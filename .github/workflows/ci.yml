@@ -1,0 +1,123 @@
+# =============================================================
+# CI WORKFLOW (the robot's note)
+# Save this file in your repo at exactly this path:
+#   .github/workflows/ci.yml
+# GitHub finds it automatically. No setup screen, no button.
+# =============================================================
+
+# The name shows up in the "Actions" tab on GitHub. Cosmetic only.
+name: CI
+
+# -------------------------------------------------------------
+# WHEN does the robot wake up? (the trigger)
+# -------------------------------------------------------------
+on:
+  # Wake up when a pull request is opened OR updated with new commits.
+  pull_request:
+
+  # Also wake up when code lands directly on the main branch.
+  # This catches anything that sneaks past a PR.
+  push:
+    branches: [main]
+
+# -------------------------------------------------------------
+# THE CHORE GROUPS (jobs)
+# Jobs run IN PARALLEL by default, each on its OWN fresh computer.
+# So "quality" and "secret-scan" below run at the same time.
+# -------------------------------------------------------------
+jobs:
+
+  # ===========================================================
+  # JOB 1: quality
+  # Does the code compile, follow the rules, and pass tests?
+  # ===========================================================
+  quality:
+    # What kind of rented computer? A standard fresh Linux machine.
+    runs-on: ubuntu-latest
+
+    steps:
+      # Chore 1: download my repo onto this empty computer.
+      # Remember: the computer is brand new and has never seen your code.
+      # "uses" means we borrow a prewritten chore from GitHub's app store.
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      # Chore 2: install Node.js version 22 on the computer.
+      # "with" passes settings into the borrowed chore.
+      # The cache line saves downloaded packages between runs so
+      # future runs are faster. Free speed, no downside.
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Chore 3: install the project's packages.
+      # "run" means: type this command in the terminal, exactly
+      # like you would on your MacBook.
+      # "npm ci" is the strict twin of "npm install". It installs
+      # EXACTLY what package-lock.json says, nothing newer.
+      # Same inputs every time = same results every time.
+      - name: Install packages
+        run: npm ci
+
+      # Chore 4: does the TypeScript actually compile?
+      # If someone wrote code with type errors, stop right here.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # Chore 5: does the code follow our style and safety rules?
+      - name: Lint
+        run: npm run lint
+
+      # Chore 6: run the test suite.
+      # If ANY test fails, this job fails, the PR gets a red X,
+      # and merging is blocked. This is the whole point.
+      - name: Run tests
+        run: npm test
+
+  # ===========================================================
+  # JOB 2: secret-scan
+  # Did anyone accidentally commit a password or API key?
+  # This job exists because of the HelpMe Hub incident.
+  # It runs on its own separate fresh computer, in parallel.
+  # ===========================================================
+  secret-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Download the code again. Yes, again. Different computer,
+      # remember? Each job starts from zero.
+      # fetch-depth 0 means download the FULL git history,
+      # because secrets often hide in old commits, not new ones.
+      - name: Get the code with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Borrow the gitleaks chore. It reads every commit looking
+      # for things shaped like API keys, tokens, and passwords.
+      # Finds one? Job fails, merge blocked, secret never ships.
+      # Free for personal GitHub accounts.
+      - name: Scan for leaked secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          # This token is created automatically by GitHub for every
+          # run. You do NOT create it or store it anywhere.
+          # It lets gitleaks write its findings onto the PR.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# =============================================================
+# WHAT WE WILL ADD LATER (not yet, on purpose):
+#
+# 1. A "build" job that runs "npm run build" to prove the app
+#    actually compiles for production.
+# 2. An end to end job using Playwright that clicks through the
+#    real app like a human: create monitor, watch it fail,
+#    see the ticket appear.
+# 3. A "docker" job that builds the sealed image for your
+#    homelab VM. That is the Docker chapter.
+#
+# Rule of thumb: get green checks working on day one with THIS
+# file. Add fancier jobs only after the boring ones work.
+# =============================================================
