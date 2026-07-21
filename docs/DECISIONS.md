@@ -6,6 +6,41 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-21 — Every session carries an organization: hidePersonal on the switcher
+
+**Decided.** The organization switcher in the dashboard header is rendered with
+`hidePersonal`, so a user cannot select a personal workspace. Clerk's instance
+config backs this up with `force_organization_selection` enabled. Every
+authenticated session therefore has an active organization.
+
+**Why.** Tenancy is not a UI preference here, it is the thing the database
+relies on. Every RLS policy reads the organization claim from the Clerk token,
+using the pattern in the entry below:
+
+```sql
+organization_id = (select coalesce(auth.jwt()->>'org_id', auth.jwt()->'o'->>'id'))
+```
+
+A personal workspace produces a session with no organization id. That claim
+then resolves to null, the predicate matches nothing, and every query silently
+returns zero rows. The failure looks like an empty dashboard rather than an
+error, which is the worst kind: it is indistinguishable from a tenant that
+genuinely has no data, so it would be diagnosed as a bug in whatever feature
+happened to be on screen. Closing the hole at the session boundary means no
+query is ever issued without a tenant to scope it to.
+
+**Affects.** The data layer in `src/lib/db/` from Task 4 onward may treat an
+active organization as a precondition rather than an optional value, but it
+must not assume the invariant holds silently. `hidePersonal` is a UI control,
+and UI controls are not a security boundary: it stops the switcher offering a
+personal workspace, it does not stop a request arriving without an org. Task 4
+still needs an explicit server side decision, redirect or hard error, for a
+request whose token has no organization id. `src/app/dashboard/page.tsx`
+currently surfaces the active `userId`, `orgId`, and `orgRole` so a session
+missing its organization is visible immediately rather than at query time.
+
+---
+
 ## 2026-07-21 — Clerk to Supabase auth path: third party auth, not JWT templates
 
 **Decided.** Clerk is wired to Supabase as a third party auth provider. The
