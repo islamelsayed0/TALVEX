@@ -85,6 +85,19 @@ jobs:
   secret-scan:
     runs-on: ubuntu-latest
 
+    # What is this job's automatic token ALLOWED to touch?
+    # By default GitHub hands out a read only token that can see the
+    # code and nothing else. Gitleaks needs more than that: it asks
+    # the API "which commits are in this pull request?" and then
+    # writes findings back onto the PR. Without these two lines it
+    # gets a 403 "Resource not accessible by integration" and the job
+    # dies before scanning a single commit.
+    # We grant the two narrowest permissions that do the job, and
+    # nothing else.
+    permissions:
+      contents: read
+      pull-requests: write
+
     steps:
       # Download the code again. Yes, again. Different computer,
       # remember? Each job starts from zero.
