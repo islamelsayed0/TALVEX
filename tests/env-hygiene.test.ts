@@ -19,6 +19,8 @@ describe('env hygiene', () => {
     for (const name of [
       'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
       'CLERK_SECRET_KEY',
+      'NEXT_PUBLIC_CLERK_SIGN_IN_URL',
+      'NEXT_PUBLIC_CLERK_SIGN_UP_URL',
       'NEXT_PUBLIC_SUPABASE_URL',
       'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
       'SUPABASE_SERVICE_ROLE_KEY',
