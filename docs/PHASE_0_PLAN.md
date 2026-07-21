@@ -12,11 +12,25 @@ assume earlier ones. Commit and merge each task through a PR so CI runs.
 ## Task 0: Prerequisites (human, not Claude Code)
 Do these yourself in a browser before starting:
 - [ ] GitHub organization `talvex` created; this repo lives under it
-- [ ] Clerk account + new application named Talvex; enable Google as a
+      NOT DONE, and deliberately deferred. The repo lives at
+      `islamelsayed0/TALVEX` under the personal account instead. Branch
+      protection on a private repo requires GitHub Pro, so the repo was made
+      public, which also gives unlimited Actions minutes and serves as the
+      portfolio artifact (BRD C5). Transfer to an org later if needed.
+- [x] Clerk account + new application named Talvex; enable Google as a
       sign in method; enable Organizations; copy the two API keys
+      Google uses Clerk's shared development credentials, which is fine for
+      development but needs our own Google OAuth app before Task 6.
 - [ ] Supabase account + new project named talvex; copy the project URL,
       anon key, and service role key
-- [ ] Vercel account connected to the GitHub org
+      PARTIAL. Project created, ref `rdfuzadtraxzrrthhnnp`, us-east-1, and the
+      URL and publishable key are in `.env.local` and Vercel. The service role
+      key is NOT copied yet; it is not exposed over the API and needs the
+      dashboard. See the prerequisite note on Task 4, which is where it is
+      first needed.
+- [x] Vercel account connected to the GitHub org
+      Project `talvex` linked, GitHub repo connected, and the four known env
+      vars set across production, preview, and development.
 
 ## Task 1: Scaffold
 - Scaffold Next.js with TypeScript, Tailwind, ESLint, App Router, src dir:
@@ -48,14 +62,29 @@ Do these yourself in a browser before starting:
 - Test: middleware blocks `/dashboard` when signed out (redirects)
 
 ## Task 4: Database foundation (Supabase + RLS)
-- Install Supabase client; wire env vars; typed client in `src/lib/db/`
+BEFORE THIS TASK (human, in a browser):
+  1. Copy the service role key from the Supabase dashboard (Settings > API)
+     into `.env.local` and into Vercel. It is empty in both today.
+  2. Create the Clerk webhook endpoint and copy its signing secret into
+     `.env.local`, `.env.example`, and Vercel. The webhook route below cannot
+     verify signatures without it.
+
+- Register Clerk as a Supabase THIRD PARTY AUTH provider, so the Clerk session
+  token is the Supabase token. Do NOT create a Supabase JWT template in Clerk:
+  that integration was deprecated on 1 April 2025. See docs/DECISIONS.md
+- Install Supabase client; wire env vars; typed client in `src/lib/db/` that
+  forwards the Clerk token via the `accessToken` option, so queries run as the
+  user under RLS. Keep the service role client separate: it bypasses RLS
 - Migration 001 creates:
   - `organizations` (id, clerk_org_id unique, name, created_at)
   - `org_members` (org_id FK, clerk_user_id, role check: owner/admin/
     technician/member, created_at; unique on org_id + clerk_user_id)
 - Enable RLS on BOTH tables from the same migration. Policies: members can
   select only rows belonging to orgs they are members of; only owners and
-  admins can insert or update membership rows
+  admins can insert or update membership rows. Scope every policy with the
+  claim pattern recorded in docs/DECISIONS.md:
+  `coalesce(auth.jwt()->>'org_id', auth.jwt()->'o'->>'id')`. Both claim shapes
+  must be read; dropping the coalesce silently breaks isolation
 - Clerk webhook route (`/api/webhooks/clerk`) syncs org creation and
   membership changes into these tables; verify webhook signature
 - Document in `docs/DECISIONS.md`: how Clerk identity maps to RLS policies
