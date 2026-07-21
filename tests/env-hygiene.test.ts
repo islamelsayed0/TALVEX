@@ -21,6 +21,7 @@ describe('env hygiene', () => {
       'CLERK_SECRET_KEY',
       'NEXT_PUBLIC_CLERK_SIGN_IN_URL',
       'NEXT_PUBLIC_CLERK_SIGN_UP_URL',
+      'CLERK_WEBHOOK_SIGNING_SECRET',
       'NEXT_PUBLIC_SUPABASE_URL',
       'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
       'SUPABASE_SERVICE_ROLE_KEY',
@@ -32,7 +33,7 @@ describe('env hygiene', () => {
   it('carries no real credentials, only placeholders', () => {
     // Find anything shaped like a key Clerk or Supabase actually issues, then
     // require its body to be the xxx template rather than a real value.
-    const keyish = /(?:sk_(?:test|live)|pk_(?:test|live)|sb_publishable)_([A-Za-z0-9_-]{16,})/g
+    const keyish = /(?:sk_(?:test|live)|pk_(?:test|live)|sb_publishable|whsec)_([A-Za-z0-9+/=_-]{16,})/g
     for (const [, body] of example.matchAll(keyish)) {
       expect(body).toMatch(/^x+$/)
     }
