@@ -3,6 +3,10 @@ import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { LogoMark } from "@/components/brand/logo-mark";
+import { Wordmark } from "@/components/brand/wordmark";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
+
 // Server component. The Clerk widgets below are client components inside their
 // own package, so they can be rendered from here without making this a client
 // component (CLAUDE.md: server components by default).
@@ -20,11 +24,12 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      <header className="flex items-center justify-between border-b border-gray-200 px-6 py-3 dark:border-gray-800">
+    <div className="flex min-h-full flex-1 flex-col bg-background text-foreground">
+      <header className="flex items-center justify-between border-b border-border px-6 py-3">
         <div className="flex items-center gap-4">
-          <Link href="/" className="text-sm font-semibold tracking-tight">
-            Talvex
+          <Link href="/" className="flex items-center gap-2.5">
+            <LogoMark size={28} />
+            <Wordmark size="sm" />
           </Link>
           {/* Org switcher. hidePersonal keeps every session inside an
               organization, which is what the tenancy model depends on: a
@@ -36,7 +41,10 @@ export default async function DashboardLayout({
             afterSelectOrganizationUrl="/dashboard"
           />
         </div>
-        <UserButton />
+        <div className="flex items-center gap-3">
+          <ThemeToggle className="h-9 w-9" />
+          <UserButton />
+        </div>
       </header>
       {children}
     </div>

@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { getActiveOrganization, listOrgMembers } from "@/lib/db/queries";
 
 // Protected placeholder. Empty on purpose: Phase 1 fills it with monitors,
-// incidents, and tickets, and Task 7 gives it a real look.
+// incidents, and tickets; Task 7 gave it the design system it inherits from.
 //
 // The org row and member list come from Postgres through the org scoped
 // client, which makes this page the live proof of the whole Task 4 chain:
@@ -20,27 +20,27 @@ export default async function DashboardPage() {
   return (
     <main className="flex flex-1 flex-col gap-6 p-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        <h1 className="text-title text-foreground">Dashboard</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
           Signed in and scoped to an organization. Nothing to show yet.
         </p>
       </div>
 
       {/* Identifiers only, never tokens. */}
-      <dl className="grid max-w-md grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-        <dt className="text-gray-500">User</dt>
+      <dl className="grid max-w-md grid-cols-[auto_1fr] gap-x-6 gap-y-2.5 rounded-button border border-border bg-card p-5 text-sm text-card-foreground">
+        <dt className="text-quiet">User</dt>
         <dd className="font-mono text-xs">{userId}</dd>
-        <dt className="text-gray-500">Organization</dt>
+        <dt className="text-quiet">Organization</dt>
         <dd className="font-mono text-xs">{orgId}</dd>
-        <dt className="text-gray-500">Role</dt>
+        <dt className="text-quiet">Role</dt>
         <dd className="font-mono text-xs">{orgRole ?? "none"}</dd>
-        <dt className="text-gray-500">Database row</dt>
+        <dt className="text-quiet">Database row</dt>
         <dd className="font-mono text-xs">
           {organization
             ? `${organization.name} (synced)`
-            : "not synced yet - webhook pending"}
+            : "not synced yet, webhook pending"}
         </dd>
-        <dt className="text-gray-500">Members synced</dt>
+        <dt className="text-quiet">Members synced</dt>
         <dd className="font-mono text-xs">{members.length}</dd>
       </dl>
     </main>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;height:100%}
+  body{font-family:'Geist',system-ui,sans-serif}
+  [data-theme="dark"]{
+    --page:radial-gradient(130% 100% at 50% -8%, #17140f 0%, #0d0b09 55%, #0b0a08 100%);
+    --glow:rgba(61,139,255,.07);--mark-ring:#08111f;--mark-inset:rgba(255,255,255,.28);
+    --wordmark:#f6f4f0;--sub:#a7a39c;--muted:#6f6b65;--divider:rgba(255,255,255,.09);
+    --field-bg:#141210;--field-bg-focus:#171512;--field-border:rgba(255,255,255,.1);--field-text:#eeece7;--placeholder:#6f6b65;
+    --ghost-border:rgba(255,255,255,.16);--ghost-border-hover:rgba(255,255,255,.32);--ghost-text:#e8e6e2;--ghost-hover-bg:rgba(255,255,255,.03);
+    --btn-text:#08111f;--link:#8f8b84;--link-border:rgba(143,139,132,.3);
+    --toggle-bg:rgba(255,255,255,.05);--toggle-border:rgba(255,255,255,.12);
+  }
+  [data-theme="light"]{
+    --page:radial-gradient(130% 100% at 50% -8%, #ffffff 0%, #f4f6f9 58%, #eef1f5 100%);
+    --glow:rgba(61,139,255,.08);--mark-ring:#ffffff;--mark-inset:rgba(255,255,255,.4);
+    --wordmark:#17150f;--sub:#6b675f;--muted:#a29e95;--divider:rgba(0,0,0,.1);
+    --field-bg:#ffffff;--field-bg-focus:#ffffff;--field-border:rgba(0,0,0,.12);--field-text:#17150f;--placeholder:#a29e95;
+    --ghost-border:rgba(0,0,0,.14);--ghost-border-hover:rgba(0,0,0,.28);--ghost-text:#2a2822;--ghost-hover-bg:rgba(0,0,0,.03);
+    --btn-text:#ffffff;--link:#6b675f;--link-border:rgba(107,103,95,.3);
+    --toggle-bg:rgba(0,0,0,.04);--toggle-border:rgba(0,0,0,.12);
+  }
+  a{color:var(--link)}
+  input::placeholder{color:var(--placeholder)}
+</style>
+</helmet>
+<div data-theme="{{ theme }}" style="position:relative;min-height:100vh;box-sizing:border-box;background:var(--page);display:flex;align-items:center;justify-content:center;padding:48px 0;overflow-x:hidden;overflow-y:auto;transition:background .3s ease">
+  <div style="position:absolute;inset:0;background:radial-gradient(48% 32% at 50% 24%, var(--glow), transparent 70%);pointer-events:none"></div>
+  <div style="position:absolute;inset:0;opacity:.45;pointer-events:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/></filter><rect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22 opacity=%220.025%22/></svg>')"></div>
+
+  <button onClick="{{ toggleTheme }}" aria-label="Toggle color theme" style="position:absolute;top:22px;right:22px;width:40px;height:40px;border-radius:999px;background:var(--toggle-bg);border:1px solid var(--toggle-border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--link);transition:background .16s ease" style-hover="background:var(--ghost-hover-bg)">
+    <sc-if value="{{ isDark }}" hint-placeholder-val="{{ true }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    </sc-if>
+    <sc-if value="{{ isLight }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </sc-if>
+  </button>
+
+  <div style="position:relative;width:340px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 24px">
+    <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(150deg,#4d95ff,#2f6fd6);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 28px -10px rgba(61,139,255,.6),inset 0 1px 0 var(--mark-inset)">
+      <div style="width:16px;height:16px;border:2.5px solid var(--mark-ring);border-radius:50%;border-right-color:transparent;transform:rotate(-45deg)"></div>
+    </div>
+    <div style="height:20px"></div>
+    <div style="font:600 27px/1 'Geist',sans-serif;color:var(--wordmark);letter-spacing:-.022em">Talvex</div>
+    <p style="margin:13px 0 0;max-width:280px;font:400 14.5px/1.55 'Geist',sans-serif;color:var(--sub);text-wrap:pretty">Everything about your systems, in one calm place. Sign in to pick up where you left off.</p>
+    <div style="height:28px"></div>
+    <button style="width:100%;height:52px;background:#3d8bff;border:none;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:11px;cursor:pointer;font:600 15px 'Geist',sans-serif;color:var(--btn-text);box-shadow:0 10px 26px -12px rgba(61,139,255,.7),inset 0 1px 0 rgba(255,255,255,.3);transition:transform .16s ease,background .16s ease" style-hover="background:#4d97ff;transform:translateY(-1px)">
+      <span style="width:21px;height:21px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font:700 13px 'Geist',sans-serif;color:#3d8bff">G</span>
+      Continue with Google
+    </button>
+    <div style="display:flex;align-items:center;gap:12px;width:100%;margin:20px 0">
+      <div style="flex:1;height:1px;background:var(--divider)"></div>
+      <span style="font:400 11px 'Geist',sans-serif;color:var(--muted)">or use email</span>
+      <div style="flex:1;height:1px;background:var(--divider)"></div>
+    </div>
+    <div style="width:100%;display:flex;flex-direction:column;gap:10px">
+      <input placeholder="Email address" style="width:100%;height:48px;box-sizing:border-box;background:var(--field-bg);border:1px solid var(--field-border);border-radius:11px;padding:0 15px;font:400 14px 'Geist',sans-serif;color:var(--field-text);outline:none;transition:border-color .16s ease,background .16s ease" style-focus="border-color:rgba(61,139,255,.6);background:var(--field-bg-focus)" />
+      <input placeholder="Password" type="password" style="width:100%;height:48px;box-sizing:border-box;background:var(--field-bg);border:1px solid var(--field-border);border-radius:11px;padding:0 15px;font:400 14px 'Geist',sans-serif;color:var(--field-text);outline:none;transition:border-color .16s ease,background .16s ease" style-focus="border-color:rgba(61,139,255,.6);background:var(--field-bg-focus)" />
+    </div>
+    <div style="width:100%;text-align:right;margin-top:9px">
+      <a href="#" style="font:400 12px 'Geist',sans-serif;text-decoration:none;border-bottom:1px solid var(--link-border)">Forgot password?</a>
+    </div>
+    <div style="height:16px"></div>
+    <button style="width:100%;height:48px;background:transparent;border:1px solid var(--ghost-border);border-radius:11px;cursor:pointer;font:600 14px 'Geist',sans-serif;color:var(--ghost-text);transition:border-color .16s ease,background .16s ease" style-hover="border-color:var(--ghost-border-hover);background:var(--ghost-hover-bg)">Continue with email</button>
+    <p style="margin:22px 0 0;font:400 11.5px/1.5 'Geist',sans-serif;color:var(--muted)">Protected and private. Your data stays yours.</p>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { theme: 'dark' };
+  renderVals() {
+    const theme = this.state.theme;
+    return {
+      theme,
+      isDark: theme === 'dark',
+      isLight: theme === 'light',
+      toggleTheme: () => this.setState(s => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
+    };
+  }
+}
+</script>
+</body>
+</html>
