@@ -6,6 +6,50 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-22 — Phase 0 ships on a Clerk development instance, and what that costs
+
+**Decided.** The Phase 0 production deploy runs at
+`https://talvex-chi.vercel.app` on Clerk **development** keys (`pk_test_`). No
+domain was purchased. The plain `talvex.vercel.app` subdomain is taken by
+another account and returns 451, so Vercel's auto assigned
+`talvex-chi.vercel.app` is the "nearest available" name Task 6 allows.
+
+**Why.** A Clerk production instance requires DNS records (`clerk.<domain>`,
+`accounts.<domain>`, and email records) on a domain you control. Those records
+cannot be added to a `*.vercel.app` subdomain because Vercel owns that zone. So
+"production deploy on the free vercel.app subdomain" and "Clerk production
+instance" are mutually exclusive; one of them had to give. BRD section 9.1
+budgets the domain at roughly 12 dollars a year and defers it until there is a
+reason to look professional to a paying stranger, so the domain gave.
+
+**What it actually costs, including one thing we did not anticipate.** The
+known costs were a Clerk development banner, a Google consent screen showing an
+`accounts.dev` domain, and a development instance user cap. Verification of the
+live deploy turned up a fourth, larger one: **protected routes return 404 to
+signed out visitors instead of redirecting to sign in.** The response carries
+`x-clerk-auth-reason: protect-rewrite, dev-browser-missing`. A development
+instance establishes session context on a deployed domain through a dev browser
+token; with no token present, `auth.protect()` rewrites to 404 rather than
+redirecting. This contradicts the behaviour `src/proxy.ts` documents and that
+the Task 3 test proves, both of which are correct on localhost and on a
+production instance. A visitor entering through the home page and signing in is
+unaffected, because the handshake sets the token; only a cold deep link to
+`/dashboard` or `/select-org` hits it.
+
+**Affects.** The live URL is usable as a demo but is not yet the portfolio
+artifact BRD C5 wants, and the Phase 0 definition of done ("a stranger can
+visit the live URL, sign in with Google, create an organization") holds only
+for a stranger who starts at the home page. Upgrading is a self contained
+sequence, not a rewrite: buy a domain, point it at the Vercel project, create a
+Clerk production instance with our own Google OAuth credentials, re register the
+new Clerk domain in Supabase third party auth (the third party auth entry
+below), reissue the Clerk environment variables in Vercel, and recreate the
+webhook endpoint against the new instance. The RLS claim pattern does not
+change, so no migration is involved. Until then, do not read the deployed 404
+as a routing bug; it is this decision showing through.
+
+---
+
 ## 2026-07-22 — Isolation is proven against an ephemeral local Supabase stack with self minted JWTs
 
 **Decided.** The tenant isolation suite (`tests/isolation/`) runs against a
