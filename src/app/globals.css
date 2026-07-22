@@ -442,9 +442,16 @@
     display: none;
   }
   .cl-organizationListPreviewItems {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
+    border: none;
   }
-  .cl-organizationListPreviewItem {
+  /* The row is a button in this Clerk version; the item wrapper is styled
+   * too so the treatment survives either markup. */
+  .cl-organizationListPreviewItem,
+  .cl-organizationListPreviewButton {
+    padding: 14px 16px;
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius-button);
@@ -452,7 +459,8 @@
       border-color 0.16s ease,
       background 0.16s ease;
   }
-  .cl-organizationListPreviewItem:hover {
+  .cl-organizationListPreviewItem:hover,
+  .cl-organizationListPreviewButton:hover {
     border-color: var(--ring);
     background: var(--card-hover);
   }
