@@ -247,5 +247,47 @@ consent screen.
    save.
 6. Re test Google sign in on the live URL.
 
+---
+
+# Manual verification checklist
+
+What a human needs to confirm on https://talvex-chi.vercel.app that no script
+can. Do item 1 of the queued work first, or steps 5 and 6 below will fail for a
+reason that has nothing to do with your account.
+
+**Start at the home page every time.** Do not paste `/dashboard` into the
+address bar as your first action; that path 404s by design on this instance
+(see the 10:41 entry) and will send you chasing a bug that is not there.
+
+- [ ] **1. Home page.** Visit the live URL. The page renders and the tab title
+      reads "Talvex".
+- [ ] **2. Development banner.** Expect a Clerk development mode banner. Its
+      presence is correct for this deploy, not a defect.
+- [ ] **3. Sign in.** Click through to sign in. The Clerk widget appears with a
+      Google button.
+- [ ] **4. Google sign in.** Complete it. Expect the consent screen to name an
+      `accounts.dev` domain; that is the shared development credential and is
+      what queued item 3 replaces.
+- [ ] **5. Organization creation.** You should be required to pick or create an
+      organization; a personal workspace must not be offered, because
+      `hidePersonal` and `force_organization_selection` are on. Create one.
+- [ ] **6. Dashboard.** You land on `/dashboard` and it shows a `userId`, an
+      `orgId`, and an `orgRole`. All three must be populated. A blank `orgId`
+      means the session has no active organization and every future tenant
+      query would silently return nothing.
+- [ ] **7. Supabase sync.** In the Supabase dashboard, table editor,
+      `public.organizations`: a row exists whose `clerk_org_id` matches the
+      `orgId` from step 6, and `public.org_members` has your `clerk_user_id`
+      against it. **This is the real test of queued item 1.** If the row is
+      missing, the webhook is not delivering; check the endpoint's delivery log
+      in Clerk for a non 200 response.
+- [ ] **8. Second organization and switching.** Create a second org from the
+      switcher and switch between them. The dashboard `orgId` changes to match.
+- [ ] **9. Sign out.** The dashboard becomes unreachable again.
+
+If steps 1 through 6 and 8 pass, the Phase 0 definition of done is met for a
+visitor who starts at the home page. Step 7 is what proves the Task 4 webhook
+and the Task 5 isolation work are wired to something real in production.
+
 
 
