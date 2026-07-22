@@ -6,6 +6,45 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-22 — The domain upgrade trigger is the first shared link, not the first customer
+
+**Decided.** Talvex stays on `https://talvex-chi.vercel.app` with Clerk
+development keys, deliberately and for now. The trigger to buy a domain, create
+our own Google OAuth application, and move to a Clerk production instance is
+**the first job application or outreach that includes the Talvex link**. It is
+explicitly not the first paying customer, and not a date.
+
+**Why.** The two known costs of the development instance, the Clerk banner and
+the deep link 404 on `/dashboard` recorded in the entry below, are costs of
+being *looked at*. Nobody external is looking yet, so today they are worth
+nothing to fix. The moment the link goes into an application or a message to a
+stranger, both costs land at once and land on the exact audience BRD C5 is
+written for, where a 404 or a development banner reads as a broken portfolio
+piece rather than a deliberate phase gate. Tying the trigger to the first
+customer would be too late: the link gets shared with recruiters and hiring
+managers long before anyone pays, so customer arrival is the wrong signal
+entirely.
+
+Choosing a trigger rather than a date also keeps the roughly 12 dollars a year
+unspent while the project is still only being read by its author, which is what
+BRD section 9.1 intends.
+
+**Operating rule until the trigger fires.** When the URL is shared at all, share
+the **root URL** and nothing deeper. Deep links to `/dashboard` or
+`/select-org` return 404 to anyone not already signed in, so a link to a deep
+path is a broken first impression. The root URL is a working path through the
+whole flow.
+
+**Affects.** The upgrade is a single known sequence, listed in the entry below,
+and nothing in it is a rewrite: no migration, no change to the RLS claim
+pattern. Treat this as a queued piece of work with a defined starting gun rather
+than as debt. When the trigger fires, do the whole sequence at once; a domain
+without the Clerk production instance still shows the banner, and a production
+instance without our own Google OAuth application still shows `accounts.dev` on
+the consent screen.
+
+---
+
 ## 2026-07-22 — Phase 0 ships on a Clerk development instance, and what that costs
 
 **Decided.** The Phase 0 production deploy runs at
