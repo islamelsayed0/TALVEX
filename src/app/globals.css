@@ -1,5 +1,5 @@
 /*
- * Talvex design tokens - the single source of truth for color, type, radii,
+ * Talvex design tokens: the single source of truth for color, type, radii,
  * shadows, and spacing. Extracted from docs/design/README.md (Task 7).
  *
  * Rules enforced here and by tests/design-tokens.test.ts:
@@ -10,8 +10,9 @@
  * - Green, amber, and red appear nowhere. They are reserved for status
  *   meaning in Phase 1 features and must be added as explicit status tokens
  *   when that day comes, never ad hoc.
- * - Every text/background pair below meets WCAG AA (BRD D5). Four reference
- *   values were nudged to pass; each deviation is commented at the token.
+ * - Every text/background pair below meets WCAG AA (BRD D5). Several
+ *   reference values were nudged to pass; each deviation is commented at
+ *   the token it changes.
  */
 
 /* Declare the layer order before Tailwind loads so Clerk's injected styles
@@ -49,7 +50,7 @@
   --link: #8f8b84;
   --link-border: rgba(143, 139, 132, 0.3);
 
-  /* Accent - the single accent color, primary action only */
+  /* Accent: the single accent color, primary action only */
   --primary: #3d8bff;
   --primary-hover: #4d97ff;
   --primary-foreground: #08111f;
@@ -296,7 +297,7 @@
     text-wrap: pretty;
   }
 
-  /* Continue with Google - the primary and only accent action. */
+  /* Continue with Google: the primary and only accent action. */
   .cl-socialButtonsBlockButton {
     height: 52px;
     background: var(--primary);
@@ -386,7 +387,7 @@
     border-radius: 0;
   }
 
-  /* Continue with email - deliberately neutral so blue stays exclusive to
+  /* Continue with email: deliberately neutral so blue stays exclusive to
    * the primary Google action. */
   .cl-formButtonPrimary {
     height: 48px;
