@@ -7,8 +7,10 @@
  * second copy of the rule; it calls this.
  */
 
-/** Everything at or below these paths requires a session. */
-export const PROTECTED_PREFIXES = ['/dashboard'] as const
+/** Everything at or below these paths requires a session. /select-org needs
+ * a signed in user (it lists their orgs) but deliberately NOT an active org:
+ * it is where org-less sessions are sent to get one. */
+export const PROTECTED_PREFIXES = ['/dashboard', '/select-org'] as const
 
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(

@@ -1,9 +1,21 @@
 import { auth } from "@clerk/nextjs/server";
 
+import { getActiveOrganization, listOrgMembers } from "@/lib/db/queries";
+
 // Protected placeholder. Empty on purpose: Phase 1 fills it with monitors,
 // incidents, and tickets, and Task 7 gives it a real look.
+//
+// The org row and member list come from Postgres through the org scoped
+// client, which makes this page the live proof of the whole Task 4 chain:
+// Clerk token -> Supabase third party auth -> RLS -> rows. If the webhook
+// has not synced this org yet, the org shows as "not synced" rather than
+// erroring; the layout already guaranteed an active org exists.
 export default async function DashboardPage() {
   const { userId, orgId, orgRole } = await auth();
+  const [organization, members] = await Promise.all([
+    getActiveOrganization(),
+    listOrgMembers(),
+  ]);
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-8">
@@ -14,28 +26,23 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* These three values are the tenancy signal the whole platform rests on.
-          orgId is the claim every RLS policy in Task 4 filters on, so showing
-          it here makes a broken session obvious immediately rather than at
-          query time. Identifiers only, never tokens. */}
+      {/* Identifiers only, never tokens. */}
       <dl className="grid max-w-md grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
         <dt className="text-gray-500">User</dt>
         <dd className="font-mono text-xs">{userId}</dd>
         <dt className="text-gray-500">Organization</dt>
-        <dd className="font-mono text-xs">
-          {orgId ?? "none active"}
-        </dd>
+        <dd className="font-mono text-xs">{orgId}</dd>
         <dt className="text-gray-500">Role</dt>
         <dd className="font-mono text-xs">{orgRole ?? "none"}</dd>
+        <dt className="text-gray-500">Database row</dt>
+        <dd className="font-mono text-xs">
+          {organization
+            ? `${organization.name} (synced)`
+            : "not synced yet - webhook pending"}
+        </dd>
+        <dt className="text-gray-500">Members synced</dt>
+        <dd className="font-mono text-xs">{members.length}</dd>
       </dl>
-
-      {!orgId && (
-        <p className="max-w-md rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          No organization is active. Create or select one in the switcher above.
-          Tenant data in Task 4 is keyed on the organization, so requests
-          without one cannot be scoped.
-        </p>
-      )}
     </main>
   );
 }
