@@ -1,5 +1,8 @@
 import { OrganizationList } from "@clerk/nextjs";
 
+import { AuthShell } from "@/components/auth-shell";
+import { LogoMark } from "@/components/brand/logo-mark";
+
 /**
  * Landing spot for signed in sessions with no active organization.
  *
@@ -9,24 +12,28 @@ import { OrganizationList } from "@clerk/nextjs";
  * can be in the app without one for longer than it takes to pick or create
  * an organization. hidePersonal matches the switcher: personal workspaces
  * do not exist in this product.
+ *
+ * Styled after exploration 3c in docs/design/sign-in-explorations.html. The
+ * page owns the heading, so the widget's own header is hidden here.
  */
 export default function SelectOrgPage() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 p-8">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Choose an organization
-        </h1>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Everything in Talvex belongs to an organization. Pick one or create
-          your first.
-        </p>
+    <AuthShell width={356}>
+      <LogoMark size={46} />
+      <h1 className="mt-[22px] text-title text-foreground">
+        Choose an organization
+      </h1>
+      <p className="mt-3 max-w-[296px] text-sm leading-relaxed text-muted-foreground">
+        Everything in Talvex belongs to an organization. Pick one or create
+        your first.
+      </p>
+      <div className="org-list-shell mt-[30px] w-full">
+        <OrganizationList
+          hidePersonal
+          afterCreateOrganizationUrl="/dashboard"
+          afterSelectOrganizationUrl="/dashboard"
+        />
       </div>
-      <OrganizationList
-        hidePersonal
-        afterCreateOrganizationUrl="/dashboard"
-        afterSelectOrganizationUrl="/dashboard"
-      />
-    </main>
+    </AuthShell>
   );
 }
