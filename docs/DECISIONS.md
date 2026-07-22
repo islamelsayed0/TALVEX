@@ -6,6 +6,47 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-22 — Isolation is proven against an ephemeral local Supabase stack with self minted JWTs
+
+**Decided.** The tenant isolation suite (`tests/isolation/`) runs against a
+local Supabase stack started by the pinned CLI (`supabase` in devDependencies,
+exact version), both on developer machines and in CI. `supabase/config.toml`
+starts only Postgres, Kong, PostgREST, and GoTrue; migrations apply from zero
+on every start. GoTrue is never called by the tests, but disabling it also
+removes the auth schema helpers (`auth.jwt()`) that every RLS policy reads,
+so it runs. The tests mint their own HS256 JWTs with the CLI's fixed, published
+local development secret, carrying the Clerk claim shapes from the entry
+below, one token per shape. CI holds no cloud credentials of any kind. When
+the stack is not running the suite fails loudly with the command that fixes
+it; it never skips.
+
+**Why.** RLS can only be proven by a real Postgres and a real PostgREST
+evaluating the real policies under a real token; mocks would prove nothing.
+The alternatives all put credentials somewhere: pointing CI at the real
+project puts the RLS bypassing service role key in GitHub secrets and writes
+test rows into the production bound database on every PR; a persistent cloud
+test project still needs secrets, pauses after a week idle on the free tier
+(silently bricking CI), and drifts. The local stack needs neither Clerk nor
+Supabase accounts because the policies never talk to Clerk: they read claims
+from whatever verified JWT arrives, so a token signed with the stack's own
+secret and shaped like Clerk's exercises exactly the production code path.
+Self minting also lets the suite test BOTH claim shapes of the coalesce,
+which no single real Clerk token can do. Bonus: every PR now proves the
+migrations replay cleanly from an empty database.
+
+**Affects.** Every tenant table added after this gets its cases in
+`tests/isolation/` against this stack (CLAUDE.md rules 2 and 8). Running the
+full test suite now requires Docker plus `npm run db:start`; after a new
+migration, `npm run db:reset`. CI's quality job boots the stack (a few
+minutes of image pulls per run; image caching is a known future optimization,
+weakening the test is not). The local dev JWT secret literal in
+`tests/isolation/local-stack.ts` is intentionally committed with a gitleaks
+allow marker: it is a published constant shared by every local Supabase stack
+in the world, not a credential. If the local stack ever moves to asymmetric
+signing keys, `TALVEX_TEST_SUPABASE_JWT_SECRET` is the escape hatch.
+
+---
+
 ## 2026-07-21 — Every session carries an organization: hidePersonal on the switcher
 
 **Decided.** The organization switcher in the dashboard header is rendered with
