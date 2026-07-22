@@ -61,16 +61,29 @@ jobs:
       - name: Install packages
         run: npm ci
 
-      # Chore 4: does the TypeScript actually compile?
+      # Chore 4: boot a real Postgres with our real RLS policies.
+      # The tenant isolation tests (tests/isolation/) prove cross tenant
+      # reads return nothing, and only a real database can prove that.
+      # The Supabase CLI (pinned in devDependencies, so CI and laptops run
+      # the same version) starts the stack defined in supabase/config.toml:
+      # just Postgres, Kong, and PostgREST, with supabase/migrations/
+      # applied from zero. Docker is preinstalled on ubuntu-latest. No
+      # cloud credentials are involved anywhere in this workflow; the
+      # tests sign their own tokens with the CLI's fixed local dev secret.
+      # Bonus: every PR now also proves the migrations replay cleanly.
+      - name: Start local Supabase database
+        run: npx supabase start
+
+      # Chore 5: does the TypeScript actually compile?
       # If someone wrote code with type errors, stop right here.
       - name: Typecheck
         run: npx tsc --noEmit
 
-      # Chore 5: does the code follow our style and safety rules?
+      # Chore 6: does the code follow our style and safety rules?
       - name: Lint
         run: npm run lint
 
-      # Chore 6: run the test suite.
+      # Chore 7: run the test suite, isolation proof included.
       # If ANY test fails, this job fails, the PR gets a red X,
       # and merging is blocked. This is the whole point.
       - name: Run tests

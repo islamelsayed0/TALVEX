@@ -1,0 +1,68 @@
+# Local Supabase stack for Talvex. It exists to run tests/isolation/ against
+# real Postgres RLS (docs/DECISIONS.md, ephemeral stack entry), locally and in
+# CI. Only four services start: Postgres, Kong (API gateway), PostgREST, and
+# GoTrue (auth). Everything else is disabled on purpose. The tests mint their
+# own JWTs signed with the stack's local dev secret, so nothing ever calls
+# GoTrue itself; it must still run because disabling it also removes the
+# auth schema helpers (auth.jwt()) that every RLS policy reads, and migration
+# 001 fails to apply without them. supabase/migrations/ is applied on
+# `supabase start` from clean state and on `supabase db reset`.
+
+project_id = "TALVEX"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+# Parity with the remote project, which grants API roles access to new public
+# tables automatically (proven: the Task 4 webhook writes work there). Without
+# this, every table from supabase/migrations/ is unreachable locally, even by
+# service_role (42501). DEPRECATED upstream, removed 2026-10-30: before then,
+# migrations must add explicit GRANTs and this flag must go. Tracked in
+# docs/PHASE_0_PLAN.md Task 6 notes.
+auto_expose_new_tables = true
+
+[db]
+port = 54322
+shadow_port = 54320
+health_timeout = "2m"
+# Matches the remote project's Postgres major version.
+major_version = 17
+
+[db.pooler]
+enabled = false
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+# No seed file. The isolation tests seed their own rows and clean them up.
+enabled = false
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = false
+
+[local_smtp]
+enabled = false
+
+[storage]
+enabled = false
+
+[auth]
+# Runs only to provide the auth schema helpers; see the header comment.
+enabled = true
+site_url = "http://127.0.0.1:3000"
+jwt_expiry = 3600
+enable_signup = false
+enable_anonymous_sign_ins = false
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false
