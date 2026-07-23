@@ -1,5 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
+import Link from "next/link";
 
+import { countOpenIncidents } from "@/lib/db/incidents";
 import { getActiveOrganization, listOrgMembers } from "@/lib/db/queries";
 
 // Protected placeholder. Empty on purpose: Phase 1 fills it with monitors,
@@ -12,9 +14,10 @@ import { getActiveOrganization, listOrgMembers } from "@/lib/db/queries";
 // erroring; the layout already guaranteed an active org exists.
 export default async function DashboardPage() {
   const { userId, orgId, orgRole } = await auth();
-  const [organization, members] = await Promise.all([
+  const [organization, members, openIncidents] = await Promise.all([
     getActiveOrganization(),
     listOrgMembers(),
+    countOpenIncidents(),
   ]);
 
   return (
@@ -22,9 +25,22 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-title text-foreground">Dashboard</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Signed in and scoped to an organization. Nothing to show yet.
+          Signed in and scoped to an organization.
         </p>
       </div>
+
+      {/* Deliberately one stat, not a dashboard redesign: that comes later. */}
+      <Link
+        href="/dashboard/incidents"
+        className="flex max-w-md items-baseline justify-between rounded-button border border-border bg-card p-5 transition-colors hover:bg-card-hover"
+      >
+        <span className="text-sm text-muted-foreground">Open incidents</span>
+        <span
+          className={`text-title ${openIncidents > 0 ? "text-status-down" : "text-card-foreground"}`}
+        >
+          {openIncidents}
+        </span>
+      </Link>
 
       {/* Identifiers only, never tokens. */}
       <dl className="grid max-w-md grid-cols-[auto_1fr] gap-x-6 gap-y-2.5 rounded-button border border-border bg-card p-5 text-sm text-card-foreground">

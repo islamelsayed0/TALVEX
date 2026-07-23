@@ -53,6 +53,12 @@ export default async function DashboardLayout({
             >
               Monitors
             </Link>
+            <Link
+              href="/dashboard/incidents"
+              className="rounded-button px-3 py-1.5 text-muted-foreground transition-colors hover:bg-(--ghost-hover-bg) hover:text-foreground"
+            >
+              Incidents
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-3">

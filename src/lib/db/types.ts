@@ -14,13 +14,111 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
+      incident_events: {
+        Row: {
+          check_id: string | null
+          detail: string | null
+          event_type: string
+          id: string
+          incident_id: string
+          occurred_at: string
+          org_id: string
+        }
+        Insert: {
+          check_id?: string | null
+          detail?: string | null
+          event_type: string
+          id?: string
+          incident_id: string
+          occurred_at: string
+          org_id: string
+        }
+        Update: {
+          check_id?: string | null
+          detail?: string | null
+          event_type?: string
+          id?: string
+          incident_id?: string
+          occurred_at?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_events_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "monitor_checks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_events_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          created_at: string
+          id: string
+          last_reopened_at: string | null
+          monitor_id: string
+          opened_at: string
+          org_id: string
+          resolved_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_reopened_at?: string | null
+          monitor_id: string
+          opened_at: string
+          org_id: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_reopened_at?: string | null
+          monitor_id?: string
+          opened_at?: string
+          org_id?: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_monitor_id_fkey"
+            columns: ["monitor_id"]
+            isOneToOne: false
+            referencedRelation: "monitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monitor_checks: {
         Row: {
           checked_at: string
@@ -118,6 +216,7 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          failing_since: string | null
           id: string
           interval_seconds: number
           last_checked_at: string | null
@@ -130,6 +229,7 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          failing_since?: string | null
           id?: string
           interval_seconds?: number
           last_checked_at?: string | null
@@ -142,6 +242,7 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          failing_since?: string | null
           id?: string
           interval_seconds?: number
           last_checked_at?: string | null
@@ -356,6 +457,7 @@ export const Constants = {
 } as const
 
 
+
 // Convenience aliases used by the data layer.
 export type Organization = Tables<"organizations">
 export type OrgMember = Tables<"org_members">
@@ -365,3 +467,7 @@ export type MonitorCheck = Tables<"monitor_checks">
 export type MonitorDailyRollup = Tables<"monitor_daily_rollups">
 /** Check outcome as stored. The UI adds "pending" for never checked monitors. */
 export type MonitorStatus = "up" | "down"
+export type Incident = Tables<"incidents">
+export type IncidentEvent = Tables<"incident_events">
+export type IncidentStatus = "open" | "resolved"
+export type IncidentEventType = "opened" | "reopened" | "recovered" | "resolved"
