@@ -49,5 +49,7 @@ Professional, human, short sentences. No robotic filler. No hyphens in any
 user facing text (product copy, emails, marketing); use en dashes or rewrite.
 
 ## Current phase
-Phase 0: foundation. Scope is ONLY what docs/PHASE_0_PLAN.md lists. Do not
-build Phase 1 features early, even if they seem quick.
+Phase 1: core features. Scope is monitors, incidents, tickets, AI chat, and
+the incident to ticket bridge, in that order, one feature per PR. The landing
+page remains out of scope until the end of MVP. Phase 0 rules all remain in
+force.
