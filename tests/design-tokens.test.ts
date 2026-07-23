@@ -126,6 +126,13 @@ const TEXT_PAIRS: Array<[string, string]> = [
   ['card-foreground', 'card'],
   ['quiet', 'card'],
   ['muted-foreground', 'card'],
+  // Status colors (Phase 1) carry text and icons on the page and on cards.
+  ['status-up', 'background'],
+  ['status-up', 'card'],
+  ['status-down', 'background'],
+  ['status-down', 'card'],
+  ['status-pending', 'background'],
+  ['status-pending', 'card'],
 ]
 
 describe.each([
@@ -158,11 +165,21 @@ describe.each([
 })
 
 describe('reserved colors', () => {
-  it('globals.css declares no green, amber, or red tokens', () => {
-    // Every hex token in the file must be neutral (warm gray scale) or the
-    // accent blue family: blue channel dominant, or near equal channels.
-    // Green, amber, and red are reserved for status meaning (Phase 1+).
+  // The status tokens (added with Phase 1 monitors) are the ONE sanctioned
+  // home for green, amber, and red: status meaning, nothing else. Their hex
+  // values are collected here and exempted from the neutral-or-blue rule;
+  // any other green/amber/red hex in globals.css still fails.
+  const statusHexes = new Set(
+    [...css.matchAll(/--status-[\w-]+:\s*(#[0-9a-f]{6})\b/gi)].map((m) =>
+      m[1].toLowerCase(),
+    ),
+  )
+
+  it('outside the status tokens, no green, amber, or red appears', () => {
+    // Every other hex token in the file must be neutral (warm gray scale) or
+    // the accent blue family: blue channel dominant, or near equal channels.
     for (const m of css.matchAll(/#([0-9a-f]{6})\b/gi)) {
+      if (statusHexes.has(`#${m[1].toLowerCase()}`)) continue
       const n = parseInt(m[1], 16)
       const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
       const spread = Math.max(r, g, b) - Math.min(r, g, b)
@@ -173,5 +190,26 @@ describe('reserved colors', () => {
         `#${m[1]} is neither neutral nor accent blue`,
       ).toBe(true)
     }
+  })
+
+  it.each([
+    ['dark', darkTokens],
+    ['light', lightTokens],
+  ] as const)('status tokens carry their meaning in the %s theme', (_t, tokens) => {
+    // Up is green, down is red, pending is amber, in both themes; a swapped
+    // or off family value would lie to the user about status.
+    const channels = (name: string) => {
+      const { r, g, b } = parseColor(resolve(tokens, name))
+      return { r, g, b }
+    }
+    const up = channels('status-up')
+    expect(up.g, 'status-up must be green dominant').toBeGreaterThan(up.r)
+    expect(up.g).toBeGreaterThan(up.b)
+    const down = channels('status-down')
+    expect(down.r, 'status-down must be red dominant').toBeGreaterThan(down.g)
+    expect(down.r).toBeGreaterThan(down.b)
+    const pending = channels('status-pending')
+    expect(pending.r, 'status-pending must be amber').toBeGreaterThan(pending.b)
+    expect(pending.g, 'status-pending must be amber').toBeGreaterThan(pending.b)
   })
 })

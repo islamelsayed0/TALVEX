@@ -1,7 +1,8 @@
 // GENERATED FILE. Do not edit by hand.
-// Regenerate after every migration with the Supabase MCP tool
-// generate_typescript_types (project rdfuzadtraxzrrthhnnp), or once the
-// Supabase CLI is linked: npx supabase gen types typescript --linked
+// Regenerate after every migration, with the local stack running:
+//   npx supabase db reset && npx supabase gen types typescript --local --schema public
+// (or the Supabase MCP tool generate_typescript_types against project
+// rdfuzadtraxzrrthhnnp). Then re-append the convenience aliases at the bottom.
 // Source of truth is the schema in supabase/migrations/.
 
 export type Json =
@@ -20,6 +21,146 @@ export type Database = {
   }
   public: {
     Tables: {
+      monitor_checks: {
+        Row: {
+          checked_at: string
+          error_message: string | null
+          id: string
+          monitor_id: string
+          org_id: string
+          response_time_ms: number | null
+          status: string
+        }
+        Insert: {
+          checked_at?: string
+          error_message?: string | null
+          id?: string
+          monitor_id: string
+          org_id: string
+          response_time_ms?: number | null
+          status: string
+        }
+        Update: {
+          checked_at?: string
+          error_message?: string | null
+          id?: string
+          monitor_id?: string
+          org_id?: string
+          response_time_ms?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitor_checks_monitor_id_fkey"
+            columns: ["monitor_id"]
+            isOneToOne: false
+            referencedRelation: "monitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monitor_checks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monitor_daily_rollups: {
+        Row: {
+          avg_response_ms: number | null
+          check_count: number
+          day: string
+          max_response_ms: number | null
+          min_response_ms: number | null
+          monitor_id: string
+          org_id: string
+          uptime_percent: number
+        }
+        Insert: {
+          avg_response_ms?: number | null
+          check_count: number
+          day: string
+          max_response_ms?: number | null
+          min_response_ms?: number | null
+          monitor_id: string
+          org_id: string
+          uptime_percent: number
+        }
+        Update: {
+          avg_response_ms?: number | null
+          check_count?: number
+          day?: string
+          max_response_ms?: number | null
+          min_response_ms?: number | null
+          monitor_id?: string
+          org_id?: string
+          uptime_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitor_daily_rollups_monitor_id_fkey"
+            columns: ["monitor_id"]
+            isOneToOne: false
+            referencedRelation: "monitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monitor_daily_rollups_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monitors: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          interval_seconds: number
+          last_checked_at: string | null
+          last_status: string | null
+          name: string
+          org_id: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          interval_seconds?: number
+          last_checked_at?: string | null
+          last_status?: string | null
+          name: string
+          org_id: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          interval_seconds?: number
+          last_checked_at?: string | null
+          last_status?: string | null
+          name?: string
+          org_id?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitors_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_members: {
         Row: {
           clerk_user_id: string
@@ -77,6 +218,10 @@ export type Database = {
     Functions: {
       clerk_active_org_id: { Args: never; Returns: string }
       clerk_is_org_admin: { Args: never; Returns: boolean }
+      upsert_monitor_daily_rollups: {
+        Args: { p_day: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
@@ -210,7 +355,13 @@ export const Constants = {
   },
 } as const
 
+
 // Convenience aliases used by the data layer.
 export type Organization = Tables<"organizations">
 export type OrgMember = Tables<"org_members">
 export type OrgMemberRole = "owner" | "admin" | "technician" | "member"
+export type Monitor = Tables<"monitors">
+export type MonitorCheck = Tables<"monitor_checks">
+export type MonitorDailyRollup = Tables<"monitor_daily_rollups">
+/** Check outcome as stored. The UI adds "pending" for never checked monitors. */
+export type MonitorStatus = "up" | "down"

@@ -7,9 +7,10 @@
  * - Dark is the default theme; [data-theme="light"] overrides. The pre paint
  *   script in src/components/theme/theme-script.tsx picks the initial theme
  *   from localStorage, then prefers-color-scheme, then falls back to dark.
- * - Green, amber, and red appear nowhere. They are reserved for status
- *   meaning in Phase 1 features and must be added as explicit status tokens
- *   when that day comes, never ad hoc.
+ * - Green, amber, and red carry status meaning and nothing else. They exist
+ *   only as the explicit --status-* tokens below (added with the Phase 1
+ *   monitors feature): green up, red down, amber pending or unknown. Using
+ *   them decoratively, or adding any other green/amber/red, fails the test.
  * - Every text/background pair below meets WCAG AA (BRD D5). Several
  *   reference values were nudged to pass; each deviation is commented at
  *   the token it changes.
@@ -82,6 +83,13 @@
   --ghost-border-hover: rgba(255, 255, 255, 0.32);
   --ghost-text: #e8e6e2;
   --ghost-hover-bg: rgba(255, 255, 255, 0.03);
+
+  /* Status: the reserved palette, status meaning only (monitors, incidents).
+   * Green up, red down, amber pending or unknown. Text grade: every value
+   * clears AA on the page and card backgrounds, enforced by the tokens test. */
+  --status-up: #4ade80;
+  --status-down: #f87171;
+  --status-pending: #fbbf24;
 
   /* Theme toggle */
   --toggle-bg: rgba(255, 255, 255, 0.05);
@@ -156,6 +164,11 @@
   --ghost-text: #2a2822;
   --ghost-hover-bg: rgba(0, 0, 0, 0.03);
 
+  /* Status colors darken for light surfaces; same meanings as dark. */
+  --status-up: #15803d;
+  --status-down: #b91c1c;
+  --status-pending: #b45309;
+
   --toggle-bg: rgba(0, 0, 0, 0.04);
   --toggle-border: rgba(0, 0, 0, 0.12);
 
@@ -193,6 +206,9 @@
   --color-placeholder: var(--placeholder);
   --color-ghost-text: var(--ghost-text);
   --color-ring: var(--ring);
+  --color-status-up: var(--status-up);
+  --color-status-down: var(--status-down);
+  --color-status-pending: var(--status-pending);
 
   /* Radii scale from the reference: logo tile 14, primary button 12,
    * inputs and secondary buttons 11. */

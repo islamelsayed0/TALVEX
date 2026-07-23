@@ -40,6 +40,20 @@ export default async function DashboardLayout({
             afterCreateOrganizationUrl="/dashboard"
             afterSelectOrganizationUrl="/dashboard"
           />
+          <nav className="flex items-center gap-1 text-sm">
+            <Link
+              href="/dashboard"
+              className="rounded-button px-3 py-1.5 text-muted-foreground transition-colors hover:bg-(--ghost-hover-bg) hover:text-foreground"
+            >
+              Overview
+            </Link>
+            <Link
+              href="/dashboard/monitors"
+              className="rounded-button px-3 py-1.5 text-muted-foreground transition-colors hover:bg-(--ghost-hover-bg) hover:text-foreground"
+            >
+              Monitors
+            </Link>
+          </nav>
         </div>
         <div className="flex items-center gap-3">
           <ThemeToggle className="h-9 w-9" />
