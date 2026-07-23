@@ -10,6 +10,9 @@ import type { Database } from './types'
  * Permitted callers, exhaustively:
  *   - src/app/api/webhooks/clerk/route.ts  (syncing Clerk orgs and members;
  *     webhooks carry no user session, so there is no token to scope by)
+ *   - src/app/api/cron/check-monitors/route.ts  (the cron sweep; cron
+ *     invocations carry no user session either, and it must write check
+ *     results and rollups across every org in one pass)
  *   - future cron route handlers and migration tooling, added to this list
  *     when they exist
  *

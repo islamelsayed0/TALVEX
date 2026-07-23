@@ -26,10 +26,14 @@ export default clerkMiddleware(async (auth, request) => {
 
 export const config = {
   matcher: [
-    // Everything except Next internals and static files, unless a search
-    // param is present, so server actions on static-ish routes still run.
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes.
-    '/(api|trpc)(.*)',
+    // Everything except Next internals, static files (unless a search
+    // param is present, so server actions on static-ish routes still run),
+    // and the cron routes. Cron invocations carry no user session and
+    // authenticate with the CRON_SECRET bearer token inside the route
+    // (architecture ruling, Phase 1 Task 1), so Clerk middleware has
+    // nothing to add there.
+    '/((?!_next|api/cron|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes, except the cron routes (same reason).
+    '/(api(?!/cron)|trpc)(.*)',
   ],
 }
