@@ -7,6 +7,30 @@ is not starting cold. Promote an item into a real task when its phase comes.
 
 ---
 
+## Tickets: the follow ups parked by the Task 3 ruling
+
+**What.** Four things the tickets feature deliberately shipped without:
+email notifications on ticket activity, assignment (whose desk is this on),
+priorities and categories, and the separate client portal for people outside
+the org. Also parked, smaller: comment editing (comments are immutable in
+this build; a wrong comment is corrected by a follow up comment).
+
+**Why.** Task 3 scoped tickets to lifecycle, role based visibility, the
+system trail, and the Get help surface. Each parked item pulls in real
+design work (notifications need per org preferences and BRD F10 plumbing;
+assignment wants the technician role to mean something; the portal is BRD
+persona P3 with its own auth story). Capturing them here keeps the task PR
+honest without losing the ideas.
+
+**How (sketch).** Notifications ride the existing Resend/Discord work when
+BRD F10 lands, triggered where ticket_events are written. Assignment is a
+nullable assigned_to column plus a policy widening and a queue filter.
+Priorities are a column and a sort tweak; resist building them before a real
+queue is long enough to need triage. The portal reuses the Get help surface
+per BRD D4, scoped to a portal role.
+
+---
+
 ## Monitors: run the first check immediately on save
 
 **What.** When a user adds a monitor and presses save, check the URL once right

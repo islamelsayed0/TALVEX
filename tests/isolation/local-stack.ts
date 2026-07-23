@@ -69,11 +69,19 @@ export function memberToken(opts: {
   clerkUserId: string
   clerkOrgId: string
   shape: ClaimShape
+  /**
+   * The role CLAIM carried in the token, defaulting to member. Deliberately
+   * independent of org_members.role: the ticket policies (Task 3) must read
+   * the database column, not this claim, so the suite mints tokens whose
+   * claim disagrees with the column and asserts the column wins either way.
+   */
+  claimRole?: 'member' | 'admin'
 }): string {
+  const role = opts.claimRole ?? 'member'
   const orgClaims =
     opts.shape === 'legacy'
-      ? { org_id: opts.clerkOrgId, org_role: 'org:member' }
-      : { o: { id: opts.clerkOrgId, rol: 'member' } }
+      ? { org_id: opts.clerkOrgId, org_role: `org:${role}` }
+      : { o: { id: opts.clerkOrgId, rol: role } }
   return signHS256({
     ...baseClaims('authenticated'),
     sub: opts.clerkUserId,

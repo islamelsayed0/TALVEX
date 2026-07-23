@@ -30,6 +30,12 @@ import {
  * assume fresh checks). The logic is correct at any cadence and tightens
  * automatically when the schedule does.
  *
+ * Tickets (Phase 1 Task 3): the same sweep also closes tickets that have
+ * sat resolved for more than 7 days (same route, same auth, per ruling).
+ * The update sends only the status; the tickets lifecycle trigger stamps
+ * closed_at and writes the auto_closed trail event, attributing it to the
+ * system because the service role token carries no user.
+ *
  * Auth: CRON_SECRET bearer token, checked before anything else; requests
  * without it get 401 and touch nothing. The route is excluded from Clerk
  * middleware (src/proxy.ts) because cron invocations carry no user session.
@@ -47,6 +53,8 @@ export const maxDuration = 60
 
 const RETENTION_DAYS = 30
 const BATCH_SIZE = 10
+// A resolved ticket closes on the first sweep after 7 full days (ruling).
+const TICKET_AUTO_CLOSE_DAYS = 7
 
 function utcDay(date: Date): string {
   return date.toISOString().slice(0, 10)
@@ -314,13 +322,31 @@ export async function GET(request: Request) {
     }
   }
 
+  // Tickets: anything resolved more than 7 days ago closes now. Only the
+  // status is written; the lifecycle trigger owns closed_at and the
+  // auto_closed trail event.
+  const ticketCutoff = new Date(
+    now - TICKET_AUTO_CLOSE_DAYS * 24 * 60 * 60 * 1000,
+  )
+  const { data: autoClosed, error: autoCloseError } = await db
+    .from('tickets')
+    .update({ status: 'closed' })
+    .eq('status', 'resolved')
+    .lt('resolved_at', ticketCutoff.toISOString())
+    .select('id')
+  if (autoCloseError) {
+    failures.push(`auto closing tickets: ${autoCloseError.message}`)
+  }
+  const ticketsClosed = autoClosed?.length ?? 0
+
   if (failures.length > 0) {
     console.error(`cron check-monitors: ${failures.length} step(s) failed:`, failures.join('; '))
   }
   console.log(
     `cron check-monitors: ${due.length} due of ${monitors.length} active, ` +
       `${up} up, ${down} down; incidents ${incidentCounts.opened} opened, ` +
-      `${incidentCounts.reopened} reopened, ${incidentCounts.resolved} resolved`,
+      `${incidentCounts.reopened} reopened, ${incidentCounts.resolved} resolved; ` +
+      `tickets ${ticketsClosed} auto closed`,
   )
 
   return NextResponse.json({
@@ -329,6 +355,7 @@ export async function GET(request: Request) {
     up,
     down,
     incidents: incidentCounts,
+    ticketsClosed,
     failures: failures.length,
   })
 }
