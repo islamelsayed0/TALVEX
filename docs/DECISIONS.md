@@ -6,6 +6,85 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-23 — Monitor checks sweep daily on Vercel Hobby; per monitor intervals are aspirational until Pro
+
+**Decided.** Monitor checks run as one cron sweep: a single Vercel Cron
+schedule invokes `/api/cron/check-monitors`, which checks every active
+monitor whose own interval has elapsed. On the Hobby plan the schedule is
+`0 6 * * *`, because Hobby hard caps cron at once per day (finer expressions
+fail deployment, and timing is only per hour precise, so 06:00 fires
+anywhere in 06:00 to 06:59 UTC).
+
+**Why.** The Phase 1 Task 1 ruling accepted free tier granularity outright.
+The sweep is granularity agnostic: it reads each monitor's
+`interval_seconds` and checks what is due, so the code is already correct
+for any schedule. Only the schedule line embodies the cap.
+
+**Affects.** Until the project moves to Vercel Pro, every monitor is
+checked at most once a day regardless of its configured interval, uptime
+percentages are computed from one or two checks per day, and "response
+time" is a daily sample. The incidents task (next) must not assume fresh
+checks exist. Upgrading is a one line edit to `vercel.json` plus nothing
+else. The route requires the `CRON_SECRET` bearer token and fails closed
+when the variable is unset, so a new environment that forgets the variable
+gets a silent cron 401, not an open endpoint; the variable is documented in
+`.env.example` and must be set in Vercel by hand.
+
+---
+
+## 2026-07-23 — Migrations carry explicit GRANTs from 003 onward
+
+**Decided.** Migration 003 is the first to state table and function grants
+explicitly: revoke everything from `anon` and `authenticated` first, then
+grant back exactly the verbs each role needs. Every future migration that
+creates a table or function does the same. The pattern for cron written
+tables: `authenticated` gets select only (RLS filters rows on top),
+`service_role` gets all, `anon` gets nothing.
+
+**Why.** Both the local stack's `auto_expose_new_tables` and the remote
+project's automatic privileges for API roles are deprecated behavior with a
+removal date (2026-10-30, tracked in supabase/config.toml). Tables relying
+on auto exposure stop being reachable when that lands. Explicit grants also
+say what each role can do where the reviewer is already reading policies.
+
+**Affects.** Tables from migrations 001 and 002 (`organizations`,
+`org_members`) still lean on auto exposure; they need a grants backfill
+migration before the config flag can be removed, and that flag must stay
+until then. Grant checks are also verb level security the isolation suite
+exercises: the monitor suite asserts a member session cannot insert into
+`monitor_checks` at all, which is the grants and the absent policy working
+together.
+
+---
+
+## 2026-07-23 — SSRF screening runs at check time; DNS rebinding is an accepted residual
+
+**Decided.** Monitor URLs get two validation layers. At save time, the data
+layer accepts only http/https with no embedded credentials (syntax only).
+At check time, before every request including every redirect hop, the cron
+path resolves the hostname and refuses any target in private or internal
+address space: localhost names, RFC 1918, loopback, link local, CGNAT
+100.64/10, 0/8, and the IPv6 equivalents (::1, ::, fc00::/7, fe80::/10,
+fec0::/10, IPv4 mapped forms). The decision table lives in
+`src/lib/db/monitor-url.ts` and is pinned by `tests/monitor-url.test.ts`.
+
+**Why.** Checks fetch user supplied URLs from our infrastructure, so a URL
+resolving to internal space would let a tenant probe our network (the cloud
+metadata address 169.254.169.254 being the classic target). The screen runs
+at check time, not save time, because DNS answers change after save;
+save time screening would be a time of check / time of use hole.
+
+**Affects.** One residual risk is accepted and documented in
+`src/lib/monitoring/check.ts`: the guard resolves the name and fetch then
+resolves it again, so an attacker flipping DNS between the two lookups
+(rebinding) could still reach an internal address. Closing it fully means
+pinning the connection to the vetted IP, which conflicts with TLS SNI and
+Host handling; revisit in Phase 2 with the other check hardening (keywords,
+certs, regions). Anything else that ever fetches user supplied URLs (status
+page logos, webhook targets, integrations) must reuse this same screen.
+
+---
+
 ## 2026-07-23 — One Supabase project backs every environment, until the first customer
 
 **Decided.** A single Supabase project (ref `rdfuzadtraxzrrthhnnp`) backs local
