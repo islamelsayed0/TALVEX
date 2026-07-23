@@ -6,6 +6,62 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-23 — One Supabase project backs every environment, until the first customer
+
+**Decided.** A single Supabase project (ref `rdfuzadtraxzrrthhnnp`) backs local
+development, Vercel preview, and production. The isolation suite is the only
+exception: it runs against an ephemeral local stack (see the 2026-07-22 entry
+below) and never touches this project.
+
+**Why.** Separate projects per environment cost setup and a second set of
+secrets for a build with no users yet. The boundary that matters is between
+organizations, and RLS enforces that inside one project regardless of
+environment.
+
+**Affects.** Anything written through the deployed Clerk webhook lands in the
+same rows the local app reads. Task 7 proved this live: creating a temp org on
+the dev Clerk instance inserted real rows, because the webhook endpoint points
+at the Vercel URL, and deleting the org removed them again. Accepted until the
+first real customer; production moves to its own project before anyone else's
+data lives here.
+
+---
+
+## 2026-07-23 — Clerk's generated org avatar is left as rendered
+
+**Decided.** The violet gradient identity avatar Clerk generates for
+organizations without a logo is not restyled. It is the one element on the
+select org and dashboard screens sitting outside the palette.
+
+**Why.** It is identity content, not chrome: a real uploaded org logo replaces
+it. Forcing it into the palette would also desaturate genuine customer logos
+once those exist, which is worse than one placeholder tile. It breaks no rule;
+violet is not a status color (green, amber, and red stay reserved for status
+meaning).
+
+**Affects.** Org logo upload in a later phase resolves this on its own. Until
+then, reviewers see a violet tile by design, not by oversight.
+
+---
+
+## 2026-07-23 — Landing page stays at the end of the MVP, reaffirmed
+
+**Decided.** The public marketing landing page is built last, after Phase 1
+features exist, exactly where docs/PHASE_0_PLAN.md and the BRD place it. A
+queued agent task to build it early (7b) was cancelled and its tracking note
+deleted.
+
+**Why.** A landing page written before the product it advertises exists would
+invent screens, metrics, and claims the features then have to catch up to. The
+Task 7 design system is the reusable material it will be assembled from when
+the time comes; nothing is lost by waiting.
+
+**Affects.** Phase 0 ends with PR #7. The root route stays the plain
+placeholder. Phase 1 (monitors, tickets, chat) is the next work and starts on
+an explicit kickoff, not by drifting into it.
+
+---
+
 ## 2026-07-22 — Phase 0 ships on a Clerk development instance, and what that costs
 
 **Decided.** The Phase 0 production deploy runs at
