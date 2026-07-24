@@ -409,3 +409,42 @@ NOT applied here: it ships in the same pull request as this log entry and is
 not merged yet. Apply it to the shared project before merging that PR, so main
 is never ahead of the database, which is precisely what the new
 `migration-drift` CI job now checks.
+
+---
+
+## 2026-07-24 — Migration 009 applied to the shared project
+
+Operator: Claude Code, under explicit grant from Islam Elsayed on 2026-07-24
+("apply 009 to production"). Applied while PR #18 was open and unmerged, on
+purpose: the grants are restrictive, so applying before merge means main is
+never ahead of the database. That ordering is the inverse of the lesson from
+the two faults above, where the database was behind main.
+
+**Checked first.** That no production code path runs as `anon`. The only
+Supabase clients in the app are `createOrgScopedClient` (publishable key plus a
+Clerk token, so `authenticated`) and `createAdminClient` (`service_role`).
+Nothing reads these tables anonymously, so revoking anon's standing privileges
+could not break a live surface.
+
+**What ran.** The statements of
+`supabase/migrations/20260724180000_009_org_table_grants.sql`, in one
+transaction with the matching `schema_migrations` row. Applied through the
+Supabase SQL path rather than `supabase db push`, because no database password
+is available to this operator; the resulting state is identical, and the
+history row carries the file's own version so `db push` sees nothing to apply.
+
+**State after, verified on the remote.**
+- `anon` holds no privilege on `organizations` or `org_members`. Before this,
+  auto exposure had given it ALL privileges on both, with only RLS in the way.
+- `authenticated`: SELECT on both tables, plus INSERT
+  `(org_id, clerk_user_id, role)` and UPDATE `(role)` on `org_members`.
+- Both claim helpers: EXECUTE for `postgres`, `authenticated`, `service_role`.
+  PUBLIC is gone.
+- History: 9 rows, 9 files, matching.
+
+**Live verification, because the EXECUTE revoke could have failed every policy
+closed.** Simulating the founding user's real session (org admin claim, actual
+Clerk ids) against production: 1 organization, 1 membership, 2 monitors and 1
+ticket visible, `clerk_active_org_id()` resolving the org and
+`clerk_is_org_admin()` returning true. As `anon`, the same read is refused with
+`42501: permission denied for table organizations`. Both halves behave.
