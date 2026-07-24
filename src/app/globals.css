@@ -403,6 +403,31 @@
     );
   }
 
+  /* Nav pill items. Neutral by default, lifting to an inset highlight when the
+   * route is active (aria-current="page"). The active/hover fills are white
+   * alphas in dark and black alphas in light, so the highlight reads on either
+   * page; kept here as a component class rather than dark: utilities so it does
+   * not flash the wrong tone before the theme attribute is set. */
+  .nav-item {
+    color: var(--muted-foreground);
+  }
+  .nav-item:hover {
+    color: var(--foreground);
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .nav-item[aria-current="page"] {
+    color: var(--foreground);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12);
+  }
+  [data-theme="light"] .nav-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+  [data-theme="light"] .nav-item[aria-current="page"] {
+    background: rgba(0, 0, 0, 0.06);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.06);
+  }
+
   /* ------------------------------------------------------------------
    * Clerk element treatments (docs/design/README.md).
    *

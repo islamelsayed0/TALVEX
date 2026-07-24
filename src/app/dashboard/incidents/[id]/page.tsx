@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { getActiveOrgViewer } from '@/lib/auth/org-viewer'
+import { requireAdmin } from '@/lib/auth/org-viewer'
 import { getIncident, listIncidentEvents } from '@/lib/db/incidents'
 import { listTicketsForIncident } from '@/lib/db/tickets'
 import type { IncidentEventType, TicketStatus } from '@/lib/db/types'
@@ -37,7 +37,7 @@ export default async function IncidentDetailPage({
 
   const [events, viewer, linkedTickets] = await Promise.all([
     listIncidentEvents(incident.id),
-    getActiveOrgViewer(),
+    requireAdmin(),
     listTicketsForIncident(incident.id),
   ])
   const open = incident.status === 'open'

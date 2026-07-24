@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { auth } from '@clerk/nextjs/server'
+import { redirect } from 'next/navigation'
 
 import { createOrgScopedClient } from '@/lib/db/client'
 
@@ -38,4 +39,20 @@ export async function getActiveOrgViewer(): Promise<OrgViewer> {
     userId,
     isAdmin: data?.role === 'admin' || data?.role === 'owner',
   }
+}
+
+/**
+ * Gate an admin only page. Reads the same org_members.role source as
+ * getActiveOrgViewer, then sends a member to the Help front door instead of an
+ * admin screen. This is a UI redirect, not the security boundary: RLS already
+ * scopes every query, so a member who reaches an admin route can load no data
+ * they should not. The redirect keeps the product coherent, matching the nav,
+ * which never offers a member these routes in the first place.
+ */
+export async function requireAdmin(): Promise<OrgViewer> {
+  const viewer = await getActiveOrgViewer()
+  if (!viewer.isAdmin) {
+    redirect('/dashboard/help')
+  }
+  return viewer
 }

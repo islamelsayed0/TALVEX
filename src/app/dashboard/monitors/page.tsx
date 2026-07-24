@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { requireAdmin } from '@/lib/auth/org-viewer'
 import { listMonitorsWithStats } from '@/lib/db/monitors'
 import {
   formatMs,
@@ -17,6 +18,7 @@ export const metadata = { title: 'Monitors — Talvex' }
  * organization. First legitimate use of the reserved status palette.
  */
 export default async function MonitorsPage() {
+  await requireAdmin()
   const monitors = await listMonitorsWithStats()
 
   return (

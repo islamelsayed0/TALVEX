@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 
+import { requireAdmin } from "@/lib/auth/org-viewer";
 import { countOpenIncidents } from "@/lib/db/incidents";
 import { getActiveOrganization, listOrgMembers } from "@/lib/db/queries";
 
@@ -13,6 +14,7 @@ import { getActiveOrganization, listOrgMembers } from "@/lib/db/queries";
 // has not synced this org yet, the org shows as "not synced" rather than
 // erroring; the layout already guaranteed an active org exists.
 export default async function DashboardPage() {
+  await requireAdmin();
   const { userId, orgId, orgRole } = await auth();
   const [organization, members, openIncidents] = await Promise.all([
     getActiveOrganization(),

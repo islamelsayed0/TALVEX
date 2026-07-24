@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { requireAdmin } from '@/lib/auth/org-viewer'
 import { listMonitorIncidents } from '@/lib/db/incidents'
 import {
   getMonitor,
@@ -33,6 +34,8 @@ export default async function MonitorDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  await requireAdmin()
+
   const { id } = await params
   const monitor = await getMonitor(id)
   if (!monitor) notFound()

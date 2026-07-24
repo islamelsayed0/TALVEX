@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { requireAdmin } from '@/lib/auth/org-viewer'
 import { listIncidents, type IncidentListItem } from '@/lib/db/incidents'
 import { formatUtc } from '../monitors/ui'
 import { IncidentBadge, incidentDuration } from './ui'
@@ -13,6 +14,7 @@ export const metadata = { title: 'Incidents — Talvex' }
  * written by the system; there are no actions to take on this screen yet.
  */
 export default async function IncidentsPage() {
+  await requireAdmin()
   const { open, resolved } = await listIncidents()
   const empty = open.length === 0 && resolved.length === 0
 
