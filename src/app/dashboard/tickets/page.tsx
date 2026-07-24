@@ -45,7 +45,7 @@ export default async function TicketsPage({
               : 'Your requests, and where each one stands.'}
           </p>
         </div>
-        <Link href="/dashboard/get-help" className={primaryButton}>
+        <Link href="/dashboard/help" className={primaryButton}>
           Get help
         </Link>
       </div>
@@ -116,7 +116,7 @@ function EmptyState({ isAdmin, filtered }: { isAdmin: boolean; filtered: boolean
           : 'When you ask for help, your request lives here so you can follow along and add details.'}
       </p>
       {isAdmin ? null : (
-        <Link href="/dashboard/get-help" className={primaryButton}>
+        <Link href="/dashboard/help" className={primaryButton}>
           Get help
         </Link>
       )}

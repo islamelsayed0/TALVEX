@@ -58,7 +58,7 @@ export default async function GetHelpPage() {
               Tell the team what is going on and they take it from there.
             </p>
             <Link
-              href="/dashboard/get-help/ticket"
+              href="/dashboard/help/ticket"
               className={`${hasKey ? ghostButton : primaryButton} w-full`}
             >
               Create a ticket instead

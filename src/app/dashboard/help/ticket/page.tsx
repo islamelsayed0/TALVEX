@@ -42,7 +42,7 @@ export default async function CreateTicketPage({
       <div className="flex w-full max-w-md flex-col gap-6 pt-6">
         <div>
           <Link
-            href="/dashboard/get-help"
+            href="/dashboard/help"
             className="text-xs text-link hover:text-foreground"
           >
             ← Back to Get help

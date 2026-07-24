@@ -36,7 +36,7 @@ export async function escalateConversationAction(formData: FormData): Promise<vo
     title: draft.title,
     description: draft.description,
   })
-  redirect(`/dashboard/get-help/ticket?${params}`)
+  redirect(`/dashboard/help/ticket?${params}`)
 }
 
 export async function markConversationResolvedAction(

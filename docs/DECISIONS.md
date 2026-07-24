@@ -6,6 +6,29 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-24 — The Get help route is /dashboard/help, with a permanent redirect from the old path
+
+**Decided.** The end user help feature lives at `/dashboard/help` (and
+`/dashboard/help/ticket`). It was previously `/dashboard/get-help`. A permanent
+redirect in `next.config.ts` sends `/dashboard/get-help/:path*` to
+`/dashboard/help/:path*` so the old path keeps working. The feature's visible
+name stays "Get help"; only the route path changed.
+
+**Why.** The redesign begins here, and the route rename lands first so the
+design PRs that follow all target one stable path. `help` reads cleaner in the
+URL, matches how the nav and pages already speak ("Get help" the action, "help"
+the place), and drops the hyphen from the path. The redirect is permanent
+because the old path may already be bookmarked or linked, and a design reskin
+should not break a link someone saved.
+
+**Affects.** New links point at `/dashboard/help`. The eight internal
+references (layout nav, the two tickets page buttons, the incident detail
+create ticket href, the chat and tickets action redirects, and the two help
+page internal links) were updated in one move. Anything added later should use
+the new path; the redirect covers stragglers, not new code.
+
+---
+
 ## 2026-07-24 — Support chat is a workplace record, admin visible, and disclosed, superseding the personal privacy default
 
 **Decided.** Chat conversations and their messages are org visible workplace

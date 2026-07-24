@@ -84,7 +84,7 @@ export default async function DashboardLayout({
                 the product's primary ask (ruling 4), and accent means
                 primary action, never status. */}
             <Link
-              href="/dashboard/get-help"
+              href="/dashboard/help"
               className="rounded-button px-3 py-1.5 font-medium whitespace-nowrap text-accent-text transition-colors hover:bg-(--accent-hover-bg)"
             >
               Get help
