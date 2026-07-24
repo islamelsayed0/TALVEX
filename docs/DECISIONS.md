@@ -32,10 +32,15 @@ main is never briefly ahead of the database.
 **Affects.** The comparison lives in `scripts/check-migration-drift.mjs` as a
 pure function, unit tested in `tests/migration-drift.test.ts`, with git and psql
 supplying the real readings in CI. The job needs one repository secret,
-`SUPABASE_DB_URL`. Until that secret is set the job warns and passes, because
-the workflow passes `--allow-unconfigured`; **removing that flag once the secret
-exists is what arms the guard**, and until then this is documentation rather
-than enforcement.
+`SUPABASE_DB_URL`, set on 2026-07-24; the guard has been armed since, with no
+`--allow-unconfigured` escape hatch. A missing or broken secret now fails the
+job rather than warning, because a guard that quietly stops guarding is worse
+than no guard: it reads as "no drift" when it means "not checked".
+
+**Use the session pooler string, not the direct connection.** Direct connections
+(`db.<ref>.supabase.co`) are IPv6 only and GitHub Actions runners are IPv4 only,
+so the direct string fails to connect on every run. That failure looks different
+from a drift failure, which is the point: connection problems say so.
 
 ---
 

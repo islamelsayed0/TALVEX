@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 // importing it here keeps the comparison logic under test without a database.
 import {
   compareMigrationHistories,
+  connectionHint,
   versionsFromFileNames,
 } from '../scripts/check-migration-drift.mjs'
 
@@ -132,5 +133,33 @@ describe('compareMigrationHistories', () => {
     expect(report.ok).toBe(false)
     expect(report.unapplied).toEqual(['002'])
     expect(report.unknown).toEqual(['999'])
+  })
+})
+
+describe('connectionHint', () => {
+  // The first armed CI run failed exactly here: the secret held the direct
+  // connection string, psql resolved it to IPv6, and the runner is IPv4 only.
+  // The guard was right to fail; what it lacked was a way to say so.
+  it('names the IPv4/IPv6 trap when the direct connection host is used', () => {
+    const hint = connectionHint('db.rdfuzadtraxzrrthhnnp.supabase.co')
+    expect(hint).toMatch(/IPv6 only/)
+    expect(hint).toMatch(/SESSION POOLER/)
+  })
+
+  it('points at credentials, not the host, when the pooler is already in use', () => {
+    const hint = connectionHint('aws-0-us-east-1.pooler.supabase.com')
+    expect(hint).toMatch(/password or the username/)
+    expect(hint).not.toMatch(/IPv6/)
+  })
+
+  it('says nothing specific about a host it does not recognise', () => {
+    expect(connectionHint('postgres.internal.example.com')).toBeNull()
+  })
+
+  it('never leaks a password, because it is given a hostname and not a URL', () => {
+    // The guard rule for this helper: it takes a hostname. If a caller ever
+    // hands it a whole connection string, the string is not a hostname, so it
+    // matches no pattern and is not echoed back.
+    expect(connectionHint('postgresql://postgres:hunter2@host/db')).toBeNull()
   })
 })
