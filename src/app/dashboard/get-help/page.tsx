@@ -20,18 +20,28 @@ export default async function GetHelpPage({
   const asString = (v: string | string[] | undefined) =>
     typeof v === 'string' ? v : ''
 
+  // When the form is opened from an incident (Task 4), the incident id rides
+  // along in a hidden field so the new ticket links back. It is otherwise
+  // absent and the form behaves exactly as before.
+  const incidentId = asString(sp.incident_id)
+  const fromIncident = incidentId !== ''
+
   return (
     <main className="flex flex-1 flex-col items-center p-8">
       <div className="flex w-full max-w-md flex-col gap-6 pt-6">
         <div>
           <h1 className="text-title text-foreground">Get help</h1>
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            Tell us what is going on and the team takes it from there. Plain
-            words are perfect.
+            {fromIncident
+              ? 'This request starts from an incident. Edit anything below, then send it to the team.'
+              : 'Tell us what is going on and the team takes it from there. Plain words are perfect.'}
           </p>
         </div>
 
         <form action={createTicketAction} className="flex flex-col gap-5">
+          {fromIncident ? (
+            <input type="hidden" name="incident_id" value={incidentId} />
+          ) : null}
           <FormError message={asString(sp.error) || undefined} />
 
           <label className="flex flex-col gap-1.5">

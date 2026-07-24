@@ -1,10 +1,19 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { getActiveOrgViewer } from '@/lib/auth/org-viewer'
 import { getIncident, listIncidentEvents } from '@/lib/db/incidents'
-import type { IncidentEventType } from '@/lib/db/types'
-import { formatUtc } from '../../monitors/ui'
-import { elapsedSince, EVENT_COPY, IncidentBadge, incidentDuration } from '../ui'
+import { listTicketsForIncident } from '@/lib/db/tickets'
+import type { IncidentEventType, TicketStatus } from '@/lib/db/types'
+import { formatUtc, primaryButton } from '../../monitors/ui'
+import { TicketStatusBadge } from '../../tickets/ui'
+import {
+  elapsedSince,
+  EVENT_COPY,
+  IncidentBadge,
+  incidentDuration,
+  incidentTicketPrefill,
+} from '../ui'
 
 export const metadata = { title: 'Incident — Talvex' }
 
@@ -26,8 +35,30 @@ export default async function IncidentDetailPage({
   const incident = await getIncident(id)
   if (!incident) notFound()
 
-  const events = await listIncidentEvents(incident.id)
+  const [events, viewer, linkedTickets] = await Promise.all([
+    listIncidentEvents(incident.id),
+    getActiveOrgViewer(),
+    listTicketsForIncident(incident.id),
+  ])
   const open = incident.status === 'open'
+  const reopenCount = events.filter((e) => e.event_type === 'reopened').length
+
+  // The Create ticket button prefills the normal Get help form and carries the
+  // incident id so the new ticket links back (Task 4). Admin only, since
+  // ticket workflow is an admin concern; RLS still allows a same org link from
+  // anyone, so this button is presentation, not the security boundary.
+  const prefill = incidentTicketPrefill({
+    monitorName: incident.monitorName,
+    monitorUrl: incident.monitorUrl,
+    openedAt: incident.opened_at,
+    status: open ? 'open' : 'resolved',
+    reopenCount,
+  })
+  const createTicketHref = `/dashboard/get-help?${new URLSearchParams({
+    title: prefill.title,
+    description: prefill.description,
+    incident_id: incident.id,
+  })}`
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-8">
@@ -78,6 +109,45 @@ export default async function IncidentDetailPage({
           </dd>
         </div>
       </dl>
+
+      {viewer.isAdmin || linkedTickets.length > 0 ? (
+        <section className="max-w-2xl">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-foreground">Tickets</h2>
+            {viewer.isAdmin ? (
+              <Link href={createTicketHref} className={`${primaryButton} px-3 py-2`}>
+                Create ticket
+              </Link>
+            ) : null}
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {viewer.isAdmin
+              ? 'Open a ticket to track the work this outage needs. It stays linked here.'
+              : 'Tickets created from this incident.'}
+          </p>
+          {linkedTickets.length > 0 ? (
+            <ul className="mt-4 flex flex-col gap-2">
+              {linkedTickets.map((ticket) => (
+                <li key={ticket.id}>
+                  <Link
+                    href={`/dashboard/tickets/${ticket.id}`}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-button border border-border bg-card px-5 py-4 transition-colors hover:border-(--ghost-border-hover)"
+                  >
+                    <span className="text-sm font-medium text-card-foreground">
+                      {ticket.title}
+                    </span>
+                    <TicketStatusBadge status={ticket.status as TicketStatus} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm text-quiet">
+              No tickets yet from this incident.
+            </p>
+          )}
+        </section>
+      ) : null}
 
       <section className="max-w-2xl">
         <h2 className="text-base font-semibold text-foreground">Timeline</h2>

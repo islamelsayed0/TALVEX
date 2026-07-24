@@ -1,5 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 
+import { getActiveOrgViewer, type OrgViewer } from '@/lib/auth/org-viewer'
 import { createOrgScopedClient } from './client'
 import { OrgNotSyncedError } from './monitors'
 import type { Ticket, TicketComment, TicketEvent, TicketStatus } from './types'
@@ -40,13 +41,17 @@ export function isTicketStatus(value: string): value is TicketStatus {
 export type TicketInput = {
   title: string
   description: string
+  /**
+   * The incident this ticket is created from, when it is (Task 4). Optional
+   * and NULL for ordinary tickets. RLS pins it to an incident in the same
+   * org, so a value from another org is refused at insert.
+   */
+  incidentId?: string | null
 }
 
-export type TicketViewer = {
-  userId: string
-  /** From org_members.role, the same column RLS reads; never the token claim. */
-  isAdmin: boolean
-}
+/** @deprecated Use OrgViewer from @/lib/auth/org-viewer. Kept as an alias so
+ * existing ticket screens need no churn. */
+export type TicketViewer = OrgViewer
 
 /** One trail entry: a user comment or a system event, ready to interleave. */
 export type TrailItem =
@@ -127,23 +132,7 @@ export function interleaveTrail(
  * query regardless.
  */
 export async function getTicketViewer(): Promise<TicketViewer> {
-  const { client } = await createOrgScopedClient()
-  const { userId } = await auth()
-  if (!userId) {
-    // Unreachable behind Clerk middleware; kept as a loud failure like
-    // MissingActiveOrgError rather than a silent non-admin default.
-    throw new Error('No signed in user on this session.')
-  }
-  const { data, error } = await client
-    .from('org_members')
-    .select('role')
-    .eq('clerk_user_id', userId)
-    .maybeSingle()
-  if (error) throw error
-  return {
-    userId,
-    isAdmin: data?.role === 'admin' || data?.role === 'owner',
-  }
+  return getActiveOrgViewer()
 }
 
 /**
@@ -220,11 +209,40 @@ export async function createTicket(input: TicketInput): Promise<Ticket> {
   if (orgError) throw orgError
   if (!org) throw new OrgNotSyncedError()
 
+  // incident_id is passed through only when present. RLS refuses a value that
+  // does not belong to this org, so a bad or forged id fails the insert
+  // rather than linking to a stranger's incident.
+  const incidentId = input.incidentId?.trim() || null
+
   const { data, error } = await client
     .from('tickets')
-    .insert({ ...row, org_id: org.id, submitted_by: userId })
+    .insert({
+      ...row,
+      org_id: org.id,
+      submitted_by: userId,
+      incident_id: incidentId,
+    })
     .select()
     .single()
+  if (error) throw error
+  return data
+}
+
+/**
+ * Tickets created from one incident, for the incident detail page. RLS scopes
+ * the result to what this session may see: a member gets the linked tickets
+ * they submitted, an admin gets all of them. Newest first, so the most recent
+ * response to the outage is at the top.
+ */
+export async function listTicketsForIncident(
+  incidentId: string,
+): Promise<Ticket[]> {
+  const { client } = await createOrgScopedClient()
+  const { data, error } = await client
+    .from('tickets')
+    .select()
+    .eq('incident_id', incidentId)
+    .order('created_at', { ascending: false })
   if (error) throw error
   return data
 }

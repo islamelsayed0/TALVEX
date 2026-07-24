@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { UNKNOWN_MEMBER, resolveUserNames } from '@/lib/auth/user-names'
+import { getIncident } from '@/lib/db/incidents'
 import {
   getTicket,
   getTicketViewer,
@@ -12,6 +13,7 @@ import {
 } from '@/lib/db/tickets'
 import type { TicketStatus } from '@/lib/db/types'
 import { formatUtc, ghostButton, primaryButton } from '../../monitors/ui'
+import { IncidentBadge } from '../../incidents/ui'
 import { addTicketCommentAction, updateTicketStatusAction } from '../actions'
 import { FormError, STATUS_LABEL, TicketStatusBadge, ticketFieldClass } from '../ui'
 
@@ -56,6 +58,14 @@ export default async function TicketDetailPage({
   const nameOf = (userId: string | null) =>
     userId === null ? 'Talvex' : (names.get(userId) ?? UNKNOWN_MEMBER)
 
+  // The incident this ticket was created from, if any (Task 4). Status is read
+  // live from the incidents table on every render, so the card reflects the
+  // incident's current state; the two lifecycles stay independent and neither
+  // one drives the other.
+  const incident = ticket.incident_id
+    ? await getIncident(ticket.incident_id)
+    : null
+
   const trail = interleaveTrail(comments, events)
   const status = ticket.status as TicketStatus
   const closed = status === 'closed'
@@ -93,6 +103,24 @@ export default async function TicketDetailPage({
         </p>
       </section>
 
+      {incident ? (
+        <Link
+          href={`/dashboard/incidents/${incident.id}`}
+          className="flex max-w-2xl flex-wrap items-center justify-between gap-3 rounded-button border border-border bg-card px-5 py-4 transition-colors hover:border-(--ghost-border-hover)"
+        >
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-quiet">From incident</span>
+            <span className="text-sm font-medium text-card-foreground">
+              {incident.monitorName}
+            </span>
+            <span className="text-xs text-quiet">
+              Opened {formatUtc(incident.opened_at)}
+            </span>
+          </div>
+          <IncidentBadge status={incident.status === 'open' ? 'open' : 'resolved'} />
+        </Link>
+      ) : null}
+
       {viewer.isAdmin && !closed ? (
         <StatusControl ticketId={ticket.id} current={status} />
       ) : null}
@@ -128,7 +156,12 @@ export default async function TicketDetailPage({
                 className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-2 py-1"
               >
                 <span className="text-sm text-muted-foreground">
-                  {item.event.detail ?? item.event.event_type}
+                  {/* The created_from_incident detail carries the raw incident
+                      id for the record; the reference card above is the human
+                      link, so the trail reads plainly here. */}
+                  {item.event.event_type === 'created_from_incident'
+                    ? 'Created from an incident'
+                    : (item.event.detail ?? item.event.event_type)}
                 </span>
                 <span className="text-xs text-quiet">
                   {nameOf(item.event.actor)}, {formatUtc(item.event.occurred_at)}

@@ -1,4 +1,5 @@
-import type { IncidentEventType } from '@/lib/db/types'
+import type { IncidentEventType, IncidentStatus } from '@/lib/db/types'
+import { formatUtc } from '../monitors/ui'
 
 /**
  * Shared server rendered pieces for the incidents screens. Same rules as
@@ -66,4 +67,40 @@ export const EVENT_COPY: Record<
   reopened: { label: 'Down again', tone: 'down' },
   recovered: { label: 'Monitor recovered', tone: 'up' },
   resolved: { label: 'Incident resolved', tone: 'up' },
+}
+
+/**
+ * The prefill for a ticket created from an incident (Task 4). Calm, plain
+ * language summarizing the outage; the admin edits both fields before
+ * sending, so this is a starting point, not a fixed record. No hyphens, per
+ * the copy rule. The real link lives in tickets.incident_id, not in this
+ * prose; the note here only tells the reader where the ticket came from.
+ */
+export function incidentTicketPrefill(incident: {
+  monitorName: string
+  monitorUrl: string
+  openedAt: string
+  status: IncidentStatus
+  reopenCount: number
+}): { title: string; description: string } {
+  const lines = [
+    'Talvex opened an incident on this monitor and this ticket was created from it.',
+    '',
+    `Monitor: ${incident.monitorName}`,
+  ]
+  if (incident.monitorUrl) lines.push(`URL: ${incident.monitorUrl}`)
+  lines.push(
+    `Opened: ${formatUtc(incident.openedAt)}`,
+    `Current status: ${incident.status === 'open' ? 'Open' : 'Resolved'}`,
+  )
+  if (incident.reopenCount > 0) {
+    lines.push(
+      `Reopened: ${incident.reopenCount} ${incident.reopenCount === 1 ? 'time' : 'times'}`,
+    )
+  }
+  lines.push('', 'You can edit anything above before sending.')
+  return {
+    title: `Outage: ${incident.monitorName}`,
+    description: lines.join('\n'),
+  }
 }
