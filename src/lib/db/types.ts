@@ -16,6 +16,136 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      api_key_events: {
+        Row: {
+          actor: string
+          event_type: string
+          id: string
+          key_last_four: string
+          occurred_at: string
+          org_id: string
+          provider: string
+        }
+        Insert: {
+          actor: string
+          event_type: string
+          id?: string
+          key_last_four: string
+          occurred_at?: string
+          org_id: string
+          provider: string
+        }
+        Update: {
+          actor?: string
+          event_type?: string
+          id?: string
+          key_last_four?: string
+          occurred_at?: string
+          org_id?: string
+          provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_key_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_conversations: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          org_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          org_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          org_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          input_tokens: number | null
+          model: string | null
+          org_id: string
+          output_tokens: number | null
+          provider: string | null
+          role: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          org_id: string
+          output_tokens?: number | null
+          provider?: string | null
+          role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          org_id?: string
+          output_tokens?: number | null
+          provider?: string | null
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incident_events: {
         Row: {
           check_id: string | null
@@ -262,6 +392,47 @@ export type Database = {
           },
         ]
       }
+      org_api_keys: {
+        Row: {
+          added_by: string
+          created_at: string
+          encrypted_key: string
+          id: string
+          key_last_four: string
+          org_id: string
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          added_by: string
+          created_at?: string
+          encrypted_key: string
+          id?: string
+          key_last_four: string
+          org_id: string
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          added_by?: string
+          created_at?: string
+          encrypted_key?: string
+          id?: string
+          key_last_four?: string
+          org_id?: string
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_api_keys_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_members: {
         Row: {
           clerk_user_id: string
@@ -402,6 +573,7 @@ export type Database = {
       tickets: {
         Row: {
           closed_at: string | null
+          conversation_id: string | null
           created_at: string
           description: string
           id: string
@@ -415,6 +587,7 @@ export type Database = {
         }
         Insert: {
           closed_at?: string | null
+          conversation_id?: string | null
           created_at?: string
           description: string
           id?: string
@@ -428,6 +601,7 @@ export type Database = {
         }
         Update: {
           closed_at?: string | null
+          conversation_id?: string | null
           created_at?: string
           description?: string
           id?: string
@@ -440,6 +614,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tickets_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tickets_incident_id_fkey"
             columns: ["incident_id"]
@@ -465,6 +646,8 @@ export type Database = {
       clerk_is_org_admin: { Args: never; Returns: boolean }
       clerk_user_id: { Args: never; Returns: string }
       is_org_admin: { Args: { p_org_id: string }; Returns: boolean }
+      org_api_key_providers: { Args: never; Returns: string[] }
+      org_has_api_key: { Args: never; Returns: boolean }
       upsert_monitor_daily_rollups: {
         Args: { p_day: string }
         Returns: undefined
@@ -626,3 +809,14 @@ export type TicketEventType =
   | "status_changed"
   | "auto_closed"
   | "created_from_incident"
+  | "created_from_chat"
+// BYOK vault and AI support chat (Task 5).
+export type OrgApiKey = Tables<"org_api_keys">
+export type ApiKeyEvent = Tables<"api_key_events">
+export type ApiKeyEventType = "added" | "replaced" | "deleted"
+/** The AI providers an org may bring a key for. One active per provider. */
+export type AiProvider = "anthropic" | "openai" | "google"
+export type ChatConversation = Tables<"chat_conversations">
+export type ChatMessage = Tables<"chat_messages">
+export type ChatConversationStatus = "open" | "resolved" | "escalated"
+export type ChatRole = "user" | "assistant"

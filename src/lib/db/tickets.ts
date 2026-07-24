@@ -47,6 +47,14 @@ export type TicketInput = {
    * org, so a value from another org is refused at insert.
    */
   incidentId?: string | null
+  /**
+   * The chat conversation this ticket is escalated from, when it is (Task 5).
+   * Optional and NULL for ordinary tickets. RLS pins it to a conversation the
+   * caller can see in the same org, exactly like incidentId. A ticket carries
+   * at most one origin (the tickets_single_origin check), so this and
+   * incidentId are never both set.
+   */
+  conversationId?: string | null
 }
 
 /** @deprecated Use OrgViewer from @/lib/auth/org-viewer. Kept as an alias so
@@ -209,10 +217,12 @@ export async function createTicket(input: TicketInput): Promise<Ticket> {
   if (orgError) throw orgError
   if (!org) throw new OrgNotSyncedError()
 
-  // incident_id is passed through only when present. RLS refuses a value that
-  // does not belong to this org, so a bad or forged id fails the insert
-  // rather than linking to a stranger's incident.
+  // incident_id and conversation_id are passed through only when present. RLS
+  // refuses a value that does not belong to this org, so a bad or forged id
+  // fails the insert rather than linking to a stranger's incident or chat. A
+  // ticket carries at most one origin (the tickets_single_origin check).
   const incidentId = input.incidentId?.trim() || null
+  const conversationId = input.conversationId?.trim() || null
 
   const { data, error } = await client
     .from('tickets')
@@ -221,9 +231,44 @@ export async function createTicket(input: TicketInput): Promise<Ticket> {
       org_id: org.id,
       submitted_by: userId,
       incident_id: incidentId,
+      conversation_id: conversationId,
     })
     .select()
     .single()
+  if (error) throw error
+
+  // A ticket escalated from a chat marks that conversation escalated, so the
+  // conversation shows "your IT team has this now" and takes no more messages.
+  // The caller is the conversation's creator, so this update passes RLS; if it
+  // ever matches zero rows the ticket still stands.
+  if (conversationId) {
+    await client
+      .from('chat_conversations')
+      .update({ status: 'escalated' })
+      .eq('id', conversationId)
+  }
+
+  return data
+}
+
+/**
+ * The ticket a conversation was escalated into, or null. RLS scopes it to what
+ * this session may see: the member who escalated sees their own ticket, an
+ * admin sees it too. Used by the conversation detail to link through after
+ * escalation, and there is at most one because an escalated conversation takes
+ * no further messages and cannot escalate twice.
+ */
+export async function getTicketForConversation(
+  conversationId: string,
+): Promise<Ticket | null> {
+  const { client } = await createOrgScopedClient()
+  const { data, error } = await client
+    .from('tickets')
+    .select()
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
   if (error) throw error
   return data
 }

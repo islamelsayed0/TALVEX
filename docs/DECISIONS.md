@@ -6,6 +6,75 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-24 — Support chat is a workplace record, admin visible, and disclosed, superseding the personal privacy default
+
+**Decided.** Chat conversations and their messages are org visible workplace
+records, not private to the person who wrote them. Org admins (per
+`org_members.role`) can read every conversation in their org; a member reads
+only their own. This supersedes the personal privacy default considered during
+design (that a chat would be private to its author). The chat surface carries
+one quiet, honest line stating it: "Conversations are visible to your IT team."
+
+**Why.** The chat is first line IT support inside a workplace, not a personal
+assistant. The team that fixes the problem needs to see what was asked and what
+the assistant advised, the same way they see tickets. Hiding transcripts from
+admins would break escalation (the ticket's reference card links through to the
+full transcript as the source of truth) and would be dishonest by omission. The
+right answer is disclosure, not secrecy: tell people plainly, once, on the
+surface, and make the record useful.
+
+**How it is encoded.** `chat_conversations` select policy is exactly the ticket
+shape: `created_by = clerk_user_id() or is_org_admin(org_id)`, org scoped.
+`chat_messages` ride that visibility (`conversation_id in (select id from
+chat_conversations)`), so there is one rule, not two copies. Proven in
+`tests/isolation/chat-isolation.test.ts`: admin of A reads member conversations,
+member One cannot read member Two's, org B reads nothing, both claim shapes.
+
+**Affects.** Any future analytics or reporting over conversations inherits admin
+visibility. If a genuinely private support channel is ever wanted, it is a new
+surface with its own policy, not a change to this one. The disclosure line is
+load bearing for the honesty of the model and must not be removed.
+
+---
+
+## 2026-07-24 — BYOK only for MVP; keys encrypted at the application layer, ciphertext never leaves the server
+
+**Decided.** AI support chat is bring your own key only for the MVP. Each org
+adds its own provider key (Anthropic, OpenAI, or Google); there is no managed
+Talvex key serving customers and no managed tier. An org with no key sees a
+calm explainer and only the ticket path in Get help. The managed tier arrives
+later with usage metering (BRD F11), not now.
+
+**Why.** Managed AI means Talvex pays for inference and must meter and bill it;
+that is a whole billing surface (BRD F13) not in Phase 1. BYOK removes the
+margin risk entirely and is the product's differentiator (BRD section 7). Cheap
+default models per provider are hardcoded this task (`claude-haiku-4-5`,
+`gpt-4o-mini`, `gemini-2.0-flash-lite`); per org model choice is future work.
+
+**How the key is protected (the design a reviewer can check against the code).**
+The plaintext key is encrypted with AES 256 GCM in `src/lib/chat/encryption.ts`
+BEFORE it reaches Postgres, using `API_KEY_ENCRYPTION_SECRET` (32 bytes, server
+env only, documented by name in `.env.example`, never in the repo or database).
+The `org_api_keys` table stores ciphertext, provider, and the last four
+plaintext characters for display. The `encrypted_key` column is withheld from
+the authenticated SELECT grant, so no user session, not even an admin's, can
+read the ciphertext through RLS; only the service role can, and it decrypts in
+request scope at the moment of a provider call, never caching or storing the
+plaintext. Key management is admin only at the database (`is_org_admin()`, the
+column not the claim), and every action writes an append only trail via a
+trigger, the `ticket_events` pattern. Nothing key shaped is ever logged: not
+the key, ciphertext, headers, or request/response bodies, and provider errors
+scrub to a status based remediation. GCM is authenticated, so a tampered
+ciphertext fails rather than decrypting to garbage.
+
+**Affects.** Rotating `API_KEY_ENCRYPTION_SECRET` invalidates every stored key
+(they must be re added); a future rotation scheme would re encrypt under a new
+secret, which the `v1.` format prefix leaves room for. The managed tier, when
+it lands, adds a platform key path and metering but does not change this
+vault. Anything that ever needs to read a provider key must go through the
+service role, `src/lib/chat/key-vault.ts`, never a user session. Proven in
+`tests/isolation/api-key-isolation.test.ts` and `tests/encryption.test.ts`.
+
 ## 2026-07-23 — Member linking is allowed at the database; the Create ticket button is admin only in the UI only
 
 **Decided.** The incident to ticket bridge (Phase 1 Task 4) adds a nullable

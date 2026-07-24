@@ -25,6 +25,7 @@ function ticket(partial: Partial<Ticket> & { id: string }): Ticket {
     resolved_at: null,
     closed_at: null,
     incident_id: null,
+    conversation_id: null,
     ...partial,
   }
 }

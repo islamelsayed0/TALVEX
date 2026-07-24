@@ -289,5 +289,77 @@ If steps 1 through 6 and 8 pass, the Phase 0 definition of done is met for a
 visitor who starts at the home page. Step 7 is what proves the Task 4 webhook
 and the Task 5 isolation work are wired to something real in production.
 
+---
+
+# Phase 1 Task 5 — AI chat deploy, and two production faults it surfaced
+
+Operator: Claude Code, under explicit grant from Islam Elsayed on 2026-07-24,
+while debugging why the chat and API keys pages 500'd. Timestamps omitted;
+recorded in order.
+
+## Fault 1 — the live database was three migrations behind merged code
+
+Both the chat and settings pages threw a raw Postgres error (`{code, details,
+hint, message}`) during server render. Cause: the remote project
+(`rdfuzadtraxzrrthhnnp`, which backs local dev, preview, and prod, per the
+2026-07-23 one project decision) was at migration **005**. Migrations **006**
+(the Task 4 incident to ticket bridge), **007** (the BYOK vault), and **008**
+(chat) had been applied only to the ephemeral local isolation stack, never to
+the remote. So the deployed app queried tables and functions that did not
+exist. The Task 4 incident to ticket bridge was therefore also silently broken
+in production the whole time, unhit only because nobody created a ticket from
+an incident.
+
+Recovery: applied 006 via the Supabase MCP `apply_migration`; 007 and 008 via
+the Supabase SQL editor (the automation classifier blocked the larger MCP
+writes, correctly, since they target the prod bound database). Verified the
+schema reached 008: all four tables present, `tickets.conversation_id` present,
+both SECURITY DEFINER helpers present, RLS enabled on all four, 6 new policies.
+
+**Standing consequence (migration drift):** the remote `schema_migrations`
+history and the local migration files have drifted. Remote records 001 to 006
+with re stamped timestamps for 001 to 004 and 006, and does NOT record 007 or
+008 at all (they went in through the SQL editor, which does not touch
+`schema_migrations`). `supabase db push` is broken as a result: it would try to
+re apply 001 to 004 (version mismatch) and would not know 007 and 008 are
+already live. Until repaired, migrations reach this project by hand. Promoted
+to a housekeeping task in docs/future_update.md (migration history repair plus
+the still pending 001/002 GRANTs backfill). This is the second time in two days
+merged code assumed schema the live database did not have; the repair is now
+the priority housekeeping PR, not parking lot.
+
+## Fault 2 — org_members had zero rows: membership sync never worked in prod
+
+With the pages loading, the API keys surface showed "Key management is
+available to admins" to the org owner. `is_org_admin()` reads
+`org_members.role` (the database column, not the token claim, by Task 3 design),
+and `public.org_members` had **zero rows ever**, for any org. So every admin
+gated feature since tickets merged (ticket status changes, and now key
+management) has been non functional in production, unnoticed only because the
+founding user was testing alone and every non admin path worked. Deploy Log
+step 7 above is exactly the check that would have caught this and was not
+completed.
+
+Cause: at org creation time (2026-07-23 17:56 UTC) the Clerk webhook endpoint
+was subscribed to `organization.*` but not `organizationMembership.*`, so
+`organization.created` synced the org while the creator's
+`organizationMembership.created` was never delivered. The membership events are
+subscribed now (verified in the Clerk dashboard), so future memberships and role
+changes sync through the existing, correct handler
+(src/lib/db/clerk-sync.ts); Clerk does not replay the original event, so the
+existing membership needed a one time backfill.
+
+Recovery: **org_members backfilled by hand for the founding user**
+(`user_3GpHQamrYPUh8ZB8fCUiYhHfNV3`) as `admin` in org
+`org_3GpHSviwFRQ9T2PRfDAtrMevjRd`; **membership events were unsubscribed at org
+creation time; future syncs verified subscribed.** The user id was recovered
+from the one existing ticket's `submitted_by` (ticket creation does not require
+a member row, which is why that path worked). No code change: the handler was
+always correct; only the subscription and the one missing row were wrong.
+
+**Watch item:** confirm future membership sync works before relying on it. When
+a second member is added, check Clerk → Webhooks → Message Attempts for a 200 on
+`organizationMembership.created`, and that a matching `org_members` row appears.
+
 
 

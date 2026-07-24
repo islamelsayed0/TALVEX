@@ -13,6 +13,13 @@ import type { Database } from './types'
  *   - src/app/api/cron/check-monitors/route.ts  (the cron sweep; cron
  *     invocations carry no user session either, and it must write check
  *     results and rollups across every org in one pass)
+ *   - src/lib/chat/key-vault.ts  (reads and decrypts an org's provider key at
+ *     the moment of a chat provider call; the ciphertext column is withheld
+ *     from the authenticated SELECT grant, so only the service role can read
+ *     it, and the plaintext lives only in that request scope, ruling 2/3)
+ *   - src/lib/chat/engine.ts  (writes chat_messages; those rows are system
+ *     written like monitor_checks, so authenticated has no insert verb and the
+ *     server is the only writer, migration 008)
  *   - future cron route handlers and migration tooling, added to this list
  *     when they exist
  *
