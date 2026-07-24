@@ -20,13 +20,13 @@ The prototypes are single-file HTML components with inline styles and a small lo
 ## Fidelity
 **Mid-to-high fidelity.** Layout, hierarchy, spacing, copy, states and interaction model are intentional and should be followed closely. Exact pixel values are given below and are real (extracted from the prototypes), but they were authored to match the **existing token values already in `src/app/globals.css`** — so implement with those tokens, not hardcoded hex.
 
-Two visual variants are included; **`Talvex Dashboard Flat.dc.html` is the chosen direction.**
+Two visual variants are included; **`Talvex_Dashboard_Flat_dc.html` is the chosen direction.**
 
 | File | Variant | Status |
 | --- | --- | --- |
-| `Talvex Dashboard Flat.dc.html` | Flat: solid near-black cards, hairline borders. Chrome (nav pill, AI button) keeps glass. | **Build this one** |
-| `Talvex Dashboard.dc.html` | Glass: translucent + blurred cards with gradient edges. | Reference / alternate |
-| `Talvex Help.dc.html` | End-user Help app, imported by both dashboards for the member view. | Build |
+| `Talvex_Dashboard_Flat_dc.html` | Flat: solid near-black cards, hairline borders. Chrome (nav pill, AI button) keeps glass. | **Build this one** |
+| `Talvex_Dashboard_dc.html` | Glass: translucent + blurred cards with gradient edges. | Reference / alternate |
+| `Talvex_Help_dc.html` | End-user Help app, imported by both dashboards for the member view. | Build |
 
 Reason for choosing Flat: universal glass on every surface started to read as templated, and it required new utilities. Flat is `bg-card` + `border` you already have, and it lets the near-black surface do the work.
 
@@ -326,9 +326,9 @@ Ship one feature per PR, each with a test. **Do not modify tenant-isolation test
 ## Files in this bundle
 | File | What it is |
 | --- | --- |
-| `Talvex Dashboard Flat.dc.html` | **Primary reference.** Admin dashboard, flat variant, role-aware (imports the Help app). |
-| `Talvex Dashboard.dc.html` | Glass variant of the same screens. Alternate. |
-| `Talvex Help.dc.html` | End-user Help app. Imported by the dashboards for the member view. |
+| `Talvex_Dashboard_Flat_dc.html` | **Primary reference.** Admin dashboard, flat variant, role-aware (imports the Help app). |
+| `Talvex_Dashboard_dc.html` | Glass variant of the same screens. Alternate. |
+| `Talvex_Help_dc.html` | End-user Help app. Imported by the dashboards for the member view. |
 | `support.js` | Runtime for the prototype format. **Not for production** — needed only to open the HTML files locally. |
 
 To view: open either dashboard file in a browser. Flip the `role` prop between `admin` and `member` to see both personas.

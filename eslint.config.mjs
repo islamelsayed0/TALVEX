@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The design handoff bundle is reference material: prototype HTML plus a
+    // generated prototype runtime (support.js). It is not our source and must
+    // never be linted or built.
+    "docs/design/handoff/**",
   ]),
 ]);
 
