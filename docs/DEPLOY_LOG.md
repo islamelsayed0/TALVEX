@@ -363,3 +363,49 @@ a second member is added, check Clerk → Webhooks → Message Attempts for a 20
 
 
 
+
+---
+
+## 2026-07-24 — Migration history repair on the shared project
+
+Not a deploy. A production database change, recorded here because it touched
+the one shared project (`rdfuzadtraxzrrthhnnp`) outside a normal deploy, and
+because the state it fixed is what caused the two faults above.
+
+Operator: Claude Code, under explicit grant from Islam Elsayed on 2026-07-24.
+Scope granted: realign the remote migration history so `supabase db push`
+works again. Nothing else on the remote was authorized and nothing else was
+touched.
+
+**State before.** `supabase_migrations.schema_migrations` recorded six
+migrations, five of them under versions that matched no file in the repository
+(001 to 004 and 006 carried re stamped timestamps), and did not record 007 or
+008 at all, which had been applied by hand in the SQL editor. Local files ran
+`20260721190000_001` through `20260724100100_008`.
+
+**Verified before touching anything.** That the schema itself was genuinely at
+008, so stamping 007 and 008 applied would be recording a fact rather than
+asserting one: both tables from 007 and both from 008 present, their policies
+present (`org_api_keys` 1, `api_key_events` 1, `chat_conversations` 3,
+`chat_messages` 1), every function present, `tickets.conversation_id` and the
+`tickets_single_origin` constraint present, and zero tables in `public` with
+RLS disabled. The pre repair contents of the history table were captured
+verbatim first, with a rollback script written against them.
+
+**What ran.** One transaction: five `update`s moving the drifted versions onto
+their local file versions, and one `insert` recording 007 and 008 with NULL
+`statements`, which is exactly how `supabase migration repair --status applied`
+records a migration whose text it does not have. `update` rather than delete
+and reinsert, so the recorded `statements` of the five drifted rows survived.
+005 already carried its local version and was not touched.
+
+**State after.** Eight rows, eight files, versions and names matching one for
+one. Nothing outside `supabase_migrations` was read or written; no schema, no
+policy, no tenant row changed.
+
+**What this unblocks.** `supabase db push` is usable again, and the SQL editor
+dance is retired. Migration 009 (the 001/002 GRANTs backfill) is deliberately
+NOT applied here: it ships in the same pull request as this log entry and is
+not merged yet. Apply it to the shared project before merging that PR, so main
+is never ahead of the database, which is precisely what the new
+`migration-drift` CI job now checks.

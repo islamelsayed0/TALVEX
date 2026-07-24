@@ -133,6 +133,58 @@ jobs:
           # It lets gitleaks write its findings onto the PR.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # ===========================================================
+  # JOB 3: migration-drift
+  # Is the shared Supabase project actually running the
+  # migrations we already merged?
+  #
+  # This job exists because of two production faults in two days
+  # (docs/DEPLOY_LOG.md, Phase 1 Task 5): merged code assumed
+  # schema the live database did not have, and the first symptom
+  # both times was a 500 in front of a user. A migration file is
+  # a promise; this job checks the promise was kept.
+  #
+  # What it does NOT do: fail a PR for the migration that PR is
+  # adding. That one has not merged yet, so it is reported and
+  # allowed. Only migrations already on the base branch are
+  # treated as promises, which is what makes this catchable
+  # before merge instead of after.
+  # ===========================================================
+  migration-drift:
+    runs-on: ubuntu-latest
+
+    steps:
+      # fetch-depth 0 because the script reads the migration files
+      # as they exist on the BASE branch, not just in this checkout.
+      # A shallow clone has no base branch to read.
+      - name: Get the code with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # psql is preinstalled on ubuntu-latest. Fail early and clearly
+      # if that ever stops being true, rather than deep inside the script.
+      - name: Check psql is available
+        run: psql --version
+
+      - name: Check merged migrations are applied
+        env:
+          # The Supabase connection string for the shared project. Set it once:
+          #   gh secret set SUPABASE_DB_URL
+          # Until it exists, the step below warns and passes because of
+          # --allow-unconfigured. REMOVE that flag once the secret is set;
+          # the guard is only real when a missing secret is a failure.
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          # Empty on a push to main, which is what we want there: with no base
+          # ref, every migration in the checkout is held to the merged standard.
+          MIGRATION_GUARD_BASE_REF: ${{ github.base_ref && format('origin/{0}', github.base_ref) || '' }}
+        run: node scripts/check-migration-drift.mjs --allow-unconfigured
+
 # =============================================================
 # WHAT WE WILL ADD LATER (not yet, on purpose):
 #
