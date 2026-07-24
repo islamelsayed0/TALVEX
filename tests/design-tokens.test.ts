@@ -171,29 +171,54 @@ describe.each([
 })
 
 describe('reserved colors', () => {
-  // The status tokens (added with Phase 1 monitors) are the ONE sanctioned
-  // home for green, amber, and red: status meaning, nothing else. Their hex
-  // values are collected here and exempted from the neutral-or-blue rule;
-  // any other green/amber/red hex in globals.css still fails.
-  const statusHexes = new Set(
-    [...css.matchAll(/--status-[\w-]+:\s*(#[0-9a-f]{6})\b/gi)].map((m) =>
-      m[1].toLowerCase(),
-    ),
-  )
+  // Green, amber, and red are reserved for status meaning. TWO families of
+  // tokens may legitimately carry them, and both are sanctioned here BY NAME,
+  // on purpose, not by slipping past the scan:
+  //   --status-*  the base status colors (green up, red down, amber pending)
+  //   --wash-*    the translucent fills behind status icons and chips, derived
+  //               from the status colors, so necessarily green and red too
+  // Every OTHER color literal in globals.css must be neutral (warm gray) or the
+  // accent blue. The scan reads rgba as well as hex, so a colored value cannot
+  // hide behind the alpha syntax: that would make rgba the known way past the
+  // guard. Widening the scan and naming the exceptions keeps it honest.
 
-  it('outside the status tokens, no green, amber, or red appears', () => {
-    // Every other hex token in the file must be neutral (warm gray scale) or
-    // the accent blue family: blue channel dominant, or near equal channels.
-    for (const m of css.matchAll(/#([0-9a-f]{6})\b/gi)) {
-      if (statusHexes.has(`#${m[1].toLowerCase()}`)) continue
-      const n = parseInt(m[1], 16)
-      const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-      const spread = Math.max(r, g, b) - Math.min(r, g, b)
+  const COLOR_RE = /#[0-9a-f]{6}\b|rgba?\([^)]*\)/gi
+
+  /** Channels of a hex or rgb/rgba literal, or null if it is not a color. */
+  function channelsOf(literal: string): { r: number; g: number; b: number } | null {
+    const hex = literal.match(/^#([0-9a-f]{6})$/i)
+    if (hex) {
+      const n = parseInt(hex[1], 16)
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 }
+    }
+    const rgb = literal.match(
+      /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*[\d.]+\s*)?\)$/i,
+    )
+    if (rgb) return { r: Number(rgb[1]), g: Number(rgb[2]), b: Number(rgb[3]) }
+    return null
+  }
+  const key = (c: { r: number; g: number; b: number }) => `${c.r}-${c.g}-${c.b}`
+
+  // The sanctioned exceptions, collected from the --status-* and --wash-*
+  // declarations themselves, so the exemption is tied to those names.
+  const sanctioned = new Set<string>()
+  for (const m of css.matchAll(/--(?:status|wash)-[\w-]+:\s*([^;]+);/gi)) {
+    const lit = m[1].match(COLOR_RE)?.[0]
+    const ch = lit ? channelsOf(lit) : null
+    if (ch) sanctioned.add(key(ch))
+  }
+
+  it('outside the status and wash tokens, no green, amber, or red appears', () => {
+    for (const m of css.matchAll(COLOR_RE)) {
+      const ch = channelsOf(m[0])
+      if (!ch) continue
+      if (sanctioned.has(key(ch))) continue
+      const spread = Math.max(ch.r, ch.g, ch.b) - Math.min(ch.r, ch.g, ch.b)
       const isNeutral = spread <= 24
-      const isBlue = b > r && b > g
+      const isBlue = ch.b > ch.r && ch.b > ch.g
       expect(
         isNeutral || isBlue,
-        `#${m[1]} is neither neutral nor accent blue`,
+        `${m[0]} is neither neutral nor accent blue`,
       ).toBe(true)
     }
   })

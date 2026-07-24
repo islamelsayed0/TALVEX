@@ -29,10 +29,16 @@ rather than implemented against.
 
 **Affects.** Adding or changing a color or surface token means providing both
 theme values; adding a text token means adding its pair to the AA test so both
-themes are guarded. New washes are kept as rgba, not hex, so the reserved
-color rule in the tokens test does not flag their green and red tints, which
-carry status meaning. Naming stays semantic; see the tokens in
+themes are guarded. Naming stays semantic; see the tokens in
 `src/app/globals.css`.
+
+**Status washes are a sanctioned exception to the reserved color rule.** The
+fills `--wash-up`, `--wash-down`, and `--wash-accent` are translucent tints
+derived from the status colors, so they are green and red on purpose. They stay
+rgba because a wash needs alpha; that is the correct value format, not a way
+around the guard. The tokens test now scans rgba as well as hex and permits
+these tokens by name, so a colored value can no longer hide behind the alpha
+syntax. The guard came out stricter, not quieter.
 
 ---
 
