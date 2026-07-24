@@ -7,6 +7,60 @@ is not starting cold. Promote an item into a real task when its phase comes.
 
 ---
 
+## Chat: let the assistant see the org's live Talvex data (tool use)
+
+**What.** Today the support assistant is stateless about the tenant: it cannot
+see this org's monitors, incidents, tickets, devices, or any live Talvex data,
+and its system prompt makes it say so plainly and point the user to the right
+dashboard page or offer to escalate. The enhancement is to give the assistant
+read only tool access over the org's own data, scoped by the same RLS the app
+uses, so it can answer "is the mail server down?" or "what is the status of my
+ticket?" directly instead of deflecting.
+
+**Why not now.** Tool use over tenant data is a real security surface: every
+tool call must run under the caller's RLS (or a tightly scoped equivalent), must
+never cross the org boundary, and must never let a prompt injection in a user
+message pull data the user could not otherwise see. That is its own design and
+isolation test effort, and BRD F14 (knowledge base retrieval) is the more
+valuable retrieval feature to build first. The honest deflection is the correct
+behavior until the tool layer exists; the assistant never guesses about system
+status.
+
+**How (sketch).** A small set of read only tools (monitor status, incident
+list, ticket lookup for the caller) exposed to the provider via the abstraction
+in `src/lib/chat/providers.ts`, each executed server side through the org scoped
+client so RLS filters exactly as it does for the dashboard. Per provider tool
+calling differs (Anthropic tools, OpenAI functions, Google function calling),
+so the abstraction grows a normalized tool interface. Add isolation tests that a
+tool call as org A can never surface org B data, and that a member's tool call
+sees only what that member's RLS allows. Update the system prompt's honesty
+rules once the assistant genuinely can see the data.
+
+---
+
+## Chat: streaming replies, per org model choice, conversation sharing
+
+**What.** Three deferred chat niceties: stream the assistant reply token by
+token instead of the current non streaming "thinking" state; let an admin pick
+the model per org (not just the hardcoded cheap default per provider); and let a
+member share or export a conversation. Also parked: file uploads into chat and
+the managed AI tier (platform key plus metering, BRD F11/F13).
+
+**Why not now.** Task 5 chose non streaming deliberately: streaming three
+providers through one abstraction means per provider SSE parsing and partial
+state on the client, real complexity for a support chat where replies are
+short. Per org model choice needs a settings surface and a place to store the
+choice. The managed tier needs billing. Each is a clean follow up, none blocks
+the MVP.
+
+**How (sketch).** Streaming: switch the provider abstraction to return a stream
+and the route to a `ReadableStream`, and have the client pane append deltas;
+persist the full assistant message on completion (the DB write path is
+unchanged). Model choice: a nullable `model` column on a per org chat settings
+row, defaulting to the current constants in `src/lib/chat/providers.ts`.
+
+---
+
 ## Tickets: deleting tickets, submitting on behalf, and a deeper role ladder
 
 **What.** Three ideas raised after using the feature live: let admins remove

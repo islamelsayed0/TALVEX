@@ -65,6 +65,21 @@ export default async function DashboardLayout({
             >
               Tickets
             </Link>
+            {/* Chat is reachable from the nav for returning to past
+                conversations (Task 5 addendum); the funnel still begins at
+                Get help. */}
+            <Link
+              href="/dashboard/chat"
+              className="rounded-button px-3 py-1.5 text-muted-foreground transition-colors hover:bg-(--ghost-hover-bg) hover:text-foreground"
+            >
+              Chat
+            </Link>
+            <Link
+              href="/dashboard/settings/api-keys"
+              className="rounded-button px-3 py-1.5 text-muted-foreground transition-colors hover:bg-(--ghost-hover-bg) hover:text-foreground"
+            >
+              Settings
+            </Link>
             {/* Get help is the one accent item in the nav on purpose: it is
                 the product's primary ask (ruling 4), and accent means
                 primary action, never status. */}

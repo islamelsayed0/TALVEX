@@ -26,6 +26,7 @@ describe('env hygiene', () => {
       'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
       'SUPABASE_SERVICE_ROLE_KEY',
       'CRON_SECRET',
+      'API_KEY_ENCRYPTION_SECRET',
     ]) {
       expect(example).toContain(name)
     }
