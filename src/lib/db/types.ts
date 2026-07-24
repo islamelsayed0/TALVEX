@@ -312,6 +312,140 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_comments: {
+        Row: {
+          author: string
+          body: string
+          created_at: string
+          id: string
+          org_id: string
+          ticket_id: string
+        }
+        Insert: {
+          author: string
+          body: string
+          created_at?: string
+          id?: string
+          org_id: string
+          ticket_id: string
+        }
+        Update: {
+          author?: string
+          body?: string
+          created_at?: string
+          id?: string
+          org_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_comments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_comments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_events: {
+        Row: {
+          actor: string | null
+          detail: string | null
+          event_type: string
+          id: string
+          occurred_at: string
+          org_id: string
+          ticket_id: string
+        }
+        Insert: {
+          actor?: string | null
+          detail?: string | null
+          event_type: string
+          id?: string
+          occurred_at?: string
+          org_id: string
+          ticket_id: string
+        }
+        Update: {
+          actor?: string | null
+          detail?: string | null
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          org_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_events_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          description: string
+          id: string
+          org_id: string
+          resolved_at: string | null
+          status: string
+          submitted_by: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          org_id: string
+          resolved_at?: string | null
+          status?: string
+          submitted_by: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          org_id?: string
+          resolved_at?: string | null
+          status?: string
+          submitted_by?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -319,6 +453,8 @@ export type Database = {
     Functions: {
       clerk_active_org_id: { Args: never; Returns: string }
       clerk_is_org_admin: { Args: never; Returns: boolean }
+      clerk_user_id: { Args: never; Returns: string }
+      is_org_admin: { Args: { p_org_id: string }; Returns: boolean }
       upsert_monitor_daily_rollups: {
         Args: { p_day: string }
         Returns: undefined
@@ -471,3 +607,8 @@ export type Incident = Tables<"incidents">
 export type IncidentEvent = Tables<"incident_events">
 export type IncidentStatus = "open" | "resolved"
 export type IncidentEventType = "opened" | "reopened" | "recovered" | "resolved"
+export type Ticket = Tables<"tickets">
+export type TicketComment = Tables<"ticket_comments">
+export type TicketEvent = Tables<"ticket_events">
+export type TicketStatus = "open" | "in_progress" | "resolved" | "closed"
+export type TicketEventType = "created" | "status_changed" | "auto_closed"
