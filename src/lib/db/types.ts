@@ -405,6 +405,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          incident_id: string | null
           org_id: string
           resolved_at: string | null
           status: string
@@ -417,6 +418,7 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
+          incident_id?: string | null
           org_id: string
           resolved_at?: string | null
           status?: string
@@ -429,6 +431,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          incident_id?: string | null
           org_id?: string
           resolved_at?: string | null
           status?: string
@@ -437,6 +440,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tickets_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tickets_org_id_fkey"
             columns: ["org_id"]
@@ -611,4 +621,8 @@ export type Ticket = Tables<"tickets">
 export type TicketComment = Tables<"ticket_comments">
 export type TicketEvent = Tables<"ticket_events">
 export type TicketStatus = "open" | "in_progress" | "resolved" | "closed"
-export type TicketEventType = "created" | "status_changed" | "auto_closed"
+export type TicketEventType =
+  | "created"
+  | "status_changed"
+  | "auto_closed"
+  | "created_from_incident"

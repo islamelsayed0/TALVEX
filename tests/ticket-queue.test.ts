@@ -24,6 +24,7 @@ function ticket(partial: Partial<Ticket> & { id: string }): Ticket {
     updated_at: '2026-07-01T00:00:00Z',
     resolved_at: null,
     closed_at: null,
+    incident_id: null,
     ...partial,
   }
 }

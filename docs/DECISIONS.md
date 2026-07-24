@@ -6,6 +6,51 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-23 — Member linking is allowed at the database; the Create ticket button is admin only in the UI only
+
+**Decided.** The incident to ticket bridge (Phase 1 Task 4) adds a nullable
+`tickets.incident_id`. On the question the ruling left open, whether a
+non admin member may create a ticket carrying an incident_id for their own
+org, the answer is **allow**. The insert with check permits any member to
+link, as long as the incident belongs to the same organization; it does not
+gate linking on `org_members.role`. The Create ticket button on incident
+detail is admin only, but that is a UI affordance, not a database boundary.
+
+**Why.** The link is harmless same org metadata. A member already sees every
+incident in their org (migration 004: incident visibility is org wide), so a
+ticket that references one they can already see reveals nothing new and
+grants no capability. The ticket insert policy is deliberately role agnostic
+("any member creates tickets in their own org, as themselves"); adding an
+admin gate only on the incident_id branch would thread role logic into the
+creation path for no security gain. The boundary that actually matters,
+cross org linkage, is enforced regardless of role and is the one new attack
+surface this task introduces.
+
+**How it is encoded.** The with check gains one clause:
+`incident_id is null or incident_id in (select id from public.incidents)`.
+That subquery runs under the caller's own RLS, so it is exactly the incidents
+this session may see, which for org wide incident visibility is exactly the
+incidents in the active org. The ticket's own `org_id` is already pinned to
+the active org by the existing clause, so a passing incident is provably in
+the same org as its ticket. This mirrors the ticket_comments "on a ticket you
+can see" pattern rather than inventing a second mechanism. `incident_id` is
+in the insert column grant but NOT the update grant, so the link is fixed at
+birth and no one, admin included, can rewrite it.
+
+**Affects.** Org B cannot mint a ticket pointing at org A's incident: A's
+incident is not in B's visible set, so the with check fails. A member of A
+also cannot link to an incident they cannot see. Both are proven in
+`tests/isolation/incident-ticket-link-isolation.test.ts` under both claim
+shapes, alongside the allow decision (a plain member seeds the linked ticket
+through their own RLS session) and the immutability of the link. If incident
+visibility ever narrows below org wide (per member scoping), revisit this
+clause: "visible to you" would stop meaning "in your org", and the link
+integrity rule wants the latter. No status coupling exists in either
+direction; the reference cards read the other side's current status live and
+nothing writes across the boundary.
+
+---
+
 ## 2026-07-23 — Monitor checks sweep daily on Vercel Hobby; per monitor intervals are aspirational until Pro
 
 **Decided.** Monitor checks run as one cron sweep: a single Vercel Cron
