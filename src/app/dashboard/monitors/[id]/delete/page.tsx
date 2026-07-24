@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { requireAdmin } from '@/lib/auth/org-viewer'
 import { getMonitor } from '@/lib/db/monitors'
 import { deleteMonitorAction } from '../../actions'
 import { ghostButton, primaryButton } from '../../ui'
@@ -17,6 +18,8 @@ export default async function DeleteMonitorPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  await requireAdmin()
+
   const { id } = await params
   const monitor = await getMonitor(id)
   if (!monitor) notFound()

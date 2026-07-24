@@ -18,7 +18,7 @@ export function AskTalvexPill() {
   return (
     <Link
       href="/dashboard/help"
-      className="glass fixed right-6 bottom-6 z-50 flex items-center gap-2.5 rounded-full bg-(--accent-hover-bg) px-[19px] py-[13px] text-sm font-semibold text-accent-text transition-transform duration-150 hover:-translate-y-0.5"
+      className="glass-accent fixed right-6 bottom-6 z-50 flex items-center gap-2.5 rounded-full px-[19px] py-[13px] text-sm font-semibold text-accent-text transition-transform duration-150 hover:-translate-y-0.5"
     >
       <svg
         width="17"

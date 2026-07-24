@@ -403,6 +403,49 @@
     );
   }
 
+  /* Accent glass: the tinted variant of .glass for the AI affordance (the
+   * floating Ask Talvex pill). Same recipe, a blue fill and a blue gradient
+   * edge, because the AI action is the one accent affordance. The blue rgba
+   * values pass the reserved color rule (blue dominant, not green/amber/red). */
+  .glass-accent {
+    position: relative;
+    background: rgba(61, 139, 255, 0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.14),
+      0 14px 34px -12px rgba(0, 0, 0, 0.7),
+      0 6px 18px -8px rgba(61, 139, 255, 0.5);
+  }
+  .glass-accent::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.3px;
+    background: linear-gradient(
+      180deg,
+      rgba(122, 170, 255, 0.7) 0%,
+      rgba(61, 139, 255, 0.16) 45%,
+      rgba(61, 139, 255, 0) 60%,
+      rgba(61, 139, 255, 0.45) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  /* On a light page the heavy dark drop shadow reads as grime; soften it while
+   * keeping the accent glow. */
+  [data-theme="light"] .glass-accent {
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.5),
+      0 14px 34px -14px rgba(0, 0, 0, 0.2),
+      0 6px 18px -8px rgba(61, 139, 255, 0.4);
+  }
+
   /* Nav pill items. Neutral by default, lifting to an inset highlight when the
    * route is active (aria-current="page"). The active/hover fills are white
    * alphas in dark and black alphas in light, so the highlight reads on either
@@ -664,9 +707,17 @@
     border-color: var(--accent-outline-hover);
   }
 
-  /* Dashboard header widgets. */
+  /* Dashboard header widgets. The org switcher is the header org pill: the
+   * trigger is transparent and pill shaped (this component layer wins reliably,
+   * where an appearance element border/shadow would be dropped), sitting inside
+   * the .glass wrapper the layout puts around it, which paints the fill and the
+   * gradient hairline edge. */
   .cl-organizationSwitcherTrigger {
     color: var(--foreground);
+    background: transparent;
+    padding: 6px 12px;
+    border-radius: 999px;
+    gap: 8px;
   }
   .cl-organizationSwitcherTrigger:hover {
     background: var(--ghost-hover-bg);

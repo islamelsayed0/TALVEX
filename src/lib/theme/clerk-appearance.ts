@@ -55,4 +55,21 @@ export const clerkAppearance = {
     fontSize: "14px",
     borderRadius: "11px",
   },
+  elements: {
+    // The organization switcher renders as the header org pill. Its glass shell
+    // (fill plus gradient hairline edge) is the wrapping .glass element in the
+    // dashboard layout: a ::before edge cannot be expressed through this object,
+    // and this codebase has found appearance element border and shadow
+    // overrides get dropped against Clerk's own recipes (see the note above),
+    // which is why the shell lives in the layout and the reliable geometry in
+    // globals.css under .cl-organizationSwitcherTrigger. Here we set the trigger
+    // to sit cleanly inside that shell: no fill of its own, pill padding, gap.
+    organizationSwitcherTrigger: {
+      background: "transparent",
+      padding: "6px 12px",
+      borderRadius: "999px",
+      gap: "8px",
+      color: "var(--foreground)",
+    },
+  },
 } satisfies Appearance;

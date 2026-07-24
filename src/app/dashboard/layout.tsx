@@ -43,14 +43,19 @@ export default async function DashboardLayout({
             <Wordmark size="sm" />
           </Link>
           <div className="h-[22px] w-px flex-none bg-border" />
-          {/* hidePersonal keeps every session inside an organization, which the
-              tenancy model depends on: a personal workspace would produce a
-              session with no org id, and every RLS policy reads that claim. */}
-          <OrganizationSwitcher
-            hidePersonal
-            afterCreateOrganizationUrl="/dashboard"
-            afterSelectOrganizationUrl="/dashboard"
-          />
+          {/* The org switcher is the org pill. The .glass wrapper paints the
+              pill fill and gradient edge; the trigger inside is transparent
+              (globals.css + clerk-appearance.ts). hidePersonal keeps every
+              session inside an organization, which the tenancy model depends
+              on: a personal workspace would produce a session with no org id,
+              and every RLS policy reads that claim. */}
+          <div className="glass inline-flex items-center rounded-full">
+            <OrganizationSwitcher
+              hidePersonal
+              afterCreateOrganizationUrl="/dashboard"
+              afterSelectOrganizationUrl="/dashboard"
+            />
+          </div>
         </div>
 
         {/* Center: the role aware nav pill. */}

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 
+import { requireAdmin } from '@/lib/auth/org-viewer'
 import { getMonitor } from '@/lib/db/monitors'
 import { updateMonitorAction } from '../../actions'
 import { MonitorForm } from '../../ui'
@@ -13,6 +14,8 @@ export default async function EditMonitorPage({
   params: Promise<{ id: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
+  await requireAdmin()
+
   const [{ id }, sp] = await Promise.all([params, searchParams])
   const monitor = await getMonitor(id)
   if (!monitor) notFound()

@@ -1,4 +1,4 @@
-import { getActiveOrgViewer } from '@/lib/auth/org-viewer'
+import { requireAdmin } from '@/lib/auth/org-viewer'
 import { UNKNOWN_MEMBER, resolveUserNames } from '@/lib/auth/user-names'
 import { AI_PROVIDER_LABELS } from '@/lib/chat/providers-meta'
 import { AI_PROVIDERS, listApiKeyEvents, listApiKeys } from '@/lib/db/api-keys'
@@ -31,20 +31,9 @@ export default async function ApiKeysPage({
   const asString = (v: string | string[] | undefined) =>
     typeof v === 'string' ? v : ''
 
-  const viewer = await getActiveOrgViewer()
-  if (!viewer.isAdmin) {
-    return (
-      <main className="flex flex-1 flex-col gap-6 p-8">
-        <div>
-          <h1 className="text-title text-foreground">API keys</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Key management is available to admins. Ask an admin to add or change
-            the provider key for the assistant.
-          </p>
-        </div>
-      </main>
-    )
-  }
+  // Settings is an admin route; a member who deep links here is redirected to
+  // the Help front door, the same as every other admin route (PR C).
+  await requireAdmin()
 
   const [keys, events] = await Promise.all([listApiKeys(), listApiKeyEvents()])
   const names = await resolveUserNames([
