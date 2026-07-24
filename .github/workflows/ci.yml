@@ -174,16 +174,20 @@ jobs:
 
       - name: Check merged migrations are applied
         env:
-          # The Supabase connection string for the shared project. Set it once:
-          #   gh secret set SUPABASE_DB_URL
-          # Until it exists, the step below warns and passes because of
-          # --allow-unconfigured. REMOVE that flag once the secret is set;
-          # the guard is only real when a missing secret is a failure.
+          # The Supabase session pooler connection string for the shared
+          # project, set as a repository secret on 2026-07-24. The pooler and
+          # not the direct connection on purpose: direct is IPv6 only and
+          # these runners are IPv4 only.
+          #
+          # There is no --allow-unconfigured escape hatch here any more. If
+          # this secret goes missing or stops working, the job FAILS rather
+          # than warning, because a guard that quietly stops guarding is worse
+          # than no guard: it reads as "no drift" when it means "not checked".
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           # Empty on a push to main, which is what we want there: with no base
           # ref, every migration in the checkout is held to the merged standard.
           MIGRATION_GUARD_BASE_REF: ${{ github.base_ref && format('origin/{0}', github.base_ref) || '' }}
-        run: node scripts/check-migration-drift.mjs --allow-unconfigured
+        run: node scripts/check-migration-drift.mjs
 
 # =============================================================
 # WHAT WE WILL ADD LATER (not yet, on purpose):
