@@ -106,21 +106,77 @@ function versionsInWorkingTree() {
   return versionsFromFileNames(readdirSync(MIGRATIONS_DIR))
 }
 
+/**
+ * Why a connection failed, in terms of the thing that is actually wrong, or
+ * null when there is nothing specific to say. Pure, so it is unit tested.
+ *
+ * Takes a hostname, never the connection string: the string carries the
+ * database password and must not reach a log.
+ * @param {string} hostname
+ * @returns {string | null}
+ */
+export function connectionHint(hostname) {
+  if (/^db\..+\.supabase\.co$/.test(hostname)) {
+    return (
+      `${hostname} is Supabase's DIRECT connection host, which is IPv6 only.\n` +
+      '  GitHub Actions runners are IPv4 only, so this can never connect from CI.\n' +
+      '  Use the SESSION POOLER string instead (Dashboard, Connect, Session pooler).\n' +
+      '  It looks like postgres.<project-ref>@aws-N-<region>.pooler.supabase.com:5432\n' +
+      '  and the username has the project ref appended, which is how you tell them apart.'
+    )
+  }
+  if (/\.pooler\.supabase\.com$/.test(hostname)) {
+    return (
+      `${hostname} is the pooler, which is the right host, so the problem is\n` +
+      '  likelier the password or the username. The pooler username must be\n' +
+      '  postgres.<project-ref>, not plain postgres.'
+    )
+  }
+  return null
+}
+
+/** @param {string} dbUrl @returns {string} hostname only, never the password */
+function hostnameOf(dbUrl) {
+  try {
+    return new URL(dbUrl).hostname
+  } catch {
+    return '(connection string could not be parsed)'
+  }
+}
+
 /** @param {string} dbUrl @returns {string[]} */
 function versionsAppliedRemotely(dbUrl) {
-  const out = execFileSync(
-    'psql',
-    [
-      dbUrl,
-      '--no-psqlrc',
-      '--tuples-only',
-      '--no-align',
-      '--set=ON_ERROR_STOP=1',
-      '--command',
-      'select version from supabase_migrations.schema_migrations order by version',
-    ],
-    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] },
-  )
+  let out
+  try {
+    out = execFileSync(
+      'psql',
+      [
+        dbUrl,
+        '--no-psqlrc',
+        '--tuples-only',
+        '--no-align',
+        '--set=ON_ERROR_STOP=1',
+        '--command',
+        'select version from supabase_migrations.schema_migrations order by version',
+      ],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] },
+    )
+  } catch {
+    // psql has already printed its own diagnosis to stderr. What it cannot
+    // know is which connection string this project should be using, so say
+    // that here rather than letting a Node stack trace be the whole answer.
+    // This is deliberately NOT reported as drift: the schema was never read,
+    // so nothing is known about it either way.
+    const hostname = hostnameOf(dbUrl)
+    console.error('\nCOULD NOT REACH THE DATABASE\n')
+    console.error('  The migration history was never read, so this says nothing')
+    console.error('  about drift. It is a connection problem, not a schema problem.\n')
+    console.error(`  Host: ${hostname}`)
+    const hint = connectionHint(hostname)
+    if (hint) console.error(`\n  ${hint}\n`)
+    else console.error('\n  Check the SUPABASE_DB_URL secret.\n')
+    process.exit(1)
+  }
   return out
     .split('\n')
     .map((line) => line.trim())
