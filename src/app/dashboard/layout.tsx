@@ -59,6 +59,21 @@ export default async function DashboardLayout({
             >
               Incidents
             </Link>
+            <Link
+              href="/dashboard/tickets"
+              className="rounded-button px-3 py-1.5 text-muted-foreground transition-colors hover:bg-(--ghost-hover-bg) hover:text-foreground"
+            >
+              Tickets
+            </Link>
+            {/* Get help is the one accent item in the nav on purpose: it is
+                the product's primary ask (ruling 4), and accent means
+                primary action, never status. */}
+            <Link
+              href="/dashboard/get-help"
+              className="rounded-button px-3 py-1.5 font-medium whitespace-nowrap text-accent-text transition-colors hover:bg-(--accent-hover-bg)"
+            >
+              Get help
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-3">
