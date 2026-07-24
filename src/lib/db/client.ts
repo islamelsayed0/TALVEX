@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 
+import { withClockSkewRetry } from './fetch-retry'
 import type { Database } from './types'
 
 /**
@@ -49,6 +50,9 @@ export async function createOrgScopedClient() {
     {
       accessToken: async () => (await getToken()) ?? null,
       auth: { persistSession: false },
+      // Absorbs the transient "JWT not yet valid" flicker right after Clerk
+      // mints a fresh token; see fetch-retry.ts for the full story.
+      global: { fetch: withClockSkewRetry() },
     },
   )
 
