@@ -1,30 +1,23 @@
-import { createTicketAction } from '../tickets/actions'
-import { FormError, ticketFieldClass } from '../tickets/ui'
-import { primaryButton } from '../monitors/ui'
+import Link from 'next/link'
+
+import { orgHasKey } from '@/lib/db/api-keys'
+import { getActiveOrgViewer } from '@/lib/auth/org-viewer'
+import { primaryButton, ghostButton } from '../monitors/ui'
 
 export const metadata = { title: 'Get help — Talvex' }
 
 /**
- * The submission surface (Task 3 ruling 4): one screen, one obvious action,
- * no jargon. The person here is often non technical and possibly stressed;
- * the screen asks two plain questions and gets out of the way. On a failed
- * submit the server action redirects back with the message and the entered
- * values in the query string, so nothing typed is ever lost.
+ * The single front door for help (Task 5 addendum). Two clear doors, zero
+ * jargon, the office worker test:
+ *   - Primary, recommended: try the AI assistant, with one line of nudge.
+ *   - Secondary, always visible, never buried: create a ticket instead.
+ *
+ * No key degradation: when the org has no provider key, the AI door does not
+ * appear at all and only the ticket path renders, so a member never hits a dead
+ * end. Admins additionally see a quiet hint linking to key settings.
  */
-export default async function GetHelpPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}) {
-  const sp = await searchParams
-  const asString = (v: string | string[] | undefined) =>
-    typeof v === 'string' ? v : ''
-
-  // When the form is opened from an incident (Task 4), the incident id rides
-  // along in a hidden field so the new ticket links back. It is otherwise
-  // absent and the form behaves exactly as before.
-  const incidentId = asString(sp.incident_id)
-  const fromIncident = incidentId !== ''
+export default async function GetHelpPage() {
+  const [hasKey, viewer] = await Promise.all([orgHasKey(), getActiveOrgViewer()])
 
   return (
     <main className="flex flex-1 flex-col items-center p-8">
@@ -32,56 +25,59 @@ export default async function GetHelpPage({
         <div>
           <h1 className="text-title text-foreground">Get help</h1>
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            {fromIncident
-              ? 'This request starts from an incident. Edit anything below, then send it to the team.'
-              : 'Tell us what is going on and the team takes it from there. Plain words are perfect.'}
+            Pick the way that suits you. Either one reaches your IT team if it
+            needs to.
           </p>
         </div>
 
-        <form action={createTicketAction} className="flex flex-col gap-5">
-          {fromIncident ? (
-            <input type="hidden" name="incident_id" value={incidentId} />
+        <div className="flex flex-col gap-4">
+          {hasKey ? (
+            <div className="flex flex-col gap-3 rounded-button border border-border bg-card p-6">
+              <h2 className="text-base font-semibold text-card-foreground">
+                Try the AI assistant
+              </h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Most issues can be sorted out in a few minutes with the
+                assistant. If it cannot help, it can send your request to the
+                team.
+              </p>
+              <Link
+                href="/dashboard/chat/new"
+                className={`${primaryButton} w-full`}
+              >
+                Start with the assistant
+              </Link>
+            </div>
           ) : null}
-          <FormError message={asString(sp.error) || undefined} />
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm text-muted-foreground">
-              What do you need help with?
-            </span>
-            <input
-              name="title"
-              type="text"
-              required
-              maxLength={200}
-              defaultValue={asString(sp.title)}
-              placeholder="A few words, like: the printer will not print"
-              className={`${ticketFieldClass} h-12`}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm text-muted-foreground">What happened?</span>
-            <textarea
-              name="description"
-              required
-              rows={6}
-              maxLength={10000}
-              defaultValue={asString(sp.description)}
-              placeholder="What were you trying to do, and what did you see instead?"
-              className={`${ticketFieldClass} resize-y py-3 leading-relaxed`}
-            />
-          </label>
-
-          <div className="mt-1 flex flex-col gap-3">
-            <button type="submit" className={primaryButton}>
-              Send to the team
-            </button>
-            <p className="text-xs text-quiet">
-              You can follow your request and add details any time under
-              Tickets.
+          <div className="flex flex-col gap-3 rounded-button border border-border bg-card p-6">
+            <h2 className="text-base font-semibold text-card-foreground">
+              Create a ticket
+            </h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Tell the team what is going on and they take it from there.
             </p>
+            <Link
+              href="/dashboard/get-help/ticket"
+              className={`${hasKey ? ghostButton : primaryButton} w-full`}
+            >
+              Create a ticket instead
+            </Link>
           </div>
-        </form>
+
+          {!hasKey && viewer.isAdmin ? (
+            <p className="text-xs text-quiet">
+              Want the AI assistant here too?{' '}
+              <Link
+                href="/dashboard/settings/api-keys"
+                className="text-accent-text hover:underline"
+              >
+                Add an API key in settings
+              </Link>{' '}
+              to turn it on.
+            </p>
+          ) : null}
+        </div>
       </div>
     </main>
   )

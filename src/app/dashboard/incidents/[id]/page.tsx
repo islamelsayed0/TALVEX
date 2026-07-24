@@ -54,7 +54,7 @@ export default async function IncidentDetailPage({
     status: open ? 'open' : 'resolved',
     reopenCount,
   })
-  const createTicketHref = `/dashboard/get-help?${new URLSearchParams({
+  const createTicketHref = `/dashboard/get-help/ticket?${new URLSearchParams({
     title: prefill.title,
     description: prefill.description,
     incident_id: incident.id,

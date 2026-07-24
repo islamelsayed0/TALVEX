@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { UNKNOWN_MEMBER, resolveUserNames } from '@/lib/auth/user-names'
+import { getConversation } from '@/lib/db/chat'
 import { getIncident } from '@/lib/db/incidents'
 import {
   getTicket,
@@ -66,6 +67,14 @@ export default async function TicketDetailPage({
     ? await getIncident(ticket.incident_id)
     : null
 
+  // The chat conversation this ticket was escalated from, if any (Task 5). The
+  // card links through to the full transcript, which the AI summary in the
+  // ticket body condenses; admins can read conversations, the submitter reads
+  // their own. Null when the conversation was since removed.
+  const conversation = ticket.conversation_id
+    ? await getConversation(ticket.conversation_id)
+    : null
+
   const trail = interleaveTrail(comments, events)
   const status = ticket.status as TicketStatus
   const closed = status === 'closed'
@@ -121,6 +130,22 @@ export default async function TicketDetailPage({
         </Link>
       ) : null}
 
+      {conversation ? (
+        <Link
+          href={`/dashboard/chat/${conversation.id}`}
+          className="flex max-w-2xl flex-wrap items-center justify-between gap-3 rounded-button border border-border bg-card px-5 py-4 transition-colors hover:border-(--ghost-border-hover)"
+        >
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-quiet">From chat</span>
+            <span className="text-sm font-medium text-card-foreground">
+              {conversation.title}
+            </span>
+            <span className="text-xs text-quiet">View the full conversation</span>
+          </div>
+          <span className="text-sm text-accent-text">Open →</span>
+        </Link>
+      ) : null}
+
       {viewer.isAdmin && !closed ? (
         <StatusControl ticketId={ticket.id} current={status} />
       ) : null}
@@ -161,7 +186,9 @@ export default async function TicketDetailPage({
                       link, so the trail reads plainly here. */}
                   {item.event.event_type === 'created_from_incident'
                     ? 'Created from an incident'
-                    : (item.event.detail ?? item.event.event_type)}
+                    : item.event.event_type === 'created_from_chat'
+                      ? 'Created from a chat'
+                      : (item.event.detail ?? item.event.event_type)}
                 </span>
                 <span className="text-xs text-quiet">
                   {nameOf(item.event.actor)}, {formatUtc(item.event.occurred_at)}
