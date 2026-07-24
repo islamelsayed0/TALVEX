@@ -126,6 +126,12 @@ const TEXT_PAIRS: Array<[string, string]> = [
   ['card-foreground', 'card'],
   ['quiet', 'card'],
   ['muted-foreground', 'card'],
+  // Dashboard text tokens (added with the design reskin). Secondary carries
+  // dense body and activity rows; chip text carries recurrence and linked
+  // incident labels, which sit on the card. Guarded in both themes.
+  ['secondary-foreground', 'background'],
+  ['secondary-foreground', 'card'],
+  ['chip-text', 'card'],
   // Status colors (Phase 1) carry text and icons on the page and on cards.
   ['status-up', 'background'],
   ['status-up', 'card'],

@@ -6,6 +6,36 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-24 — Light mode stays in scope; every design token carries both themes, guarded in both
+
+**Decided.** Light mode is a supported, in scope mode of the product, not a
+deferred idea. The design handoff prototype was authored dark only and its
+README called light mode "never designed" (open question 1); that framing is
+stale against this codebase. Light mode already ships here: the theme toggle,
+the pre paint theme script, Clerk theming, and light screenshots for every
+screen. Every design token added from here on gets values in both the dark
+`:root` and the `[data-theme="light"]` override, and `tests/design-tokens.test.ts`
+asserts WCAG AA on the text pairs in both themes. Wiring a token dark only
+would silently regress a live feature, so it is not allowed.
+
+**Why.** The reskin adds a batch of tokens (flat card surface, dividers,
+tiles, secondary and chip text, status washes, card shadow, a fuller type and
+radius scale, a glass chrome class). Treating light as out of scope, as the
+prototype implies, would have let those tokens ship without light values and
+without contrast coverage, breaking the light theme that users already have.
+The honest reading is that the prototype is behind the repo, not that the repo
+should follow the prototype. The handoff README was reconciled to say so
+rather than implemented against.
+
+**Affects.** Adding or changing a color or surface token means providing both
+theme values; adding a text token means adding its pair to the AA test so both
+themes are guarded. New washes are kept as rgba, not hex, so the reserved
+color rule in the tokens test does not flag their green and red tints, which
+carry status meaning. Naming stays semantic; see the tokens in
+`src/app/globals.css`.
+
+---
+
 ## 2026-07-24 — The Get help route is /dashboard/help, with a permanent redirect from the old path
 
 **Decided.** The end user help feature lives at `/dashboard/help` (and

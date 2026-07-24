@@ -42,6 +42,10 @@
 
   /* Text */
   --foreground: #f6f4f0;
+  /* Between primary and muted: dense body, activity rows. */
+  --secondary-foreground: #d7d3cc;
+  /* Chip labels (recurrence, linked incident). */
+  --chip-text: #c9c3ba;
   --muted-foreground: #a7a39c;
   /* Reference used #6f6b65, which is 3.7:1 on the page and 3.5:1 on fields.
    * Bumped to the nearest value that clears 4.5:1 on page, field, and card
@@ -62,10 +66,22 @@
   --accent-gradient: linear-gradient(150deg, #4d95ff, #2f6fd6);
 
   /* Surfaces */
-  --card: #171512;
+  /* The dashboard flat card surface. Repointed from the sign in value
+   * (#171512) to the dashboard handoff value; the two are a shade apart and
+   * the darker surface does the work in the flat variant. Light mode keeps
+   * its own #ffffff card below. */
+  --card: #151310;
   --card-foreground: #eeece7;
   --card-hover: #1b1815;
+  /* The header bottom rule and general edge. */
   --border: rgba(255, 255, 255, 0.09);
+  /* Hairline around cards; lighter than the header border on purpose. */
+  --card-border: rgba(255, 255, 255, 0.07);
+  /* Row separators inside a card. */
+  --divider: rgba(255, 255, 255, 0.06);
+  /* Nested tiles inside a card (KPI mini tiles, count tiles). */
+  --tile-bg: rgba(255, 255, 255, 0.03);
+  --tile-border: rgba(255, 255, 255, 0.07);
 
   /* Fields */
   --field-bg: #141210;
@@ -90,6 +106,15 @@
   --status-up: #4ade80;
   --status-down: #f87171;
   --status-pending: #fbbf24;
+  /* Paused and closed read as quiet grey, never a status hue. */
+  --status-paused: var(--quiet);
+  /* Washes: translucent status and accent fills behind icons and chips.
+   * Kept as rgba, not hex, so the neutral-or-blue hex rule in
+   * tests/design-tokens.test.ts does not flag the green and red tints,
+   * which carry status meaning here, not decoration. */
+  --wash-up: rgba(74, 222, 128, 0.12);
+  --wash-down: rgba(248, 113, 113, 0.12);
+  --wash-accent: rgba(61, 139, 255, 0.1);
 
   /* Theme toggle */
   --toggle-bg: rgba(255, 255, 255, 0.05);
@@ -109,6 +134,10 @@
   --shadow-primary:
     0 10px 26px -12px rgba(61, 139, 255, 0.7),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  /* The soft, deliberately shallow card shadow used across the dashboard. */
+  --shadow-card:
+    inset 0 1px 1px rgba(255, 255, 255, 0.06),
+    0 14px 34px -20px rgba(0, 0, 0, 0.5);
 
   /* Base radius for future shadcn components (11px). */
   --radius: 0.6875rem;
@@ -127,6 +156,9 @@
   --glow: rgba(61, 139, 255, 0.08);
 
   --foreground: #17150f;
+  /* Dark greys that clear AA on both the light page and white cards. */
+  --secondary-foreground: #45423c;
+  --chip-text: #55514a;
   --muted-foreground: #6b675f;
   /* Reference used #a29e95, which is 2.5:1 on the page. Darkened to clear
    * 4.5:1 on both the page and white fields/cards. */
@@ -150,6 +182,10 @@
   --card-foreground: #17150f;
   --card-hover: #ffffff;
   --border: rgba(0, 0, 0, 0.1);
+  --card-border: rgba(0, 0, 0, 0.07);
+  --divider: rgba(0, 0, 0, 0.06);
+  --tile-bg: rgba(0, 0, 0, 0.03);
+  --tile-border: rgba(0, 0, 0, 0.07);
 
   --field-bg: #ffffff;
   --field-bg-focus: #ffffff;
@@ -168,6 +204,11 @@
   --status-up: #15803d;
   --status-down: #b91c1c;
   --status-pending: #b45309;
+  /* status-paused inherits var(--quiet), which the light quiet override
+   * already darkens. Washes retint to the light status hues. */
+  --wash-up: rgba(21, 128, 61, 0.12);
+  --wash-down: rgba(185, 28, 28, 0.12);
+  --wash-accent: rgba(61, 139, 255, 0.12);
 
   --toggle-bg: rgba(0, 0, 0, 0.04);
   --toggle-border: rgba(0, 0, 0, 0.12);
@@ -180,6 +221,9 @@
   --shadow-primary:
     0 10px 24px -12px rgba(61, 139, 255, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  --shadow-card:
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    0 14px 34px -20px rgba(0, 0, 0, 0.12);
 }
 
 @theme inline {
@@ -209,24 +253,60 @@
   --color-status-up: var(--status-up);
   --color-status-down: var(--status-down);
   --color-status-pending: var(--status-pending);
+  --color-status-paused: var(--status-paused);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-chip-text: var(--chip-text);
+  --color-card-border: var(--card-border);
+  --color-divider: var(--divider);
+  --color-tile: var(--tile-bg);
+  --color-tile-border: var(--tile-border);
+  --color-wash-up: var(--wash-up);
+  --color-wash-down: var(--wash-down);
+  --color-wash-accent: var(--wash-accent);
 
-  /* Radii scale from the reference: logo tile 14, primary button 12,
-   * inputs and secondary buttons 11. */
+  /* Radii scale from the reference: logo/icon tile 14, primary button 12,
+   * inputs and secondary buttons 11. Dashboard adds the larger card and
+   * nested surfaces plus the small nav and mini radii. */
   --radius-tile: 14px;
   --radius-button: 12px;
   --radius-field: 11px;
+  --radius-card: 20px;
+  --radius-kpi: 18px;
+  --radius-nested: 16px;
+  --radius-nav: 9px;
+  --radius-mini: 8px;
 
-  /* Type scale from the reference. */
+  /* Type scale from the reference. The auth wordmark stays 27px; the
+   * dashboard header brand is its own 20px token. Named tokens exist for
+   * roles reused across screens; one off sizes use Tailwind utilities. */
   --text-wordmark: 27px;
   --text-wordmark--line-height: 1;
   --text-wordmark--letter-spacing: -0.022em;
   --text-wordmark--font-weight: 600;
-  --text-title: 23px;
+  --text-brand: 20px;
+  --text-brand--line-height: 1;
+  --text-brand--letter-spacing: -0.022em;
+  --text-brand--font-weight: 600;
+  --text-title: 24px;
   --text-title--line-height: 1.15;
   --text-title--letter-spacing: -0.02em;
   --text-title--font-weight: 600;
+  --text-kpi: 32px;
+  --text-kpi--line-height: 1;
+  --text-kpi--letter-spacing: -0.02em;
+  --text-kpi--font-weight: 600;
   --text-subhead: 14.5px;
   --text-subhead--line-height: 1.55;
+  /* Column headers and section labels also take the `uppercase` utility;
+   * text-transform is not a font token sub property. */
+  --text-column: 11px;
+  --text-column--letter-spacing: 0.05em;
+  --text-column--font-weight: 500;
+  --text-section: 11px;
+  --text-section--letter-spacing: 0.06em;
+  --text-section--font-weight: 600;
+  --text-chip: 10.5px;
+  --text-chip--font-weight: 500;
 }
 
 @layer base {
@@ -272,6 +352,55 @@
   }
   :root:not([data-theme="light"]) .when-light {
     display: none;
+  }
+
+  /* Glass chrome: the ONE translucent treatment in the flat variant, used by
+   * the nav pill, org pill, AI button and floating pill (built in the shell
+   * PR). Cards are flat; only the chrome is glass. The consumer sets its own
+   * border-radius; the ::before paints a gradient hairline edge that follows
+   * it via mask-composite. Visual correctness is verified once the shell
+   * consumes it. */
+  .glass {
+    position: relative;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.09);
+  }
+  .glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.2px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0.08) 42%,
+      rgba(255, 255, 255, 0) 58%,
+      rgba(255, 255, 255, 0.3) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  /* Light mode chrome: the same recipe inverted so the edge and fill read on
+   * a light page. Dashboard light is in scope (see docs/DECISIONS.md). */
+  [data-theme="light"] .glass {
+    background: rgba(0, 0, 0, 0.03);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  }
+  [data-theme="light"] .glass::before {
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.14) 0%,
+      rgba(0, 0, 0, 0.04) 42%,
+      rgba(0, 0, 0, 0) 58%,
+      rgba(0, 0, 0, 0.1) 100%
+    );
   }
 
   /* ------------------------------------------------------------------
