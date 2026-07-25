@@ -1,7 +1,10 @@
 /**
  * Pre paint theme resolution. Rendered as the first child of <body> so it
- * runs synchronously before anything paints: stored choice first, then the
- * system preference, then dark, which is the product default.
+ * runs synchronously before anything paints: the stored choice wins, otherwise
+ * dark, which is the product's primary mode (docs/design/handoff/README.md).
+ * The OS preference is deliberately NOT consulted: the design is dark first, so
+ * a first visit shows dark regardless of the system setting, and light is an
+ * explicit opt in through the header toggle (which persists to localStorage).
  *
  * Kept as an inline script rather than a client component so there is no
  * flash of the wrong theme while React hydrates. The root <html> carries
@@ -12,9 +15,7 @@ const THEME_SCRIPT = `(function () {
   try {
     var t = localStorage.getItem("talvex-theme");
     if (t !== "dark" && t !== "light") {
-      t = window.matchMedia("(prefers-color-scheme: light)").matches
-        ? "light"
-        : "dark";
+      t = "dark";
     }
     document.documentElement.dataset.theme = t;
   } catch (e) {
