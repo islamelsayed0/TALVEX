@@ -41,6 +41,20 @@ export function elapsedSince(openedAt: string): string {
   return formatDuration(Date.now() - Date.parse(openedAt))
 }
 
+/** Resolved incidents whose resolution falls within the last `days` days, for
+ * the "resolved this week" section. Pure so the count and the list agree and a
+ * test can exercise the window. */
+export function resolvedWithin<T extends { resolved_at: string | null }>(
+  resolved: T[],
+  nowMs: number,
+  days = 7,
+): T[] {
+  const cutoff = nowMs - days * 24 * 60 * 60 * 1000
+  return resolved.filter(
+    (r) => r.resolved_at !== null && Date.parse(r.resolved_at) >= cutoff,
+  )
+}
+
 /** Duration cell for a list row: elapsed so far for open, total for resolved. */
 export function incidentDuration(incident: {
   status: string
