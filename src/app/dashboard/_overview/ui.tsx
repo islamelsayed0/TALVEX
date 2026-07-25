@@ -184,7 +184,9 @@ export function UptimeStrip({
   )
 }
 
-function StatusDotEl({ status }: { status: StatusKind }) {
+/** The status dot: colored by kind, pulsing only when down. Shared across the
+ * overview panel and the monitors table. */
+export function StatusDot({ status }: { status: StatusKind }) {
   return (
     <span
       aria-hidden
@@ -208,7 +210,7 @@ export function MonitorRow({
     : 'no checks yet'
   return (
     <div className="flex items-center gap-3 border-t border-divider px-5 py-[13px]">
-      <StatusDotEl status={status} />
+      <StatusDot status={status} />
       <div className="w-[146px] flex-none">
         <div className="truncate text-[14.5px] font-medium text-foreground">
           {m.name}
