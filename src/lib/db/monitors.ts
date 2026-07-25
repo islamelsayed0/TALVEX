@@ -171,6 +171,91 @@ export async function getUptimePercent30d(
   return weightedUptime(data)
 }
 
+export type MonitorOverviewItem = MonitorListItem & {
+  /** Recent check outcomes, oldest to newest, for the uptime strip. Real
+   * check history only; a monitor with no checks yet has an empty array. */
+  recentChecks: Array<{ status: string; checkedAt: string }>
+}
+
+/** Monitors of the active org with recent check history attached, for the
+ * overview panel strips. One query; RLS scopes rows to the org. The overview
+ * needs the strip that the list page (listMonitorsWithStats) does not, so it
+ * embeds the last N checks rather than only the latest one. */
+export async function listMonitorsWithRecentChecks(
+  checkLimit = 40,
+): Promise<MonitorOverviewItem[]> {
+  const { client } = await createOrgScopedClient()
+
+  const [monitorsRes, rollupsRes] = await Promise.all([
+    client
+      .from('monitors')
+      .select('*, monitor_checks(status, response_time_ms, checked_at)')
+      .order('name', { ascending: true })
+      .order('checked_at', {
+        referencedTable: 'monitor_checks',
+        ascending: false,
+      })
+      .limit(checkLimit, { referencedTable: 'monitor_checks' }),
+    client
+      .from('monitor_daily_rollups')
+      .select('monitor_id, uptime_percent, check_count')
+      .gte('day', rollupCutoff()),
+  ])
+  if (monitorsRes.error) throw monitorsRes.error
+  if (rollupsRes.error) throw rollupsRes.error
+
+  const rollupsByMonitor = new Map<
+    string,
+    Array<{ uptime_percent: number; check_count: number }>
+  >()
+  for (const row of rollupsRes.data) {
+    const list = rollupsByMonitor.get(row.monitor_id) ?? []
+    list.push(row)
+    rollupsByMonitor.set(row.monitor_id, list)
+  }
+
+  return monitorsRes.data.map(({ monitor_checks, ...monitor }) => ({
+    ...monitor,
+    lastResponseMs: monitor_checks[0]?.response_time_ms ?? null,
+    uptimePercent30d: weightedUptime(rollupsByMonitor.get(monitor.id) ?? []),
+    // The embed arrives newest first; reverse so the strip reads left (oldest)
+    // to right (newest), the way time runs.
+    recentChecks: [...monitor_checks]
+      .reverse()
+      .map((c) => ({ status: c.status, checkedAt: c.checked_at })),
+  }))
+}
+
+/** Average response time over the last 12 hourly buckets, oldest to newest,
+ * for the overview sparkline. Real checks only; returns fewer than 12 points
+ * when history is thin and an empty array when there is not enough to draw a
+ * line, so the caller can show an honest empty state instead of a fake trend. */
+export async function responseTrend(): Promise<number[]> {
+  const { client } = await createOrgScopedClient()
+  const HOURS = 12
+  const cutoff = new Date(Date.now() - HOURS * 60 * 60 * 1000).toISOString()
+
+  const { data, error } = await client
+    .from('monitor_checks')
+    .select('response_time_ms, checked_at')
+    .gte('checked_at', cutoff)
+    .not('response_time_ms', 'is', null)
+    .order('checked_at', { ascending: true })
+  if (error) throw error
+  if (data.length === 0) return []
+
+  const now = Date.now()
+  const buckets = Array.from({ length: HOURS }, () => ({ sum: 0, n: 0 }))
+  for (const row of data) {
+    if (row.response_time_ms === null) continue
+    const ageHours = (now - Date.parse(row.checked_at)) / 3_600_000
+    const idx = Math.min(HOURS - 1, Math.max(0, HOURS - 1 - Math.floor(ageHours)))
+    buckets[idx].sum += row.response_time_ms
+    buckets[idx].n += 1
+  }
+  return buckets.filter((b) => b.n > 0).map((b) => Math.round(b.sum / b.n))
+}
+
 export async function createMonitor(input: MonitorInput): Promise<Monitor> {
   const row = validated(input)
   const { client, orgId } = await createOrgScopedClient()

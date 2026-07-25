@@ -309,6 +309,40 @@
   --text-chip--font-weight: 500;
 }
 
+/* Overview motion. fadeUp settles the main content on mount; pulseDot rings a
+ * down status dot (and only a down one). The pulseDot red is the --status-down
+ * color, so it is sanctioned by the reserved color rule: this is genuine down
+ * status meaning, not decoration. */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pulseDot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.5);
+  }
+  60% {
+    box-shadow: 0 0 0 6px rgba(248, 113, 113, 0);
+  }
+}
+/* Respect a reduced motion preference: no mount animation, no pulsing. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 @layer base {
   body {
     background: var(--background);
