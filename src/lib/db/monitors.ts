@@ -172,9 +172,15 @@ export async function getUptimePercent30d(
 }
 
 export type MonitorOverviewItem = MonitorListItem & {
-  /** Recent check outcomes, oldest to newest, for the uptime strip. Real
-   * check history only; a monitor with no checks yet has an empty array. */
-  recentChecks: Array<{ status: string; checkedAt: string }>
+  /** Recent checks, oldest to newest: outcome for the uptime strip and the
+   * response time for the latency sparkline. Real check history only; a
+   * monitor with no checks yet has an empty array, and a check with no timing
+   * (a failed connect) carries a null responseMs. */
+  recentChecks: Array<{
+    status: string
+    responseMs: number | null
+    checkedAt: string
+  }>
 }
 
 /** Monitors of the active org with recent check history attached, for the
@@ -220,9 +226,11 @@ export async function listMonitorsWithRecentChecks(
     uptimePercent30d: weightedUptime(rollupsByMonitor.get(monitor.id) ?? []),
     // The embed arrives newest first; reverse so the strip reads left (oldest)
     // to right (newest), the way time runs.
-    recentChecks: [...monitor_checks]
-      .reverse()
-      .map((c) => ({ status: c.status, checkedAt: c.checked_at })),
+    recentChecks: [...monitor_checks].reverse().map((c) => ({
+      status: c.status,
+      responseMs: c.response_time_ms,
+      checkedAt: c.checked_at,
+    })),
   }))
 }
 

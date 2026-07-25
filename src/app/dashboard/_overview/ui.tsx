@@ -144,6 +144,31 @@ export function Sparkline({ points }: { points: number[] }) {
   )
 }
 
+/** A compact latency line (stroke only, no gradient, so it is safe to repeat
+ * on every row). Real response times; renders nothing below two points. */
+export function MiniSpark({ points }: { points: number[] }) {
+  const geo = sparklineGeometry(points, 200, 24)
+  if (!geo) return null
+  return (
+    <svg
+      viewBox="0 0 200 24"
+      preserveAspectRatio="none"
+      className="block h-[13px] w-full"
+      aria-hidden
+    >
+      <path
+        d={geo.line}
+        fill="none"
+        stroke="var(--muted-foreground)"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        opacity="0.7"
+      />
+    </svg>
+  )
+}
+
 /** The 40 bar recent checks strip. Real checks only; empty until a monitor has
  * been checked. */
 export function UptimeStrip({

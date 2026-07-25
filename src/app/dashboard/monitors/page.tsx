@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { requireAdmin } from '@/lib/auth/org-viewer'
 import { listMonitorsWithRecentChecks } from '@/lib/db/monitors'
 
-import { StatusDot, UptimeStrip } from '../_overview/ui'
+import { MiniSpark, StatusDot, UptimeStrip } from '../_overview/ui'
 import { shortAge } from '../_overview/lib'
 import {
   STATUS_LABEL,
@@ -92,7 +92,7 @@ export default async function MonitorsPage() {
             className={`${GRID} px-[22px] py-3.5 text-column text-quiet uppercase`}
           >
             <span>Monitor</span>
-            <span>Recent checks</span>
+            <span>Recent checks · latency</span>
             <span className="text-right">Response</span>
             <span className="text-right">Uptime</span>
             <span className="text-right">Interval</span>
@@ -121,6 +121,15 @@ export default async function MonitorsPage() {
               </div>
               <div className="min-w-0">
                 <UptimeStrip checks={m.recentChecks} paused={status === 'paused'} />
+                {status !== 'paused' ? (
+                  <div className="mt-1">
+                    <MiniSpark
+                      points={m.recentChecks
+                        .map((c) => c.responseMs)
+                        .filter((n): n is number => n !== null)}
+                    />
+                  </div>
+                ) : null}
               </div>
               <div className="text-right text-[13.5px] font-medium whitespace-nowrap">
                 <span className={STATUS_TEXT[status]}>{STATUS_LABEL[status]}</span>
