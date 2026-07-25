@@ -2,7 +2,6 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
-import { ThemeScript } from "@/components/theme/theme-script";
 import { clerkAppearance } from "@/lib/theme/clerk-appearance";
 import { clerkLocalization } from "@/lib/theme/clerk-localization";
 
@@ -34,8 +33,8 @@ export default function RootLayout({
   // widgets agree on one source of truth. Setting them here as well would let
   // the two drift apart.
   //
-  // suppressHydrationWarning: the pre paint theme script mutates data-theme
-  // on <html> before React hydrates, which is intentional.
+  // The product is dark only, so data-theme="dark" is set statically here; no
+  // pre paint script and no hydration mismatch to suppress.
   return (
     <ClerkProvider
       afterSignOutUrl="/"
@@ -44,11 +43,10 @@ export default function RootLayout({
     >
       <html
         lang="en"
-        suppressHydrationWarning
+        data-theme="dark"
         className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       >
         <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
-          <ThemeScript />
           {children}
         </body>
       </html>

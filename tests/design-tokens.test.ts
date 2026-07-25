@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * BRD D5 as a test: every text/background token pair in the design system
- * meets WCAG 2.1 AA (4.5:1 for normal text), in both themes, forever.
+ * meets WCAG 2.1 AA (4.5:1 for normal text), in the dark theme (the product is
+ * dark only), forever.
  *
  * The tokens are parsed straight out of globals.css, so a palette edit that
  * breaks contrast fails CI rather than shipping. Alpha colors are composited
@@ -42,9 +43,6 @@ function tokensOf(selector: string): Map<string, string> {
 }
 
 const darkTokens = tokensOf(':root')
-const lightOverrides = tokensOf('[data-theme="light"]')
-// Light inherits every dark token it does not override, like the cascade.
-const lightTokens = new Map([...darkTokens, ...lightOverrides])
 
 type RGBA = { r: number; g: number; b: number; a: number }
 
@@ -141,10 +139,7 @@ const TEXT_PAIRS: Array<[string, string]> = [
   ['status-pending', 'card'],
 ]
 
-describe.each([
-  ['dark', darkTokens],
-  ['light', lightTokens],
-] as const)('%s theme', (_theme, tokens) => {
+describe.each([['dark', darkTokens]] as const)('%s theme', (_theme, tokens) => {
   it.each(TEXT_PAIRS)('--%s on --%s meets AA for normal text', (fg, bg) => {
     expect(contrast(fg, bg, tokens)).toBeGreaterThanOrEqual(4.5)
   })
@@ -223,10 +218,9 @@ describe('reserved colors', () => {
     }
   })
 
-  it.each([
-    ['dark', darkTokens],
-    ['light', lightTokens],
-  ] as const)('status tokens carry their meaning in the %s theme', (_t, tokens) => {
+  it.each([['dark', darkTokens]] as const)(
+    'status tokens carry their meaning in the %s theme',
+    (_t, tokens) => {
     // Up is green, down is red, pending is amber, in both themes; a swapped
     // or off family value would lie to the user about status.
     const channels = (name: string) => {

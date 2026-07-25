@@ -57,7 +57,7 @@ export function Card({
 }) {
   return (
     <section
-      className={`rounded-card border border-card-border bg-card shadow-[var(--shadow-card)] ${className}`}
+      className={`rounded-card border border-card-border bg-card shadow-card ${className}`}
     >
       {children}
     </section>
@@ -101,7 +101,7 @@ export function KpiCard({
   viz?: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-[96px] flex-col rounded-kpi border border-card-border bg-card px-[18px] pt-4 pb-2 shadow-[var(--shadow-card)]">
+    <div className="flex min-h-[96px] flex-col rounded-kpi border border-card-border bg-card px-[18px] pt-4 pb-2 shadow-card">
       <div className="text-[13px] font-medium text-quiet">{label}</div>
       <div className="mt-2 flex items-baseline gap-1.5">
         <span className={`text-kpi ${valueClass}`}>{value}</span>
@@ -216,7 +216,7 @@ export function StatusDot({ status }: { status: StatusKind }) {
     <span
       aria-hidden
       className={`h-[9px] w-[9px] flex-none rounded-full ${DOT[status]} ${
-        status === 'down' ? 'animate-[pulseDot_1.8s_ease-in-out_infinite]' : ''
+        status === 'down' ? 'animate-pulse-dot' : ''
       }`}
     />
   )

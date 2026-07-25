@@ -36,7 +36,7 @@ Reason for choosing Flat: universal glass on every surface started to read as te
 
 These rules are **binding**. They were the constraint the design was built under.
 
-- **Dark mode (near black) is the primary mode.** A light mode also ships in this codebase (theme toggle, theme script, Clerk theming) and stays in scope: every design token carries both dark and light values, and `tests/design-tokens.test.ts` guards AA contrast in both. This supersedes the prototype note that light mode "was not designed"; see `docs/DECISIONS.md` (2026-07-24).
+- **Dark mode (near black) is the only mode.** Light mode was removed and the product ships dark only: `data-theme="dark"` is hardcoded, there is no toggle, and the `:root` tokens are the single palette. See `docs/DECISIONS.md` (2026-07-25), which supersedes the earlier "light stays in scope" note.
 - **One friendly blue accent: `#3d8bff`.** Used *only* for actions and interactive affordances (primary buttons, links, the AI entry point, in-progress ticket state).
 - **Green / amber / red are reserved exclusively for status meaning.** Never decorative.
 - **Geist** for all UI text; **Geist Mono** for hostnames, timestamps, latency, uptime percentages, masked keys.
@@ -334,7 +334,7 @@ Ship one feature per PR, each with a test. **Do not modify tenant-isolation test
 To view: open either dashboard file in a browser. Flip the `role` prop between `admin` and `member` to see both personas.
 
 ## Open questions
-1. **Light mode** — RESOLVED, not open. Light mode already ships in the codebase and stays in scope; it is not a pre ship decision. Every token carries both themes and the AA test guards both. See the `docs/DECISIONS.md` entry dated 2026-07-24. The prototype's "never designed" framing was stale against the repo.
+1. **Light mode** — RESOLVED, not open. Light mode was removed; the product is dark only. See the `docs/DECISIONS.md` entry dated 2026-07-25.
 2. **Client status page** — a simple embeddable public widget was requested and deferred. Not designed yet.
 3. **SLA source** — SLA countdowns are shown but no SLA policy model was defined. Where do targets come from?
 4. **Scope / blast radius** — "Affects ~8 people · Front desk, Booking" needs a data source (monitor→department/user mapping).

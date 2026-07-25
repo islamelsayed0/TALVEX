@@ -6,6 +6,32 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-25 — The product is dark only; light mode removed
+
+**Decided.** Talvex ships dark only. The light theme, the theme toggle, and the
+pre paint theme script are gone; `data-theme="dark"` is set statically on
+`<html>`, and the `:root` tokens in `src/app/globals.css` are the single palette.
+This supersedes the 2026-07-24 decision that kept light mode in scope.
+
+**Why.** The design is dark first, and light mode caused two real problems: a
+visitor on a light mode OS saw a washed out light adaptation instead of the
+intended design, and every surface carried a second set of token values plus
+`[data-theme="light"]` overrides that had to stay correct. Removing light
+collapses the theme system to one palette and deletes a class of failure modes.
+Alongside it, the fragile arbitrary utilities (`shadow-[var(--shadow-card)]`,
+`animate-[fadeUp…]`, `bg-[image:var(--accent-gradient)]`) became first-class
+`@theme` utilities (`shadow-card`, `animate-fade-up`, `animate-pulse-dot`,
+`bg-accent-gradient`), so Tailwind v4 under Turbopack emits them deterministically
+and the dev stylesheet stops going stale as screens are added — which is what
+made the running app look unstyled while the production build was correct.
+
+**Affects.** There is no `[data-theme="light"]` anywhere; `tests/design-tokens.test.ts`
+runs its AA and reserved color checks for the dark palette only. The auth screens
+are dark only too (no toggle). If light mode is ever wanted again it is fresh,
+deliberate work, not a maintained overlay.
+
+---
+
 ## 2026-07-24 — Light mode stays in scope; every design token carries both themes, guarded in both
 
 **Decided.** Light mode is a supported, in scope mode of the product, not a

@@ -43,7 +43,7 @@ export default async function MonitorsPage() {
   const paused = withStatus.filter((x) => x.status === 'paused').length
 
   return (
-    <main className="mx-auto w-full max-w-[1360px] flex-1 animate-[fadeUp_0.5s_ease_both] px-8 pt-[30px] pb-[72px]">
+    <main className="mx-auto w-full max-w-[1360px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
       <div className="mb-[22px] flex flex-wrap items-end justify-between gap-5">
         <div>
           <h1 className="text-title text-foreground">Monitors</h1>
@@ -73,7 +73,7 @@ export default async function MonitorsPage() {
       </div>
 
       {monitors.length === 0 ? (
-        <div className="flex max-w-xl flex-col items-start gap-4 rounded-card border border-card-border bg-card p-8 shadow-[var(--shadow-card)]">
+        <div className="flex max-w-xl flex-col items-start gap-4 rounded-card border border-card-border bg-card p-8 shadow-card">
           <h2 className="text-base font-semibold text-card-foreground">
             No monitors yet
           </h2>
@@ -87,7 +87,7 @@ export default async function MonitorsPage() {
           </Link>
         </div>
       ) : (
-        <section className="overflow-hidden rounded-card border border-card-border bg-card pb-2 shadow-[var(--shadow-card)]">
+        <section className="overflow-hidden rounded-card border border-card-border bg-card pb-2 shadow-card">
           <div
             className={`${GRID} px-[22px] py-3.5 text-column text-quiet uppercase`}
           >

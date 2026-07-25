@@ -114,7 +114,7 @@ export default async function OverviewPage() {
   })
 
   return (
-    <main className="mx-auto w-full max-w-[1360px] flex-1 animate-[fadeUp_0.5s_ease_both] px-8 pt-[30px] pb-[72px]">
+    <main className="mx-auto w-full max-w-[1360px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
       {/* Greeting. No scenario switcher: that was a prototype demo control. */}
       <div className="mb-[22px]">
         <h1 className="text-title text-foreground">
@@ -325,7 +325,7 @@ export default async function OverviewPage() {
             href="/dashboard/help"
             className="flex items-center gap-3 rounded-button border border-(--accent-outline) bg-field px-4 py-[13px] transition-colors hover:bg-card-hover"
           >
-            <span className="flex h-[26px] w-[26px] flex-none items-center justify-center rounded-[8px] bg-[image:var(--accent-gradient)]">
+            <span className="flex h-[26px] w-[26px] flex-none items-center justify-center rounded-[8px] bg-accent-gradient">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-foreground)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M12 3l1.5 5.1L18.5 9.5 13.5 11 12 16l-1.5-5L5.5 9.5 10.5 8.1z" />
               </svg>

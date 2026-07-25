@@ -4,7 +4,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Wordmark } from "@/components/brand/wordmark";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { getActiveOrgViewer } from "@/lib/auth/org-viewer";
 
 import { AskTalvexPill } from "./_shell/ask-talvex-pill";
@@ -61,10 +60,9 @@ export default async function DashboardLayout({
         {/* Center: the role aware nav pill. */}
         <DashboardNav items={navFor(isAdmin)} />
 
-        {/* Right: settings (admin only), theme, and the account menu. */}
+        {/* Right: settings (admin only) and the account menu. */}
         <div className="flex flex-none items-center gap-2.5">
           {isAdmin ? <SettingsGear /> : null}
-          <ThemeToggle className="h-9 w-9" />
           <UserButton />
         </div>
       </header>
