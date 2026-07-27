@@ -490,7 +490,9 @@
       rgba(11, 10, 8, 0.74) 70%
     );
   }
-  /* The background video itself: pinned behind everything, fading in on load. */
+  /* The background video: pinned behind everything. Visible by default and
+   * showing its poster until it decodes, so the hero is never black even if the
+   * browser blocks autoplay or cannot play the video. Never gated on JS. */
   .landing-hero-video {
     position: fixed;
     inset: 0;
@@ -498,11 +500,6 @@
     height: 100%;
     object-fit: cover;
     z-index: 0;
-    opacity: 0;
-    transition: opacity 0.6s ease;
-  }
-  .landing-hero-video[data-ready="true"] {
-    opacity: 1;
   }
 
   /* ------------------------------------------------------------------

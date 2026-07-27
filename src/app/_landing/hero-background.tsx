@@ -4,12 +4,14 @@ import { useEffect, useRef } from 'react'
 
 /**
  * The fixed background video behind the landing page, plus the vignette that
- * keeps text legible over it. Client only because autoplay needs a nudge and
- * the video must be kept muted defensively.
+ * keeps text legible over it.
+ *
+ * The video is visible by default and shows a poster frame until it decodes, so
+ * the hero is never black: if the browser cannot autoplay or decode the video,
+ * the poster stands in. Visibility is never gated on a JS event.
  *
  * Muting is guaranteed three ways: the `muted` attribute, a reassert on mount,
- * and (because a stray script or extension could flip it) the volume is pinned
- * to 0. There is no audio track we ever want to hear here.
+ * and the volume pinned to 0. There is no audio track we ever want to hear.
  */
 export function HeroBackground() {
   const ref = useRef<HTMLVideoElement>(null)
@@ -19,16 +21,8 @@ export function HeroBackground() {
     if (!v) return
     v.muted = true
     v.volume = 0
-
-    const markReady = () => v.setAttribute('data-ready', 'true')
-    if (v.readyState >= 3) markReady()
-    else v.addEventListener('canplay', markReady, { once: true })
-
-    // Browsers may defer autoplay until the element is ready; nudge it and
-    // ignore the promise rejection that a blocked autoplay throws.
+    // Browsers may defer autoplay; nudge it and ignore a blocked-autoplay reject.
     v.play().catch(() => {})
-
-    return () => v.removeEventListener('canplay', markReady)
   }, [])
 
   return (
@@ -36,6 +30,7 @@ export function HeroBackground() {
       <video
         ref={ref}
         className="landing-hero-video"
+        poster="/landing/hero-poster.jpg"
         muted
         loop
         autoPlay
