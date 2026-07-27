@@ -1,24 +1,18 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
-import type { AiProvider, ChatRole } from '@/lib/db/types'
 import { bubble, bubbleRow, roleLabel } from './chat-style'
+import type { ProviderOption } from './ui'
+import { type PaneMessage, useChat } from './use-chat'
 
 /**
  * The interactive chat pane (client component: interactivity requires it,
- * CLAUDE.md rule 6). It renders the thread, sends to /api/chat, and shows a
- * thinking indicator while the reply is on its way (non streaming). Message
- * writes and the provider call happen server side; this only reflects them.
- *
- * When a send creates a new conversation, the pane updates the address bar to
- * the conversation url WITHOUT navigating, so its state survives (a router
- * navigation would remount and lose the thread).
+ * CLAUDE.md rule 6). It renders the thread and a thinking indicator while the
+ * reply is on its way (non streaming). The send flow lives in useChat, shared
+ * with the floating popup; here it runs with syncUrl so a refresh keeps the
+ * thread. Message writes and the provider call happen server side.
  */
-
-type PaneMessage = { id: string; role: ChatRole; content: string }
-
-type ProviderOption = { value: AiProvider; label: string }
 
 const primaryButton =
   'inline-flex items-center justify-center rounded-button bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-60'
@@ -27,7 +21,7 @@ const fieldClass =
   'w-full rounded-field border border-input bg-field px-4 py-3 text-sm leading-relaxed text-field-text outline-none transition-colors placeholder:text-placeholder focus:border-(--ring) focus:bg-field-focus'
 
 export function ChatPane({
-  conversationId: initialConversationId,
+  conversationId,
   initialMessages,
   providers,
 }: {
@@ -35,70 +29,23 @@ export function ChatPane({
   initialMessages: PaneMessage[]
   providers: ProviderOption[]
 }) {
-  const [messages, setMessages] = useState<PaneMessage[]>(initialMessages)
-  const [conversationId, setConversationId] = useState<string | null>(
-    initialConversationId,
-  )
-  const [input, setInput] = useState('')
-  const [sending, setSending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [provider, setProvider] = useState<AiProvider>(
-    providers[0]?.value ?? ('anthropic' as AiProvider),
-  )
-  const endRef = useRef<HTMLDivElement>(null)
+  const {
+    messages,
+    input,
+    setInput,
+    sending,
+    error,
+    provider,
+    setProvider,
+    send,
+  } = useChat({ conversationId, initialMessages, providers, syncUrl: true })
 
-  const scrollToEnd = () => {
+  const endRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
     requestAnimationFrame(() =>
       endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }),
     )
-  }
-
-  async function send() {
-    const text = input.trim()
-    if (text === '' || sending) return
-    setError(null)
-
-    const optimistic: PaneMessage = {
-      id: `local-${Date.now()}`,
-      role: 'user',
-      content: text,
-    }
-    setMessages((m) => [...m, optimistic])
-    setInput('')
-    setSending(true)
-    scrollToEnd()
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          conversationId,
-          message: text,
-          provider: providers.length > 1 ? provider : null,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data?.error ?? 'Something went wrong. Please try again.')
-        return
-      }
-      // A new conversation: keep the pane, just update the url.
-      if (!conversationId && typeof data.conversationId === 'string') {
-        setConversationId(data.conversationId)
-        window.history.replaceState(null, '', `/dashboard/chat/${data.conversationId}`)
-      }
-      setMessages((m) => [
-        ...m,
-        { id: data.assistant.id, role: 'assistant', content: data.assistant.content },
-      ])
-    } catch {
-      setError('Could not reach the assistant. Check your connection and try again.')
-    } finally {
-      setSending(false)
-      scrollToEnd()
-    }
-  }
+  }, [messages, sending])
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -160,7 +107,7 @@ export function ChatPane({
             Assistant
             <select
               value={provider}
-              onChange={(e) => setProvider(e.target.value as AiProvider)}
+              onChange={(e) => setProvider(e.target.value as typeof provider)}
               className="rounded-field border border-input bg-field px-2 py-1 text-xs text-field-text outline-none focus:border-(--ring)"
             >
               {providers.map((p) => (

@@ -11,6 +11,27 @@ added the CI migration drift guard. See docs/DECISIONS.md for all three.
 
 ---
 
+## Assistant: gate the floating popup on entitlement once billing lands
+
+**Raised 2026-07-27** when the floating Talvex AI popup shipped for everyone. The
+popup (`src/app/dashboard/_shell/ask-talvex-widget.tsx`) reuses the BYOK chat, so
+today it is effectively gated by the org having a provider key connected: no key,
+and it shows a "needs a key" state instead of taking input.
+
+**What.** When Phase 2 billing (F13) and a platform managed AI key (F7's "platform
+managed key on paid tiers") exist, the assistant should be usable when the org
+**subscribes to the platform AI model** OR **has its own key connected** — and
+the popup should reflect that entitlement rather than only BYOK presence. The
+current `hasKey` prop from the layout is the seam: replace it with an
+`assistantEnabled` entitlement check that is true for a subscribed org or a
+BYOK org.
+
+**Why not now.** There is no billing or platform key yet, so entitlement is
+exactly "has a BYOK key." Building a gate before there is a second path to gate
+on would be speculative. Capture it; wire it when F13 lands.
+
+---
+
 ## Ops: verify Clerk membership sync end to end, and consider a self heal
 
 **Raised 2026-07-24** after finding `org_members` had zero rows in production

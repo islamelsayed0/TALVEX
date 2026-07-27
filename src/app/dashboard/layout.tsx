@@ -5,10 +5,12 @@ import { redirect } from "next/navigation";
 
 import { Wordmark } from "@/components/brand/wordmark";
 import { getActiveOrgViewer } from "@/lib/auth/org-viewer";
+import { listKeyProviders } from "@/lib/db/api-keys";
 
-import { AskTalvexPill } from "./_shell/ask-talvex-pill";
+import { AskTalvexWidget } from "./_shell/ask-talvex-widget";
 import { DashboardNav } from "./_shell/dashboard-nav";
 import { SettingsGear } from "./_shell/settings-gear";
+import { toProviderOptions } from "./chat/ui";
 import { navFor } from "./nav-items";
 
 // Server component. The Clerk widgets and the nav pill are client components,
@@ -31,6 +33,11 @@ export default async function DashboardLayout({
   // affordance, not the boundary: RLS enforces the same answer on every query,
   // and admin pages call requireAdmin() to redirect a member who deep links in.
   const { isAdmin } = await getActiveOrgViewer();
+
+  // The floating assistant is for everyone. It needs to know whether the org has
+  // a provider key connected (otherwise it explains that instead of taking
+  // input) and which providers to offer. Presence only; no key material.
+  const keyProviders = await listKeyProviders();
 
   return (
     <div className="relative flex min-h-full flex-1 flex-col bg-background text-foreground">
@@ -69,8 +76,12 @@ export default async function DashboardLayout({
 
       {children}
 
-      {/* The floating AI entry point, admin only; it hides itself on Help. */}
-      {isAdmin ? <AskTalvexPill /> : null}
+      {/* The floating AI assistant, for everyone; it hides itself on Help. */}
+      <AskTalvexWidget
+        hasKey={keyProviders.length > 0}
+        isAdmin={isAdmin}
+        providers={toProviderOptions(keyProviders)}
+      />
     </div>
   );
 }
