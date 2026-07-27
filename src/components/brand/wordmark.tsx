@@ -1,6 +1,7 @@
 /**
  * The Talvex wordmark: title case, Geist 600, tight letter spacing.
- * "lg" is the sign in treatment (27px), "sm" fits the dashboard header.
+ * "lg" is the sign in treatment (27px); "sm" is the dashboard header brand
+ * (20px, the --text-brand token).
  */
 export function Wordmark({ size = "lg" }: { size?: "lg" | "sm" }) {
   return (
@@ -8,7 +9,7 @@ export function Wordmark({ size = "lg" }: { size?: "lg" | "sm" }) {
       className={
         size === "lg"
           ? "text-wordmark text-foreground"
-          : "text-[16px] font-semibold tracking-[-0.022em] text-foreground"
+          : "text-brand text-foreground"
       }
     >
       Talvex

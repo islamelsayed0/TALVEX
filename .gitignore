@@ -35,6 +35,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# screenshot capture session (holds Clerk session tokens; never commit)
+/.auth/
+
 # vercel
 .vercel
 

@@ -1,3 +1,4 @@
+import { requireAdmin } from '@/lib/auth/org-viewer'
 import { createMonitorAction } from '../actions'
 import { MonitorForm } from '../ui'
 
@@ -13,6 +14,8 @@ export default async function NewMonitorPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
+  await requireAdmin()
+
   const sp = await searchParams
   const asString = (v: string | string[] | undefined) =>
     typeof v === 'string' ? v : ''

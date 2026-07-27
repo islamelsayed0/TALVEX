@@ -1,13 +1,16 @@
-import { getActiveOrgViewer } from '@/lib/auth/org-viewer'
+import { requireAdmin } from '@/lib/auth/org-viewer'
 import { UNKNOWN_MEMBER, resolveUserNames } from '@/lib/auth/user-names'
 import { AI_PROVIDER_LABELS } from '@/lib/chat/providers-meta'
 import { AI_PROVIDERS, listApiKeyEvents, listApiKeys } from '@/lib/db/api-keys'
+import { getActiveOrganization, listOrgMembers } from '@/lib/db/queries'
 import type { AiProvider, ApiKeyEventType } from '@/lib/db/types'
-import { formatUtc, ghostButton, primaryButton } from '../../monitors/ui'
+
+import { Card } from '../../_overview/ui'
+import { formatUtc, primaryButton } from '../../monitors/ui'
 import { FormError, ticketFieldClass } from '../../tickets/ui'
 import { deleteApiKeyAction, saveApiKeyAction } from './actions'
 
-export const metadata = { title: 'API keys — Talvex' }
+export const metadata = { title: 'Settings — Talvex' }
 
 const EVENT_LABEL: Record<ApiKeyEventType, string> = {
   added: 'Key added',
@@ -15,14 +18,28 @@ const EVENT_LABEL: Record<ApiKeyEventType, string> = {
   deleted: 'Key removed',
 }
 
+const ROLE_LABEL: Record<string, string> = {
+  owner: 'Owner',
+  admin: 'Admin',
+  technician: 'Technician',
+  member: 'Member',
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase()
+}
+
 /**
- * BYOK key management, admin only (ruling 6). Members never reach the content:
- * RLS returns nothing, and the page shows a calm "admins only" note instead of
- * an empty admin UI. The key is never shown; the list carries provider and last
- * four only, and there is no reveal. Save runs a validation call first (ruling
- * 5), so a bad key is rejected with a calm message and never saved.
+ * Settings, restyled to the handoff. Admin only (requireAdmin). Real data:
+ * the organization name, the team roster from org_members, and the BYOK AI
+ * provider keys. The BYOK section is load bearing (add/replace with a provider
+ * validation call, remove, and an append only activity trail) and is preserved
+ * exactly, only restyled. The design's Plan / Region rows and the Notifications
+ * and Quiet hours section have no schema, so they are omitted rather than faked.
  */
-export default async function ApiKeysPage({
+export default async function SettingsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -31,23 +48,16 @@ export default async function ApiKeysPage({
   const asString = (v: string | string[] | undefined) =>
     typeof v === 'string' ? v : ''
 
-  const viewer = await getActiveOrgViewer()
-  if (!viewer.isAdmin) {
-    return (
-      <main className="flex flex-1 flex-col gap-6 p-8">
-        <div>
-          <h1 className="text-title text-foreground">API keys</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Key management is available to admins. Ask an admin to add or change
-            the provider key for the assistant.
-          </p>
-        </div>
-      </main>
-    )
-  }
+  await requireAdmin()
 
-  const [keys, events] = await Promise.all([listApiKeys(), listApiKeyEvents()])
+  const [org, members, keys, events] = await Promise.all([
+    getActiveOrganization(),
+    listOrgMembers(),
+    listApiKeys(),
+    listApiKeyEvents(),
+  ])
   const names = await resolveUserNames([
+    ...members.map((m) => m.clerk_user_id),
     ...keys.map((k) => k.addedBy),
     ...events.map((e) => e.actor),
   ])
@@ -67,131 +77,182 @@ export default async function ApiKeysPage({
   const configured = new Set(keys.map((k) => k.provider))
 
   return (
-    <main className="flex flex-1 flex-col gap-8 p-8">
-      <div>
-        <h1 className="text-title text-foreground">API keys</h1>
-        <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          The assistant runs on your own AI provider key. Keys are encrypted, are
-          never shown again after you save, and are used only on the server. Add
-          one key per provider.
+    <main className="mx-auto w-full max-w-[780px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
+      <div className="mb-[22px]">
+        <h1 className="text-title text-foreground">Settings</h1>
+        <p className="mt-1.5 text-[14px] text-quiet">
+          Manage your workspace, team and integrations.
         </p>
       </div>
 
       {banner ? (
-        <p className="max-w-2xl rounded-button border border-border bg-card px-5 py-4 text-sm text-card-foreground">
+        <Card className="mb-[18px] px-5 py-4 text-sm text-card-foreground">
           {banner}
-        </p>
+        </Card>
       ) : null}
 
-      {/* Add or replace */}
-      <section className="max-w-2xl">
-        <h2 className="text-base font-semibold text-foreground">Add a key</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          We check the key with the provider before saving. Adding a key for a
-          provider that already has one replaces it.
-        </p>
-        <form
-          action={saveApiKeyAction}
-          className="mt-4 flex flex-col gap-4"
-          autoComplete="off"
-        >
-          <FormError message={error || undefined} />
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm text-muted-foreground">Provider</span>
-            <select
-              name="provider"
-              defaultValue={errorProvider || AI_PROVIDERS[0]}
-              className={`${ticketFieldClass} h-12 appearance-none`}
-            >
-              {AI_PROVIDERS.map((p) => (
-                <option key={p} value={p}>
-                  {AI_PROVIDER_LABELS[p]}
-                  {configured.has(p) ? ' (replace)' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm text-muted-foreground">Key</span>
-            <input
-              name="key"
-              type="password"
-              required
-              autoComplete="off"
-              placeholder="Paste your provider key"
-              className={`${ticketFieldClass} h-12`}
-            />
-          </label>
-          <div>
-            <button type="submit" className={primaryButton}>
-              Validate and save
-            </button>
+      <div className="flex flex-col gap-[18px]">
+        {/* Organization */}
+        <Card className="px-[22px] py-5">
+          <h2 className="mb-4 text-base font-semibold text-foreground">
+            Organization
+          </h2>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-[13.5px] text-muted-foreground">Name</span>
+            <span className="min-w-[220px] rounded-field border border-input bg-field px-3.5 py-2.5 text-sm text-field-text">
+              {org?.name ?? 'Not synced yet'}
+            </span>
           </div>
-        </form>
-      </section>
+          {/* TODO: plan and region are not modeled (no schema); omitted, not faked. */}
+        </Card>
 
-      {/* Configured keys */}
-      <section className="max-w-2xl">
-        <h2 className="text-base font-semibold text-foreground">Configured keys</h2>
-        {keys.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">
-            No keys yet. Add one above to turn on the assistant.
-          </p>
-        ) : (
-          <ul className="mt-4 flex flex-col gap-2">
-            {keys.map((k) => (
-              <li
-                key={k.provider}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-button border border-border bg-card px-5 py-4"
-              >
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium text-card-foreground">
-                    {AI_PROVIDER_LABELS[k.provider]} · ending in {k.keyLastFour}
+        {/* Team members */}
+        <Card className="px-[22px] py-5">
+          <h2 className="mb-4 text-base font-semibold text-foreground">
+            Team members
+          </h2>
+          <div className="flex flex-col">
+            {members.map((m) => {
+              const name = nameOf(m.clerk_user_id)
+              return (
+                <div
+                  key={m.clerk_user_id}
+                  className="flex items-center gap-3 border-t border-divider py-2.5 first:border-t-0"
+                >
+                  <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-accent-gradient text-[12px] font-semibold text-primary-foreground">
+                    {initials(name)}
                   </span>
-                  <span className="text-xs text-quiet">
-                    Added by {nameOf(k.addedBy)} · {formatUtc(k.updatedAt)}
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                    {name}
+                  </span>
+                  <span className="flex-none text-[12.5px] text-muted-foreground">
+                    {ROLE_LABEL[m.role] ?? m.role}
                   </span>
                 </div>
-                <form action={deleteApiKeyAction}>
-                  <input type="hidden" name="provider" value={k.provider} />
-                  <button type="submit" className={`${ghostButton} px-3 py-2`}>
-                    Remove
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+              )
+            })}
+          </div>
+        </Card>
 
-      {/* The key trail */}
-      <section className="max-w-2xl">
-        <h2 className="text-base font-semibold text-foreground">Activity</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Every key change, oldest first. Times are UTC.
-        </p>
-        {events.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">Nothing yet.</p>
-        ) : (
-          <ol className="mt-4 flex flex-col gap-3">
-            {events.map((e) => (
-              <li
-                key={e.id}
-                className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-2 py-1"
-              >
-                <span className="text-sm text-muted-foreground">
-                  {EVENT_LABEL[e.event_type as ApiKeyEventType]} ·{' '}
-                  {AI_PROVIDER_LABELS[e.provider as AiProvider] ?? e.provider} ending
-                  in {e.key_last_four}
-                </span>
-                <span className="text-xs text-quiet">
-                  {nameOf(e.actor)}, {formatUtc(e.occurred_at)}
-                </span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+        {/* AI providers (BYOK). Functionality preserved; only restyled. */}
+        <Card className="px-[22px] py-5">
+          <h2 className="text-base font-semibold text-foreground">AI providers</h2>
+          <p className="mt-1 text-[12.5px] text-quiet">
+            Bring your own key. Keys are encrypted, are never shown again after
+            you save, and are used only on the server. One key per provider.
+          </p>
+
+          <div className="mt-4 flex flex-col">
+            {AI_PROVIDERS.map((p) => {
+              const key = keys.find((k) => k.provider === p)
+              return (
+                <div
+                  key={p}
+                  className="flex items-center justify-between gap-3 border-t border-divider py-3 first:border-t-0"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span
+                      className={`h-2 w-2 flex-none rounded-full ${key ? 'bg-status-up' : 'bg-quiet'}`}
+                      aria-hidden
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      {AI_PROVIDER_LABELS[p]}
+                    </span>
+                    <span className="truncate font-mono text-[12px] text-quiet">
+                      {key ? `key ••••${key.keyLastFour}` : 'Not connected'}
+                    </span>
+                  </div>
+                  {key ? (
+                    <form action={deleteApiKeyAction}>
+                      <input type="hidden" name="provider" value={p} />
+                      <button
+                        type="submit"
+                        className="text-[13px] font-semibold text-accent-text"
+                      >
+                        Remove
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Add or replace a key. We validate with the provider before saving. */}
+          <form
+            action={saveApiKeyAction}
+            className="mt-5 flex flex-col gap-3 border-t border-divider pt-5"
+            autoComplete="off"
+          >
+            <span className="text-[13.5px] font-medium text-foreground">
+              Add or replace a key
+            </span>
+            <FormError message={error || undefined} />
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <label className="flex flex-1 flex-col gap-1.5">
+                <span className="text-[12.5px] text-muted-foreground">Provider</span>
+                <select
+                  name="provider"
+                  defaultValue={errorProvider || AI_PROVIDERS[0]}
+                  className={`${ticketFieldClass} h-11 appearance-none`}
+                >
+                  {AI_PROVIDERS.map((p) => (
+                    <option key={p} value={p}>
+                      {AI_PROVIDER_LABELS[p]}
+                      {configured.has(p) ? ' (replace)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-[2] flex-col gap-1.5">
+                <span className="text-[12.5px] text-muted-foreground">Key</span>
+                <input
+                  name="key"
+                  type="password"
+                  required
+                  autoComplete="off"
+                  placeholder="Paste your provider key"
+                  className={`${ticketFieldClass} h-11`}
+                />
+              </label>
+            </div>
+            <div>
+              <button type="submit" className={primaryButton}>
+                Validate and save
+              </button>
+            </div>
+          </form>
+
+          {/* The append only key trail. */}
+          {events.length > 0 ? (
+            <div className="mt-5 border-t border-divider pt-4">
+              <span className="text-[13.5px] font-medium text-foreground">
+                Key activity
+              </span>
+              <ol className="mt-2 flex flex-col gap-2">
+                {events.map((e) => (
+                  <li
+                    key={e.id}
+                    className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5"
+                  >
+                    <span className="text-[13px] text-muted-foreground">
+                      {EVENT_LABEL[e.event_type as ApiKeyEventType]} ·{' '}
+                      {AI_PROVIDER_LABELS[e.provider as AiProvider] ?? e.provider}{' '}
+                      ending in {e.key_last_four}
+                    </span>
+                    <span className="font-mono text-[12px] text-quiet">
+                      {nameOf(e.actor)}, {formatUtc(e.occurred_at)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
+        </Card>
+
+        {/* Notifications and Quiet hours: no schema for preferences yet, so the
+            section is omitted rather than shown with non-functional toggles. */}
+      </div>
     </main>
   )
 }

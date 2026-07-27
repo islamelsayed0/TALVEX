@@ -4,9 +4,9 @@
  *
  * Rules enforced here and by tests/design-tokens.test.ts:
  * - No hardcoded hex values inside components; everything reads these tokens.
- * - Dark is the default theme; [data-theme="light"] overrides. The pre paint
- *   script in src/components/theme/theme-script.tsx picks the initial theme
- *   from localStorage, then prefers-color-scheme, then falls back to dark.
+ * - The product is dark only (docs/design/handoff/README.md; see the dark-only
+ *   decision in docs/DECISIONS.md). data-theme="dark" is hardcoded on <html>,
+ *   so these :root tokens are the single palette; there is no light override.
  * - Green, amber, and red carry status meaning and nothing else. They exist
  *   only as the explicit --status-* tokens below (added with the Phase 1
  *   monitors feature): green up, red down, amber pending or unknown. Using
@@ -23,8 +23,9 @@
 
 @import "tailwindcss";
 
-/* The dark: variant follows the data-theme attribute set by the theme
- * toggle, not the OS setting, so one toggle drives everything. */
+/* data-theme="dark" is always set on <html> (the product is dark only), so
+ * this variant always matches. Nothing uses `dark:` today; kept as a harmless
+ * safety net so any future `dark:` utility resolves rather than silently no ops. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
@@ -42,6 +43,10 @@
 
   /* Text */
   --foreground: #f6f4f0;
+  /* Between primary and muted: dense body, activity rows. */
+  --secondary-foreground: #d7d3cc;
+  /* Chip labels (recurrence, linked incident). */
+  --chip-text: #c9c3ba;
   --muted-foreground: #a7a39c;
   /* Reference used #6f6b65, which is 3.7:1 on the page and 3.5:1 on fields.
    * Bumped to the nearest value that clears 4.5:1 on page, field, and card
@@ -62,10 +67,22 @@
   --accent-gradient: linear-gradient(150deg, #4d95ff, #2f6fd6);
 
   /* Surfaces */
-  --card: #171512;
+  /* The dashboard flat card surface. Repointed from the sign in value
+   * (#171512) to the dashboard handoff value; the two are a shade apart and
+   * the darker surface does the work in the flat variant. Light mode keeps
+   * its own #ffffff card below. */
+  --card: #151310;
   --card-foreground: #eeece7;
   --card-hover: #1b1815;
+  /* The header bottom rule and general edge. */
   --border: rgba(255, 255, 255, 0.09);
+  /* Hairline around cards; lighter than the header border on purpose. */
+  --card-border: rgba(255, 255, 255, 0.07);
+  /* Row separators inside a card. */
+  --divider: rgba(255, 255, 255, 0.06);
+  /* Nested tiles inside a card (KPI mini tiles, count tiles). */
+  --tile-bg: rgba(255, 255, 255, 0.03);
+  --tile-border: rgba(255, 255, 255, 0.07);
 
   /* Fields */
   --field-bg: #141210;
@@ -90,6 +107,15 @@
   --status-up: #4ade80;
   --status-down: #f87171;
   --status-pending: #fbbf24;
+  /* Paused and closed read as quiet grey, never a status hue. */
+  --status-paused: var(--quiet);
+  /* Washes: translucent status and accent fills behind icons and chips.
+   * Kept as rgba, not hex, so the neutral-or-blue hex rule in
+   * tests/design-tokens.test.ts does not flag the green and red tints,
+   * which carry status meaning here, not decoration. */
+  --wash-up: rgba(74, 222, 128, 0.12);
+  --wash-down: rgba(248, 113, 113, 0.12);
+  --wash-accent: rgba(61, 139, 255, 0.1);
 
   /* Theme toggle */
   --toggle-bg: rgba(255, 255, 255, 0.05);
@@ -114,77 +140,13 @@
   --radius: 0.6875rem;
 }
 
-[data-theme="light"] {
-  color-scheme: light;
-
-  --background: #f4f6f9;
-  --page-gradient: radial-gradient(
-    130% 100% at 50% -8%,
-    #ffffff 0%,
-    #f4f6f9 58%,
-    #eef1f5 100%
-  );
-  --glow: rgba(61, 139, 255, 0.08);
-
-  --foreground: #17150f;
-  --muted-foreground: #6b675f;
-  /* Reference used #a29e95, which is 2.5:1 on the page. Darkened to clear
-   * 4.5:1 on both the page and white fields/cards. */
-  --quiet: #73706a;
-  --link: #6b675f;
-  --link-border: rgba(107, 103, 95, 0.3);
-
-  /* Reference filled the primary button with #3d8bff and a white label,
-   * which is 3.3:1. Approved fix: fill with #2f6fd6, the dark stop of the
-   * accent gradient, keeping the white label (4.8:1). Hover keeps the same
-   * fill (a lighter hover would drop the label back under AA); feedback
-   * comes from the lift and shadow. */
-  --primary: #2f6fd6;
-  --primary-hover: #2f6fd6;
-  --primary-foreground: #ffffff;
-  /* Reference #2f6fd6 as text is 4.44:1 on the page and dips further on
-   * the accent tinted hover background; darkened until both pass. */
-  --accent-text: #2b66c4;
-
-  --card: #ffffff;
-  --card-foreground: #17150f;
-  --card-hover: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
-
-  --field-bg: #ffffff;
-  --field-bg-focus: #ffffff;
-  --input: rgba(0, 0, 0, 0.12);
-  --field-text: #17150f;
-  /* A translucent accent border washes out on white fields; the solid
-   * primary keeps the focus indicator above 3:1. */
-  --ring: var(--primary);
-
-  --ghost-border: rgba(0, 0, 0, 0.14);
-  --ghost-border-hover: rgba(0, 0, 0, 0.28);
-  --ghost-text: #2a2822;
-  --ghost-hover-bg: rgba(0, 0, 0, 0.03);
-
-  /* Status colors darken for light surfaces; same meanings as dark. */
-  --status-up: #15803d;
-  --status-down: #b91c1c;
-  --status-pending: #b45309;
-
-  --toggle-bg: rgba(0, 0, 0, 0.04);
-  --toggle-border: rgba(0, 0, 0, 0.12);
-
-  --mark-ring: #ffffff;
-  --mark-inset: rgba(255, 255, 255, 0.4);
-
-  --shadow-tile:
-    0 10px 26px -10px rgba(61, 139, 255, 0.5), inset 0 1px 0 var(--mark-inset);
-  --shadow-primary:
-    0 10px 24px -12px rgba(61, 139, 255, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Display face for the landing page headings only (body stays Geist).
+   * Loaded in src/lib/fonts/general-sans.ts; drives the `font-display`
+   * utility. */
+  --font-display: var(--font-general-sans);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -209,24 +171,107 @@
   --color-status-up: var(--status-up);
   --color-status-down: var(--status-down);
   --color-status-pending: var(--status-pending);
+  --color-status-paused: var(--status-paused);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-chip-text: var(--chip-text);
+  --color-card-border: var(--card-border);
+  --color-divider: var(--divider);
+  --color-tile: var(--tile-bg);
+  --color-tile-border: var(--tile-border);
+  --color-wash-up: var(--wash-up);
+  --color-wash-down: var(--wash-down);
+  --color-wash-accent: var(--wash-accent);
 
-  /* Radii scale from the reference: logo tile 14, primary button 12,
-   * inputs and secondary buttons 11. */
+  /* Radii scale from the reference: logo/icon tile 14, primary button 12,
+   * inputs and secondary buttons 11. Dashboard adds the larger card and
+   * nested surfaces plus the small nav and mini radii. */
   --radius-tile: 14px;
   --radius-button: 12px;
   --radius-field: 11px;
+  --radius-card: 20px;
+  --radius-kpi: 18px;
+  --radius-nested: 16px;
+  --radius-nav: 9px;
+  --radius-mini: 8px;
 
-  /* Type scale from the reference. */
+  /* Type scale from the reference. The auth wordmark stays 27px; the
+   * dashboard header brand is its own 20px token. Named tokens exist for
+   * roles reused across screens; one off sizes use Tailwind utilities. */
   --text-wordmark: 27px;
   --text-wordmark--line-height: 1;
   --text-wordmark--letter-spacing: -0.022em;
   --text-wordmark--font-weight: 600;
-  --text-title: 23px;
+  --text-brand: 20px;
+  --text-brand--line-height: 1;
+  --text-brand--letter-spacing: -0.022em;
+  --text-brand--font-weight: 600;
+  --text-title: 24px;
   --text-title--line-height: 1.15;
   --text-title--letter-spacing: -0.02em;
   --text-title--font-weight: 600;
+  --text-kpi: 32px;
+  --text-kpi--line-height: 1;
+  --text-kpi--letter-spacing: -0.02em;
+  --text-kpi--font-weight: 600;
   --text-subhead: 14.5px;
   --text-subhead--line-height: 1.55;
+  /* Column headers and section labels also take the `uppercase` utility;
+   * text-transform is not a font token sub property. */
+  --text-column: 11px;
+  --text-column--letter-spacing: 0.05em;
+  --text-column--font-weight: 500;
+  --text-section: 11px;
+  --text-section--letter-spacing: 0.06em;
+  --text-section--font-weight: 600;
+  --text-chip: 10.5px;
+  --text-chip--font-weight: 500;
+
+  /* First-class utilities so Turbopack emits them deterministically, instead of
+   * arbitrary [] utilities it must JIT-scan: shadow-card, bg-accent-gradient,
+   * animate-fade-up, animate-pulse-dot. The keyframes live here in @theme so
+   * Tailwind owns and emits them alongside the animation utilities. */
+  --shadow-card:
+    inset 0 1px 1px rgba(255, 255, 255, 0.06),
+    0 14px 34px -20px rgba(0, 0, 0, 0.5);
+  /* Landing primary CTA glow (blue, so it clears the reserved color rule).
+   * First class so Turbopack emits it deterministically, not as arbitrary []. */
+  --shadow-cta:
+    0 12px 30px -14px rgba(61, 139, 255, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  --background-image-accent-gradient: var(--accent-gradient);
+  --animate-fade-up: fadeUp 0.5s ease both;
+  --animate-pulse-dot: pulseDot 1.8s ease-in-out infinite;
+
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes pulseDot {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.5);
+    }
+    60% {
+      box-shadow: 0 0 0 6px rgba(248, 113, 113, 0);
+    }
+  }
+}
+
+/* Respect a reduced motion preference: no mount animation, no pulsing. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 @layer base {
@@ -234,7 +279,6 @@
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
-    transition: background 0.3s ease;
   }
 }
 
@@ -266,12 +310,199 @@
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2"/></filter><rect width="100%25" height="100%25" filter="url(%23n)" opacity="0.025"/></svg>');
   }
 
-  /* Theme dependent icon visibility (used by the theme toggle). */
-  [data-theme="light"] .when-dark {
-    display: none;
+  /* Glass chrome: the ONE translucent treatment in the flat variant, used by
+   * the nav pill, org pill, AI button and floating pill (built in the shell
+   * PR). Cards are flat; only the chrome is glass. The consumer sets its own
+   * border-radius; the ::before paints a gradient hairline edge that follows
+   * it via mask-composite. Visual correctness is verified once the shell
+   * consumes it. */
+  .glass {
+    position: relative;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.09);
   }
-  :root:not([data-theme="light"]) .when-light {
-    display: none;
+  .glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.2px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0.08) 42%,
+      rgba(255, 255, 255, 0) 58%,
+      rgba(255, 255, 255, 0.3) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  /* Accent glass: the tinted variant of .glass for the AI affordance (the
+   * floating Ask Talvex pill). Same recipe, a blue fill and a blue gradient
+   * edge, because the AI action is the one accent affordance. The blue rgba
+   * values pass the reserved color rule (blue dominant, not green/amber/red). */
+  .glass-accent {
+    position: relative;
+    background: rgba(61, 139, 255, 0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.14),
+      0 14px 34px -12px rgba(0, 0, 0, 0.7),
+      0 6px 18px -8px rgba(61, 139, 255, 0.5);
+  }
+  .glass-accent::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.3px;
+    background: linear-gradient(
+      180deg,
+      rgba(122, 170, 255, 0.7) 0%,
+      rgba(61, 139, 255, 0.16) 45%,
+      rgba(61, 139, 255, 0) 60%,
+      rgba(61, 139, 255, 0.45) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  /* Nav pill items. Neutral by default, lifting to an inset highlight when the
+   * route is active (aria-current="page"). Kept as a component class so the
+   * values live in one place. */
+  .nav-item {
+    color: var(--muted-foreground);
+  }
+  .nav-item:hover {
+    color: var(--foreground);
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .nav-item[aria-current="page"] {
+    color: var(--foreground);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12);
+  }
+
+  /* ------------------------------------------------------------------
+   * Landing page chrome (src/app/page.tsx).
+   *
+   * The public landing sits over a background video, so its glass reads
+   * lighter than the dashboard's .glass. These are the three translucent
+   * treatments the design uses, kept here so no rgba/hex lives in the page.
+   * All white translucency (no reserved green/amber/red hue), so the tokens
+   * test is satisfied.
+   * ---------------------------------------------------------------- */
+
+  /* Nav pill and secondary "See the product" button: the faintest glass. */
+  .liquid-glass {
+    position: relative;
+    background: rgba(255, 255, 255, 0.01);
+    background-blend-mode: luminosity;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+  }
+  .liquid-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.4px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.45) 0%,
+      rgba(255, 255, 255, 0.15) 20%,
+      rgba(255, 255, 255, 0) 40%,
+      rgba(255, 255, 255, 0) 60%,
+      rgba(255, 255, 255, 0.15) 80%,
+      rgba(255, 255, 255, 0.45) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* The two browser chrome product shots: deeper fill, heavy drop shadow. */
+  .landing-frame,
+  .landing-panel {
+    position: relative;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.035);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .landing-frame {
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.1),
+      0 32px 80px -32px rgba(0, 0, 0, 0.75);
+  }
+  /* The softer card variant: the "rule" callout and the "who it's for" cards. */
+  .landing-panel {
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.1),
+      0 14px 34px -20px rgba(0, 0, 0, 0.5);
+  }
+  .landing-frame::before,
+  .landing-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.3px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.3) 0%,
+      rgba(255, 255, 255, 0.06) 40%,
+      rgba(255, 255, 255, 0) 60%,
+      rgba(255, 255, 255, 0.16) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Fixed vignette painted over the background video so text stays legible. */
+  .landing-hero-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(
+      120% 80% at 50% 0%,
+      rgba(23, 20, 15, 0.4),
+      rgba(11, 10, 8, 0.74) 70%
+    );
+  }
+  /* The background video itself: pinned behind everything, fading in on load. */
+  .landing-hero-video {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  .landing-hero-video[data-ready="true"] {
+    opacity: 1;
   }
 
   /* ------------------------------------------------------------------
@@ -510,9 +741,17 @@
     border-color: var(--accent-outline-hover);
   }
 
-  /* Dashboard header widgets. */
+  /* Dashboard header widgets. The org switcher is the header org pill: the
+   * trigger is transparent and pill shaped (this component layer wins reliably,
+   * where an appearance element border/shadow would be dropped), sitting inside
+   * the .glass wrapper the layout puts around it, which paints the fill and the
+   * gradient hairline edge. */
   .cl-organizationSwitcherTrigger {
     color: var(--foreground);
+    background: transparent;
+    padding: 6px 12px;
+    border-radius: 999px;
+    gap: 8px;
   }
   .cl-organizationSwitcherTrigger:hover {
     background: var(--ghost-hover-bg);

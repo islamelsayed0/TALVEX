@@ -64,7 +64,7 @@ export async function createTicketAction(formData: FormData): Promise<void> {
     // Keep the link on the round trip so a failed submit does not lose it.
     if (incidentId) params.incident_id = incidentId
     if (conversationId) params.conversation_id = conversationId
-    redirect(`/dashboard/get-help/ticket?${new URLSearchParams(params)}`)
+    redirect(`/dashboard/help/ticket?${new URLSearchParams(params)}`)
   }
 
   revalidatePath('/dashboard/tickets')

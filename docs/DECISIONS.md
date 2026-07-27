@@ -6,6 +6,118 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-27 — The landing page is built now, and a master design document is the design entry point
+
+**Decided.** The public landing page (`/`) is implemented ahead of schedule,
+superseding the 2026-07-23 decision to hold it until the end of the MVP. A new
+master design document, [`docs/design/DESIGN.md`](design/DESIGN.md), is now the
+single entry point for the design system and screen inventory; the existing
+handoffs and this log sit beneath it.
+
+**Why.** The landing design was finished and the owner chose to ship it. It cost
+little: the design was derived from the same token system the app already uses,
+so it reused the palette wholesale and added only landing-specific chrome
+(`.liquid-glass`, `.landing-frame`, `.landing-panel`, the hero video/overlay), a
+`General Sans` display face, and one CTA shadow token. With auth, dashboard, Help,
+and now landing all built, a master document was needed so the design is
+discoverable from one place rather than scattered across handoffs.
+
+**Affects.** `src/app/page.tsx` is now the real landing page (client
+`_landing/hero-background.tsx` for the muted background video), not a placeholder.
+General Sans is self hosted in `src/lib/fonts/`. The marketing copy only
+advertises what ships: the alert channels are Email, Discord, and recovery
+alerts, matching BRD F10 — **not** SMS or quiet hours, which are not built, and
+which the earlier draft wrongly promised. Product shots are the real
+`dashboard-home-dark` / `get-help-dark` screenshots. `tests/design-tokens.test.ts`
+still passes unchanged; no new colour tokens were needed.
+
+---
+
+## 2026-07-25 — The product is dark only; light mode removed
+
+**Decided.** Talvex ships dark only. The light theme, the theme toggle, and the
+pre paint theme script are gone; `data-theme="dark"` is set statically on
+`<html>`, and the `:root` tokens in `src/app/globals.css` are the single palette.
+This supersedes the 2026-07-24 decision that kept light mode in scope.
+
+**Why.** The design is dark first, and light mode caused two real problems: a
+visitor on a light mode OS saw a washed out light adaptation instead of the
+intended design, and every surface carried a second set of token values plus
+`[data-theme="light"]` overrides that had to stay correct. Removing light
+collapses the theme system to one palette and deletes a class of failure modes.
+Alongside it, the fragile arbitrary utilities (`shadow-[var(--shadow-card)]`,
+`animate-[fadeUp…]`, `bg-[image:var(--accent-gradient)]`) became first-class
+`@theme` utilities (`shadow-card`, `animate-fade-up`, `animate-pulse-dot`,
+`bg-accent-gradient`), so Tailwind v4 under Turbopack emits them deterministically
+and the dev stylesheet stops going stale as screens are added — which is what
+made the running app look unstyled while the production build was correct.
+
+**Affects.** There is no `[data-theme="light"]` anywhere; `tests/design-tokens.test.ts`
+runs its AA and reserved color checks for the dark palette only. The auth screens
+are dark only too (no toggle). If light mode is ever wanted again it is fresh,
+deliberate work, not a maintained overlay.
+
+---
+
+## 2026-07-24 — Light mode stays in scope; every design token carries both themes, guarded in both
+
+**Decided.** Light mode is a supported, in scope mode of the product, not a
+deferred idea. The design handoff prototype was authored dark only and its
+README called light mode "never designed" (open question 1); that framing is
+stale against this codebase. Light mode already ships here: the theme toggle,
+the pre paint theme script, Clerk theming, and light screenshots for every
+screen. Every design token added from here on gets values in both the dark
+`:root` and the `[data-theme="light"]` override, and `tests/design-tokens.test.ts`
+asserts WCAG AA on the text pairs in both themes. Wiring a token dark only
+would silently regress a live feature, so it is not allowed.
+
+**Why.** The reskin adds a batch of tokens (flat card surface, dividers,
+tiles, secondary and chip text, status washes, card shadow, a fuller type and
+radius scale, a glass chrome class). Treating light as out of scope, as the
+prototype implies, would have let those tokens ship without light values and
+without contrast coverage, breaking the light theme that users already have.
+The honest reading is that the prototype is behind the repo, not that the repo
+should follow the prototype. The handoff README was reconciled to say so
+rather than implemented against.
+
+**Affects.** Adding or changing a color or surface token means providing both
+theme values; adding a text token means adding its pair to the AA test so both
+themes are guarded. Naming stays semantic; see the tokens in
+`src/app/globals.css`.
+
+**Status washes are a sanctioned exception to the reserved color rule.** The
+fills `--wash-up`, `--wash-down`, and `--wash-accent` are translucent tints
+derived from the status colors, so they are green and red on purpose. They stay
+rgba because a wash needs alpha; that is the correct value format, not a way
+around the guard. The tokens test now scans rgba as well as hex and permits
+these tokens by name, so a colored value can no longer hide behind the alpha
+syntax. The guard came out stricter, not quieter.
+
+---
+
+## 2026-07-24 — The Get help route is /dashboard/help, with a permanent redirect from the old path
+
+**Decided.** The end user help feature lives at `/dashboard/help` (and
+`/dashboard/help/ticket`). It was previously `/dashboard/get-help`. A permanent
+redirect in `next.config.ts` sends `/dashboard/get-help/:path*` to
+`/dashboard/help/:path*` so the old path keeps working. The feature's visible
+name stays "Get help"; only the route path changed.
+
+**Why.** The redesign begins here, and the route rename lands first so the
+design PRs that follow all target one stable path. `help` reads cleaner in the
+URL, matches how the nav and pages already speak ("Get help" the action, "help"
+the place), and drops the hyphen from the path. The redirect is permanent
+because the old path may already be bookmarked or linked, and a design reskin
+should not break a link someone saved.
+
+**Affects.** New links point at `/dashboard/help`. The eight internal
+references (layout nav, the two tickets page buttons, the incident detail
+create ticket href, the chat and tickets action redirects, and the two help
+page internal links) were updated in one move. Anything added later should use
+the new path; the redirect covers stragglers, not new code.
+
+---
+
 ## 2026-07-24 — CI fails a build when a merged migration is not applied to the shared project
 
 **Decided.** A third CI job, `migration-drift`, compares three sets on every

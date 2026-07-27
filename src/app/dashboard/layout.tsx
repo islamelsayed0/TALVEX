@@ -3,100 +3,74 @@ import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { LogoMark } from "@/components/brand/logo-mark";
 import { Wordmark } from "@/components/brand/wordmark";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { getActiveOrgViewer } from "@/lib/auth/org-viewer";
 
-// Server component. The Clerk widgets below are client components inside their
-// own package, so they can be rendered from here without making this a client
-// component (CLAUDE.md: server components by default).
+import { AskTalvexPill } from "./_shell/ask-talvex-pill";
+import { DashboardNav } from "./_shell/dashboard-nav";
+import { SettingsGear } from "./_shell/settings-gear";
+import { navFor } from "./nav-items";
+
+// Server component. The Clerk widgets and the nav pill are client components,
+// rendered from here without making the shell a client component (CLAUDE.md:
+// server components by default).
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   // Architect ruling (docs/DECISIONS.md): a signed in session with no active
   // organization is redirected to org selection, never shown an error. This
-  // runs before any child page, so nothing under /dashboard can reach the
-  // data layer org-less; the MissingActiveOrgError in client.ts stays a
-  // backstop that should never fire from here.
+  // runs before any child page, so nothing under /dashboard reaches the data
+  // layer org-less; the MissingActiveOrgError in client.ts stays a backstop.
   const { orgId } = await auth();
   if (!orgId) {
     redirect("/select-org");
   }
 
+  // Role drives which nav a person sees. isAdmin reads org_members.role (the
+  // column RLS reads), never the token claim; see org-viewer.ts. This is a UI
+  // affordance, not the boundary: RLS enforces the same answer on every query,
+  // and admin pages call requireAdmin() to redirect a member who deep links in.
+  const { isAdmin } = await getActiveOrgViewer();
+
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-background text-foreground">
-      <header className="flex items-center justify-between border-b border-border px-6 py-3">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2.5">
-            <LogoMark size={28} />
+    <div className="relative flex min-h-full flex-1 flex-col bg-background text-foreground">
+      <header className="flex items-center justify-between gap-4 border-b border-border px-[22px] py-3.5">
+        {/* Left: wordmark (no logo mark, per the design) and the org switcher,
+            which is the org pill. */}
+        <div className="flex min-w-0 flex-none items-center gap-3.5">
+          <Link href="/dashboard">
             <Wordmark size="sm" />
           </Link>
-          {/* Org switcher. hidePersonal keeps every session inside an
-              organization, which is what the tenancy model depends on: a
-              personal workspace would produce a session with no org id and
-              every RLS policy in Task 4 reads that claim. */}
-          <OrganizationSwitcher
-            hidePersonal
-            afterCreateOrganizationUrl="/dashboard"
-            afterSelectOrganizationUrl="/dashboard"
-          />
-          <nav className="flex items-center gap-1 text-sm">
-            <Link
-              href="/dashboard"
-              className="rounded-button px-3 py-1.5 text-muted-foreground transition-colors hover:bg-(--ghost-hover-bg) hover:text-foreground"
-            >
-              Overview
-            </Link>
-            <Link
-              href="/dashboard/monitors"
-              className="rounded-button px-3 py-1.5 text-muted-foreground transition-colors hover:bg-(--ghost-hover-bg) hover:text-foreground"
-            >
-              Monitors
-            </Link>
-            <Link
-              href="/dashboard/incidents"
-              className="rounded-button px-3 py-1.5 text-muted-foreground transition-colors hover:bg-(--ghost-hover-bg) hover:text-foreground"
-            >
-              Incidents
-            </Link>
-            <Link
-              href="/dashboard/tickets"
-              className="rounded-button px-3 py-1.5 text-muted-foreground transition-colors hover:bg-(--ghost-hover-bg) hover:text-foreground"
-            >
-              Tickets
-            </Link>
-            {/* Chat is reachable from the nav for returning to past
-                conversations (Task 5 addendum); the funnel still begins at
-                Get help. */}
-            <Link
-              href="/dashboard/chat"
-              className="rounded-button px-3 py-1.5 text-muted-foreground transition-colors hover:bg-(--ghost-hover-bg) hover:text-foreground"
-            >
-              Chat
-            </Link>
-            <Link
-              href="/dashboard/settings/api-keys"
-              className="rounded-button px-3 py-1.5 text-muted-foreground transition-colors hover:bg-(--ghost-hover-bg) hover:text-foreground"
-            >
-              Settings
-            </Link>
-            {/* Get help is the one accent item in the nav on purpose: it is
-                the product's primary ask (ruling 4), and accent means
-                primary action, never status. */}
-            <Link
-              href="/dashboard/get-help"
-              className="rounded-button px-3 py-1.5 font-medium whitespace-nowrap text-accent-text transition-colors hover:bg-(--accent-hover-bg)"
-            >
-              Get help
-            </Link>
-          </nav>
+          <div className="h-[22px] w-px flex-none bg-border" />
+          {/* The org switcher is the org pill. The .glass wrapper paints the
+              pill fill and gradient edge; the trigger inside is transparent
+              (globals.css + clerk-appearance.ts). hidePersonal keeps every
+              session inside an organization, which the tenancy model depends
+              on: a personal workspace would produce a session with no org id,
+              and every RLS policy reads that claim. */}
+          <div className="glass inline-flex items-center rounded-full">
+            <OrganizationSwitcher
+              hidePersonal
+              afterCreateOrganizationUrl="/dashboard"
+              afterSelectOrganizationUrl="/dashboard"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <ThemeToggle className="h-9 w-9" />
+
+        {/* Center: the role aware nav pill. */}
+        <DashboardNav items={navFor(isAdmin)} />
+
+        {/* Right: settings (admin only) and the account menu. */}
+        <div className="flex flex-none items-center gap-2.5">
+          {isAdmin ? <SettingsGear /> : null}
           <UserButton />
         </div>
       </header>
+
       {children}
+
+      {/* The floating AI entry point, admin only; it hides itself on Help. */}
+      {isAdmin ? <AskTalvexPill /> : null}
     </div>
   );
 }

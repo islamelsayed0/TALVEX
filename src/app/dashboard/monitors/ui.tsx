@@ -24,14 +24,14 @@ export function monitorStatus(
   return 'pending'
 }
 
-const STATUS_LABEL: Record<StatusKind, string> = {
+export const STATUS_LABEL: Record<StatusKind, string> = {
   up: 'Up',
   down: 'Down',
   pending: 'Pending',
   paused: 'Paused',
 }
 
-const STATUS_TEXT: Record<StatusKind, string> = {
+export const STATUS_TEXT: Record<StatusKind, string> = {
   up: 'text-status-up',
   down: 'text-status-down',
   pending: 'text-status-pending',
@@ -60,6 +60,15 @@ export function formatMs(ms: number | null): string {
 
 export function formatUptime(percent: number | null): string {
   return percent === null ? '—' : `${percent.toFixed(2)}%`
+}
+
+/** The check cadence in words: "every 5 min", "every 1 hour". */
+export function formatInterval(seconds: number): string {
+  if (seconds % 3600 === 0) {
+    const hours = seconds / 3600
+    return `every ${hours} ${hours === 1 ? 'hour' : 'hours'}`
+  }
+  return `every ${Math.round(seconds / 60)} min`
 }
 
 /** Server rendered timestamps stay in UTC so output never depends on the
