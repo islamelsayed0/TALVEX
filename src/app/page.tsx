@@ -166,7 +166,7 @@ export default function Home() {
             </div>
             <div className="relative aspect-[1918/1202] overflow-hidden rounded-tile">
               <Image
-                src="/landing/dashboard-snapshot.png"
+                src="/landing/overview-shot.png"
                 alt="The Talvex overview: monitor status, open incidents, ticket queue and response times on one screen"
                 fill
                 priority
@@ -206,7 +206,7 @@ export default function Home() {
               </div>
               <div className="relative aspect-[1204/982] overflow-hidden rounded-[13px]">
                 <Image
-                  src="/landing/help-snapshot.png"
+                  src="/landing/staff-help-shot.png"
                   alt="The staff help screen: one input to describe the problem, a notice that the booking site is already known to be down, and buttons for a new request"
                   fill
                   sizes="(max-width: 768px) 100vw, 620px"
