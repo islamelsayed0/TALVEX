@@ -164,7 +164,7 @@ export default function Home() {
                 talvex.app/dashboard
               </span>
             </div>
-            <div className="relative aspect-[1280/860] overflow-hidden rounded-tile">
+            <div className="relative aspect-[1918/1202] overflow-hidden rounded-tile">
               <Image
                 src="/landing/dashboard-snapshot.png"
                 alt="The Talvex overview: monitor status, open incidents, ticket queue and response times on one screen"
@@ -204,7 +204,7 @@ export default function Home() {
                   talvex.app/help
                 </span>
               </div>
-              <div className="relative aspect-[16/10] overflow-hidden rounded-[13px]">
+              <div className="relative aspect-[1204/982] overflow-hidden rounded-[13px]">
                 <Image
                   src="/landing/help-snapshot.png"
                   alt="The staff help screen: one input to describe the problem, a notice that the booking site is already known to be down, and buttons for a new request"
