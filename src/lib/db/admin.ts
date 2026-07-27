@@ -5,6 +5,18 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 
 /**
+ * The service role client cannot be built because its env var is missing. A
+ * deployment configuration problem, not a user error: thrown so callers (the
+ * chat route) can tell it apart from a real failure and say so honestly.
+ */
+export class AdminConfigError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'AdminConfigError'
+  }
+}
+
+/**
  * Service role client. BYPASSES ROW LEVEL SECURITY ENTIRELY.
  *
  * Permitted callers, exhaustively:
@@ -32,13 +44,17 @@ import type { Database } from './types'
 export function createAdminClient() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!key) {
-    throw new Error(
+    throw new AdminConfigError(
       'SUPABASE_SERVICE_ROLE_KEY is not set. It lives in .env.local and in ' +
         'Vercel env vars, never in the repo. See .env.example.',
     )
   }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!supabaseUrl) {
+    throw new AdminConfigError('NEXT_PUBLIC_SUPABASE_URL is not set.')
+  }
 
-  return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, {
+  return createClient<Database>(supabaseUrl, key, {
     auth: { persistSession: false },
   })
 }
