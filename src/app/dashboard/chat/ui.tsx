@@ -56,3 +56,13 @@ export type ProviderOption = { value: AiProvider; label: string }
 export function toProviderOptions(providers: AiProvider[]): ProviderOption[] {
   return providers.map((p) => ({ value: p, label: AI_PROVIDER_LABELS[p] }))
 }
+
+/**
+ * Where "Open full chat" from the popup should land: the specific conversation
+ * once one exists this session, otherwise the chat home.
+ */
+export function fullChatHref(conversationId: string | null): string {
+  return conversationId
+    ? `/dashboard/chat/${conversationId}`
+    : '/dashboard/chat'
+}
