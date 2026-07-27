@@ -27,6 +27,8 @@ describe('env hygiene', () => {
       'SUPABASE_SERVICE_ROLE_KEY',
       'CRON_SECRET',
       'API_KEY_ENCRYPTION_SECRET',
+      'RESEND_API_KEY',
+      'RESEND_FROM',
     ]) {
       expect(example).toContain(name)
     }

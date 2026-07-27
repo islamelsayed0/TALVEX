@@ -12,10 +12,9 @@
  *    incident. The first failure stamps monitors.failing_since and the NEXT
  *    sweep invocation rechecks. Still down: an incident opens, backdated to
  *    failing_since. Back up: a blip, recorded only as a check result.
- *    Honest note: on the current daily Hobby cron (vercel.json, decision
- *    log 2026-07-23) the confirming recheck is up to a day away, so an
- *    outage is confirmed slowly. The logic is already correct for any
- *    schedule and tightens automatically when the cron does.
+ *    The sweep runs every 5 minutes from an external scheduler (decision
+ *    log 2026-07-27), so confirmation typically lands within minutes. The
+ *    logic is correct for any schedule either way.
  *
  * 2. Auto resolve. The first up check on a monitor with an open incident
  *    resolves it. No human step.

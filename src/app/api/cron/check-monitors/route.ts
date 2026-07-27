@@ -9,26 +9,36 @@ import {
   type EngineState,
   type IncidentEventInput,
 } from '@/lib/monitoring/incident-engine'
+import {
+  notifyIncidentEvent,
+  type IncidentNotifyEvent,
+  type NotifyChannelSettings,
+} from '@/lib/notifications/dispatch'
 
 /**
- * The cron sweep (architecture ruling for Phase 1 Task 1). One Vercel Cron
- * schedule invokes this route; it finds every active monitor due for a
- * check, runs the checks, writes results, runs the incident engine on each
- * result, prunes raw rows older than 30 days, and maintains the daily
- * rollups. Each monitor's own interval is respected: the sweep only checks
- * monitors whose interval has elapsed since their last check. Vercel Hobby
- * caps the schedule at once per day (vercel.json); the sweep itself is
- * granularity agnostic, so upgrading the plan only means editing the
- * schedule line.
+ * The cron sweep (architecture ruling for Phase 1 Task 1). An external
+ * scheduler (cron-job.org, decision log 2026-07-27) invokes this route
+ * every 5 minutes: POST, Bearer CRON_SECRET, expecting a 200. The Vercel
+ * Cron schedule is gone; Hobby caps it at once per day, which notifications
+ * cannot live with. The sweep finds every active monitor due for a check,
+ * runs the checks, writes results, runs the incident engine on each result,
+ * prunes raw rows older than 30 days, and maintains the daily rollups. Each
+ * monitor's own interval is respected: the sweep only checks monitors whose
+ * interval has elapsed since their last check.
  *
  * Incidents (Phase 1 Task 2): after each check is recorded, the pure
  * engine in src/lib/monitoring/incident-engine.ts decides what it means
  * (await confirmation, blip, open, reopen, resolve) and this route performs
  * the writes. Confirmation rechecks ride the normal sweep: a monitor with
- * failing_since set gets rechecked on the NEXT invocation, which on the
- * daily Hobby cron is up to a day later (decision log 2026-07-23: never
- * assume fresh checks). The logic is correct at any cadence and tightens
- * automatically when the schedule does.
+ * failing_since set gets rechecked on the NEXT invocation (decision log
+ * 2026-07-23: never assume fresh checks). The logic is correct at any
+ * cadence and tightens automatically when the schedule does.
+ *
+ * Notifications (F10): when an incident opens, reopens, or resolves, the
+ * org's configured channels (Resend email, Discord webhook) are notified
+ * from applyIncidentAction, after the incident write, never before.
+ * Settings are fetched once per sweep per org. A notification failure is
+ * logged and swallowed; it never fails the sweep or the incident write.
  *
  * Tickets (Phase 1 Task 3): the same sweep also closes tickets that have
  * sat resolved for more than 7 days (same route, same auth, per ruling).
@@ -65,6 +75,7 @@ type Db = ReturnType<typeof createAdminClient>
 type SweptMonitor = {
   id: string
   org_id: string
+  name: string
   url: string
   interval_seconds: number
   last_checked_at: string | null
@@ -72,15 +83,51 @@ type SweptMonitor = {
 }
 
 /**
+ * Notification dispatch (F10), strictly AFTER the incident write succeeded:
+ * the row stands whatever happens here. notifyIncidentEvent never throws and
+ * owns the reopen cooldown; when a channel actually fired, the incident is
+ * stamped so the next reopen can measure its cooldown from it. A failed
+ * stamp is logged and swallowed for the same reason a failed send is: a
+ * notification problem must never fail the sweep.
+ */
+async function notifyAndStamp(
+  db: Db,
+  settings: NotifyChannelSettings | undefined,
+  monitor: SweptMonitor,
+  event: IncidentNotifyEvent,
+  incidentId: string,
+  occurredAtIso: string,
+  lastNotifiedAtIso: string | null,
+): Promise<void> {
+  if (!settings) return
+  const { attempted } = await notifyIncidentEvent(
+    settings,
+    { name: monitor.name, url: monitor.url },
+    event,
+    { occurredAtIso, lastNotifiedAtIso },
+  )
+  if (!attempted) return
+  const { error } = await db
+    .from('incidents')
+    .update({ last_notified_at: new Date().toISOString() })
+    .eq('id', incidentId)
+  if (error) {
+    console.error('cron check-monitors: stamping last_notified_at failed:', error.message)
+  }
+}
+
+/**
  * Performs the writes one engine action describes. Returns the value
  * monitors.failing_since must take (undefined when it stays untouched) so
  * the caller can fold it into the monitor's status update, plus which
- * incident counter to bump.
+ * incident counter to bump. Open, reopen, and resolve dispatch notifications
+ * here and nowhere else, always after their write succeeded.
  */
 async function applyIncidentAction(
   db: Db,
   monitor: SweptMonitor,
   action: EngineAction,
+  settings: NotifyChannelSettings | undefined,
 ): Promise<{ failingSince?: string | null; counted?: 'opened' | 'reopened' | 'resolved' }> {
   switch (action.kind) {
     case 'none':
@@ -102,10 +149,14 @@ async function applyIncidentAction(
         .single()
       if (error) throw new Error(`opening incident: ${error.message}`)
       await appendEvents(db, monitor.org_id, incident.id, action.events)
+      await notifyAndStamp(db, settings, monitor, 'open', incident.id, action.openedAt, null)
       return { failingSince: null, counted: 'opened' }
     }
     case 'reopen': {
-      const { error } = await db
+      // The update does not touch last_notified_at, so selecting it back
+      // returns the value from before this reopen: exactly what the
+      // cooldown must measure against.
+      const { data: reopened, error } = await db
         .from('incidents')
         .update({
           status: 'open',
@@ -113,8 +164,19 @@ async function applyIncidentAction(
           last_reopened_at: action.reopenedAt,
         })
         .eq('id', action.incidentId)
+        .select('last_notified_at')
+        .single()
       if (error) throw new Error(`reopening incident: ${error.message}`)
       await appendEvents(db, monitor.org_id, action.incidentId, action.events)
+      await notifyAndStamp(
+        db,
+        settings,
+        monitor,
+        'reopen',
+        action.incidentId,
+        action.reopenedAt,
+        reopened.last_notified_at,
+      )
       return { failingSince: null, counted: 'reopened' }
     }
     case 'resolve': {
@@ -124,6 +186,15 @@ async function applyIncidentAction(
         .eq('id', action.incidentId)
       if (error) throw new Error(`resolving incident: ${error.message}`)
       await appendEvents(db, monitor.org_id, action.incidentId, action.events)
+      await notifyAndStamp(
+        db,
+        settings,
+        monitor,
+        'resolve',
+        action.incidentId,
+        action.resolvedAt,
+        null,
+      )
       return { failingSince: null, counted: 'resolved' }
     }
   }
@@ -148,7 +219,7 @@ async function appendEvents(
   if (error) throw new Error(`writing timeline events: ${error.message}`)
 }
 
-export async function GET(request: Request) {
+async function runSweep(request: Request) {
   if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
@@ -157,7 +228,7 @@ export async function GET(request: Request) {
 
   const { data: monitors, error: monitorsError } = await db
     .from('monitors')
-    .select('id, org_id, url, interval_seconds, last_checked_at, failing_since')
+    .select('id, org_id, name, url, interval_seconds, last_checked_at, failing_since')
     .eq('active', true)
   if (monitorsError) {
     console.error('cron check-monitors: listing monitors failed:', monitorsError.message)
@@ -190,6 +261,36 @@ export async function GET(request: Request) {
     }
     for (const incident of openIncidents) {
       openIncidentByMonitor.set(incident.monitor_id, incident.id)
+    }
+  }
+
+  // Notification settings, fetched once per sweep for every org with a due
+  // monitor (batched, never per monitor). A fetch failure only silences
+  // notifications for this sweep; the checks and incident writes proceed.
+  const settingsByOrg = new Map<string, NotifyChannelSettings>()
+  if (due.length > 0) {
+    const orgIds = [...new Set(due.map((m) => m.org_id))]
+    const { data: settingsRows, error: settingsError } = await db
+      .from('org_notification_settings')
+      .select(
+        'org_id, notification_email, discord_webhook, email_on_open, email_on_resolve, alert_cooldown_minutes',
+      )
+      .in('org_id', orgIds)
+    if (settingsError) {
+      console.error(
+        'cron check-monitors: listing notification settings failed:',
+        settingsError.message,
+      )
+    } else {
+      for (const row of settingsRows) {
+        settingsByOrg.set(row.org_id, {
+          notificationEmail: row.notification_email,
+          discordWebhook: row.discord_webhook,
+          emailOnOpen: row.email_on_open,
+          emailOnResolve: row.email_on_resolve,
+          alertCooldownMinutes: row.alert_cooldown_minutes,
+        })
+      }
     }
   }
 
@@ -275,7 +376,12 @@ export async function GET(request: Request) {
 
       let failingSince: string | null | undefined
       try {
-        const applied = await applyIncidentAction(db, monitor, action)
+        const applied = await applyIncidentAction(
+          db,
+          monitor,
+          action,
+          settingsByOrg.get(monitor.org_id),
+        )
         failingSince = applied.failingSince
         if (applied.counted) incidentCounts[applied.counted]++
       } catch (err) {
@@ -358,4 +464,15 @@ export async function GET(request: Request) {
     ticketsClosed,
     failures: failures.length,
   })
+}
+
+// The scheduler contract is POST (decision log 2026-07-27). GET stays for
+// manual invocation and for anything still holding the old contract; both
+// require the same bearer token and run the same sweep.
+export async function GET(request: Request) {
+  return runSweep(request)
+}
+
+export async function POST(request: Request) {
+  return runSweep(request)
 }
