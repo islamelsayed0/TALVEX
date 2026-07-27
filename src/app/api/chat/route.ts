@@ -8,7 +8,9 @@ import {
   ProviderChoiceRequiredError,
   sendChatMessage,
 } from '@/lib/chat/engine'
+import { EncryptionKeyError, KeyDecryptionError } from '@/lib/chat/encryption'
 import { ProviderError } from '@/lib/chat/providers'
+import { AdminConfigError } from '@/lib/db/admin'
 
 /**
  * The chat send endpoint (Task 5). POST a message; get back the assistant
@@ -61,6 +63,29 @@ export async function POST(req: Request): Promise<Response> {
         {
           error:
             'The assistant could not reach the provider just now. Your IT team can check the key, or you can send this to them.',
+        },
+        { status: 502 },
+      )
+    }
+    // Deployment is missing a server secret (service role key or the encryption
+    // secret). This is a configuration gap an admin fixes in the deployment
+    // settings, not a user error, so say so plainly rather than "try again".
+    if (err instanceof AdminConfigError || err instanceof EncryptionKeyError) {
+      return NextResponse.json(
+        {
+          error:
+            'The assistant is not fully set up yet. Your IT team needs to finish the deployment configuration.',
+        },
+        { status: 503 },
+      )
+    }
+    // The stored key exists but could not be decrypted: a corrupt row, or the
+    // encryption secret changed since it was saved. Re adding the key fixes it.
+    if (err instanceof KeyDecryptionError) {
+      return NextResponse.json(
+        {
+          error:
+            'The saved AI key could not be read. An admin may need to remove it and add it again in settings.',
         },
         { status: 502 },
       )
