@@ -118,6 +118,104 @@ the new path; the redirect covers stragglers, not new code.
 
 ---
 
+## 2026-07-24 — CI fails a build when a merged migration is not applied to the shared project
+
+**Decided.** A third CI job, `migration-drift`, compares three sets on every
+pull request and every push to main: the migration versions on the base branch,
+the versions in the checkout, and the versions the shared Supabase project
+records in `supabase_migrations.schema_migrations`. A migration that is already
+merged but not applied fails the build. So does a version the database records
+that no file in the repository explains.
+
+**Why.** Twice in two days, merged code assumed schema the live database did not
+have, and the first symptom both times was a 500 in front of a user
+(docs/DEPLOY_LOG.md, Phase 1 Task 5). A migration file is a promise; nothing was
+checking that the promise was kept. Reviewers cannot see the state of a database
+in a diff, so the check has to be mechanical.
+
+**What it deliberately does not do.** It never fails a PR for the migration that
+PR adds. That migration has not merged, so it is not yet a promise; it is
+reported as pending instead. Only the base branch's migrations are held to the
+standard, which is what makes drift catchable before merge rather than after.
+The implied workflow is apply, then merge: apply the new migration to the shared
+project while the PR is open (the guard then reports it as already applied), so
+main is never briefly ahead of the database.
+
+**Affects.** The comparison lives in `scripts/check-migration-drift.mjs` as a
+pure function, unit tested in `tests/migration-drift.test.ts`, with git and psql
+supplying the real readings in CI. The job needs one repository secret,
+`SUPABASE_DB_URL`, set on 2026-07-24; the guard has been armed since, with no
+`--allow-unconfigured` escape hatch. A missing or broken secret now fails the
+job rather than warning, because a guard that quietly stops guarding is worse
+than no guard: it reads as "no drift" when it means "not checked".
+
+**Use the session pooler string, not the direct connection.** Direct connections
+(`db.<ref>.supabase.co`) are IPv6 only and GitHub Actions runners are IPv4 only,
+so the direct string fails to connect on every run. That failure looks different
+from a drift failure, which is the point: connection problems say so.
+
+---
+
+## 2026-07-24 — The remote migration history was repaired to match the local files, which are the source of truth
+
+**Decided.** The shared project's `supabase_migrations.schema_migrations` was
+rewritten so its versions match `supabase/migrations/` exactly: the five drifted
+stamps (001 to 004 and 006) were moved onto their local file versions, and 007
+and 008, applied by hand in the SQL editor and never recorded, were inserted.
+Where the two disagreed, the file won.
+
+**Why.** The drift is what made `supabase db push` unusable, which is what
+forced every migration to production through the SQL editor by hand, which is
+what caused the drift. Breaking that loop is the precondition for the guard
+above being anything other than a permanently red check.
+
+**How, and what was not touched.** The repair was `update` on the `version`
+column plus two inserts, not delete and reinsert, so the recorded `statements`
+(what actually ran, in some cases retyped rather than pushed) survive as
+forensic history. No schema, no policy, and no row outside the history table
+changed. Before stamping 007 and 008 applied, their objects were verified
+present on the remote: both tables, all four policies, every function, the
+`tickets.conversation_id` column and the `tickets_single_origin` constraint.
+
+**Affects.** `db push` is now the way schema reaches production. The SQL editor
+dance is retired; using it again recreates exactly the state this repaired.
+
+---
+
+## 2026-07-24 — Migrations 001 and 002 carry explicit GRANTs; auto exposure is gone
+
+**Decided.** Migration 009 backfills the table and function grants that
+`organizations`, `org_members`, `clerk_active_org_id()` and
+`clerk_is_org_admin()` never had, completing the 2026-07-23 GRANTs decision.
+`auto_expose_new_tables` is removed from supabase/config.toml, ahead of its
+2026-10-30 upstream removal. Every table and function in the schema now states
+its own privileges.
+
+**Why it mattered more than bookkeeping.** Auto exposure had granted ALL
+privileges to `anon` **and** `authenticated` on both tables. Only RLS stood
+between an anonymous caller and a write, because neither table has a single
+policy naming anon. That was one policy mistake away from being real, and it
+would have failed closed in the other direction on 2026-10-30, when both tables
+would have silently stopped being reachable.
+
+**The judgement call.** The backfill preserves migration 001's stated intent
+rather than tightening past it: admins keep the insert and update on
+`org_members` that 001's policies were written for, narrowed to columns
+(`role` on update, so a role can be corrected but a membership cannot be
+reassigned to another person or another org). Narrowing grants is not licence to
+quietly remove a capability the schema already granted; that would be a
+behavior change wearing a housekeeping label.
+
+**Affects.** `tests/isolation/org-table-grants.test.ts` proves the verb layer:
+anon is refused outright (42501, not an empty array), organizations is read only
+for every session, membership deletion is webhook only, and a signed in session
+still reads its own org, which guards the EXECUTE revoke on the claim helpers
+from failing every policy closed. The local stack now proves the grants are
+complete on every `db reset`: without auto exposure, a table whose migration
+forgets its GRANTs fails the isolation suite immediately.
+
+---
+
 ## 2026-07-24 — Support chat is a workplace record, admin visible, and disclosed, superseding the personal privacy default
 
 **Decided.** Chat conversations and their messages are org visible workplace

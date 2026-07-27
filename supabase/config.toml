@@ -16,13 +16,13 @@ port = 54321
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
-# Parity with the remote project, which grants API roles access to new public
-# tables automatically (proven: the Task 4 webhook writes work there). Without
-# this, every table from supabase/migrations/ is unreachable locally, even by
-# service_role (42501). DEPRECATED upstream, removed 2026-10-30: before then,
-# migrations must add explicit GRANTs and this flag must go. Tracked in
-# docs/PHASE_0_PLAN.md Task 6 notes.
-auto_expose_new_tables = true
+# auto_expose_new_tables used to live here, granting API roles access to every
+# new public table so the stack matched the remote project's (also deprecated)
+# automatic privileges. It is gone as of migration 009, which backfilled the
+# explicit GRANTs that migrations 001 and 002 never carried. Every table and
+# function in supabase/migrations/ now states its own privileges, so the
+# 2026-10-30 upstream removal is a no op for us. Do not reintroduce the flag:
+# a table that needs it is a table missing its GRANTs.
 
 [db]
 port = 54322

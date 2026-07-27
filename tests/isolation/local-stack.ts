@@ -129,6 +129,18 @@ export function createMemberClient(token: string) {
   })
 }
 
+/**
+ * A caller with no session at all: the publishable key and nothing else, which
+ * is what a browser holds before sign in and what anyone who reads the client
+ * bundle can replay. Every tenant table must refuse this role outright, at the
+ * GRANT layer, not merely return zero rows through RLS.
+ */
+export function createAnonClient() {
+  return createClient<Database>(SUPABASE_URL, anonKey(), {
+    auth: { persistSession: false },
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Preflight. CLAUDE.md rule 8: this suite must never be skipped, so when its
 // preconditions are missing it FAILS, loudly, with the exact command that
@@ -155,7 +167,7 @@ export async function preflight(): Promise<void> {
       : /JW[ST]|401|signature/i.test(failure)
         ? 'The stack rejected our token: JWT secret mismatch. If supabase/config.toml auth settings changed, set TALVEX_TEST_SUPABASE_JWT_SECRET to match.'
         : /permission denied|42501/i.test(failure)
-          ? 'Tables exist but API roles lack grants. The local stack must expose public tables to PostgREST roles the same way the remote project does; see supabase/config.toml.'
+          ? 'Tables exist but API roles lack grants. Since migration 009 every table states its own GRANTs (auto exposure is gone from supabase/config.toml), so this means a migration created a table without granting service_role access to it.'
           : 'Unrecognized failure; inspect the stack with: npx supabase status'
 
   throw new Error(

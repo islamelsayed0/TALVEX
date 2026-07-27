@@ -5,48 +5,9 @@ so the idea is captured without pulling scope into the current task. Newest on
 top. Each entry says what, why, and enough of the how that whoever picks it up
 is not starting cold. Promote an item into a real task when its phase comes.
 
----
-
-## Housekeeping (PRIORITY, not parking lot): repair the migration history and backfill 001/002 GRANTs
-
-**Promoted out of the parking lot on 2026-07-24.** Twice in two days, merged
-code assumed schema the live database did not have (see docs/DEPLOY_LOG.md,
-Phase 1 Task 5). The cause is drift between the local migration files and the
-remote `schema_migrations` history, which makes `supabase db push` unusable, so
-migrations reach production by a manual SQL editor dance. That is a real,
-recurring production risk and should be the next housekeeping PR, ahead of new
-features.
-
-**What.** Two related fixes in one PR:
-1. **Repair the remote migration history** so `supabase db push` works again.
-   Current state (2026-07-24): remote records 001 to 006, with re stamped
-   timestamps on 001 to 004 and 006, and does NOT record 007 or 008 (applied
-   via the SQL editor). The local files are the source of truth
-   (`20260721190000_001` ... `20260724100100_008`). Reconcile with
-   `supabase migration repair --status applied <version>` for each local file
-   version (and revert the drifted remote entries), so the history exactly
-   matches `supabase/migrations/` and the schema already live. The schema itself
-   is correct and at 008; only the bookkeeping is wrong. Do this against the one
-   shared project (`rdfuzadtraxzrrthhnnp`) carefully, ideally after a snapshot.
-2. **Backfill the 001/002 GRANTs.** Tables from migrations 001 and 002
-   (`organizations`, `org_members`) still lean on the deprecated
-   `auto_expose_new_tables` (removal 2026-10-30, per the 2026-07-23 GRANTs
-   decision). Add the explicit revoke or grant migration those two tables never
-   got, so the `auto_expose_new_tables` flag in supabase/config.toml can finally
-   be set to false.
-
-**Why now.** Every future feature ships a migration. Once `db push` works, new
-schema reaches production the intended way (CI or a single command), not by
-pasting SQL into the dashboard and hoping the two states match. The GRANTs
-backfill removes the last dependency on a flag with a hard removal date; miss
-that date and `organizations`/`org_members` silently stop being reachable.
-
-**How (sketch).** On a housekeeping branch: verify `supabase migration list`
-against the remote, run the repairs so versions line up, confirm a no op
-`supabase db push` (nothing to apply), then add the GRANTs backfill migration
-and push it as the first clean push through the repaired pipeline. Add a CI note
-or job so a future PR whose migrations are not applied to the shared project is
-caught before merge, not after a 500 in production.
+Shipped, so no longer listed here: the migration history repair and the 001/002
+GRANTs backfill (2026-07-24), which also removed `auto_expose_new_tables` and
+added the CI migration drift guard. See docs/DECISIONS.md for all three.
 
 ---
 
