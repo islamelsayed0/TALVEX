@@ -6,6 +6,33 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-27 — The landing page is built now, and a master design document is the design entry point
+
+**Decided.** The public landing page (`/`) is implemented ahead of schedule,
+superseding the 2026-07-23 decision to hold it until the end of the MVP. A new
+master design document, [`docs/design/DESIGN.md`](design/DESIGN.md), is now the
+single entry point for the design system and screen inventory; the existing
+handoffs and this log sit beneath it.
+
+**Why.** The landing design was finished and the owner chose to ship it. It cost
+little: the design was derived from the same token system the app already uses,
+so it reused the palette wholesale and added only landing-specific chrome
+(`.liquid-glass`, `.landing-frame`, `.landing-panel`, the hero video/overlay), a
+`General Sans` display face, and one CTA shadow token. With auth, dashboard, Help,
+and now landing all built, a master document was needed so the design is
+discoverable from one place rather than scattered across handoffs.
+
+**Affects.** `src/app/page.tsx` is now the real landing page (client
+`_landing/hero-background.tsx` for the muted background video), not a placeholder.
+General Sans is self hosted in `src/lib/fonts/`. The marketing copy only
+advertises what ships: the alert channels are Email, Discord, and recovery
+alerts, matching BRD F10 — **not** SMS or quiet hours, which are not built, and
+which the earlier draft wrongly promised. Product shots are the real
+`dashboard-home-dark` / `get-help-dark` screenshots. `tests/design-tokens.test.ts`
+still passes unchanged; no new colour tokens were needed.
+
+---
+
 ## 2026-07-25 — The product is dark only; light mode removed
 
 **Decided.** Talvex ships dark only. The light theme, the theme toggle, and the
