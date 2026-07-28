@@ -512,18 +512,21 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          timezone: string | null
         }
         Insert: {
           clerk_org_id: string
           created_at?: string
           id?: string
           name: string
+          timezone?: string | null
         }
         Update: {
           clerk_org_id?: string
           created_at?: string
           id?: string
           name?: string
+          timezone?: string | null
         }
         Relationships: []
       }
