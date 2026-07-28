@@ -21,6 +21,13 @@ until an email arrived and chat also failed to decrypt its key. See the
 2026-07-27 external scheduler decision, which names this residual: nothing
 watches the watcher.
 
+**Also learned (2026-07-28), F10 email setup.** A Vercel env var only reaches
+the app on a build created after it was set, and a plain "Redeploy" can reuse
+the original deployment's env snapshot, so `RESEND_API_KEY` read as unset at
+runtime until a fresh build (a new commit) picked it up. The self check below
+should therefore assert a value is actually visible at runtime, not just that
+it exists in the Vercel dashboard.
+
 **What.** Two follow ups.
 
 1. **A heartbeat for the external sweep.** cron-job.org calling the endpoint is
