@@ -6,10 +6,13 @@ import {
 } from '@/lib/db/notification-settings'
 
 import { Card } from '../../_overview/ui'
-import { primaryButton } from '../../monitors/ui'
+import { ghostButton, primaryButton } from '../../monitors/ui'
 import { FormError, ticketFieldClass } from '../../tickets/ui'
 import { SettingsNav } from '../nav'
-import { saveNotificationSettingsAction } from './actions'
+import {
+  saveNotificationSettingsAction,
+  sendTestNotificationAction,
+} from './actions'
 
 export const metadata = { title: 'Settings — Talvex' }
 
@@ -35,6 +38,10 @@ export default async function NotificationSettingsPage({
 
   const saved = asString(sp.saved) === '1'
   const error = asString(sp.error)
+  const tested = asString(sp.tested)
+  const hasChannel = Boolean(
+    settings?.notification_email || settings?.discord_webhook,
+  )
 
   return (
     <main className="mx-auto w-full max-w-[780px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
@@ -50,6 +57,14 @@ export default async function NotificationSettingsPage({
       {saved ? (
         <Card className="mb-[18px] px-5 py-4 text-sm text-card-foreground">
           Saved. Alerts will use these settings from the next check.
+        </Card>
+      ) : null}
+
+      {tested ? (
+        <Card className="mb-[18px] px-5 py-4 text-sm text-card-foreground">
+          {tested === 'none'
+            ? 'Add a channel and save it first, then send a test.'
+            : `Test result — ${tested}`}
         </Card>
       ) : null}
 
@@ -147,6 +162,28 @@ export default async function NotificationSettingsPage({
             </button>
           </div>
         </form>
+
+        {/* Test send. Its own form (forms cannot nest) and it uses the SAVED
+            channels, so save any changes first. */}
+        <div className="mt-6 border-t border-divider pt-5">
+          <span className="text-[13.5px] font-medium text-foreground">
+            Send a test
+          </span>
+          <p className="mt-1 text-[12px] text-quiet">
+            Sends a test alert to your saved channels, so you can confirm they
+            work without waiting for a real incident. Save any changes first.
+          </p>
+          <form action={sendTestNotificationAction} className="mt-3">
+            <button type="submit" className={ghostButton} disabled={!hasChannel}>
+              Send a test
+            </button>
+          </form>
+          {!hasChannel ? (
+            <p className="mt-2 text-[12px] text-quiet">
+              Add an email or Discord webhook above and save to enable this.
+            </p>
+          ) : null}
+        </div>
       </Card>
     </main>
   )

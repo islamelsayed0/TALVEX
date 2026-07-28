@@ -17,6 +17,9 @@ import 'server-only'
  */
 export const DISCORD_DOWN_COLOR = 0xf87171
 export const DISCORD_RECOVERED_COLOR = 0x4ade80
+/** The accent blue (#3d8bff), for a test that is neither up nor down. Status
+ * colors stay reserved for real incident state. */
+export const DISCORD_TEST_COLOR = 0x3d8bff
 
 const TALVEX_FOOTER = 'Talvex Monitoring'
 
@@ -93,6 +96,17 @@ export function buildRecoveredEmbed(input: {
       { name: 'Recovered at', value: formatUtcMinute(input.occurredAtIso), inline: true },
     ],
     timestamp: input.occurredAtIso,
+    footer: { text: TALVEX_FOOTER },
+  }
+}
+
+/** The embed for a test triggered from Settings. Clearly not a real incident. */
+export function buildTestEmbed(): DiscordEmbed {
+  return {
+    title: 'Talvex test notification',
+    description:
+      'Your Discord alerts are set up correctly. This is a test from Settings, not a real incident.',
+    color: DISCORD_TEST_COLOR,
     footer: { text: TALVEX_FOOTER },
   }
 }
