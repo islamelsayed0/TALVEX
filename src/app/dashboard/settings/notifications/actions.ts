@@ -6,8 +6,11 @@ import { redirect } from 'next/navigation'
 import { getActiveOrgViewer } from '@/lib/auth/org-viewer'
 import {
   NotificationSettingsValidationError,
+  getNotificationSettings,
   saveNotificationSettings,
 } from '@/lib/db/notification-settings'
+import { buildTestEmbed, postDiscordWebhook } from '@/lib/notifications/discord'
+import { buildTestEmail, sendAlertEmailResult } from '@/lib/notifications/email'
 
 /**
  * Server action for notification settings, the api-keys actions.ts shape.
@@ -50,4 +53,32 @@ export async function saveNotificationSettingsAction(
 
   revalidatePath(PAGE)
   redirect(`${PAGE}?saved=1`)
+}
+
+/**
+ * Sends a test notification to the org's SAVED channels so an admin can
+ * confirm a webhook or email works without waiting for a real incident. It
+ * uses the saved settings, not the unsaved form, so save first. Reports each
+ * channel's outcome back in the query string; nothing sensitive is carried.
+ */
+export async function sendTestNotificationAction(): Promise<void> {
+  const viewer = await getActiveOrgViewer()
+  if (!viewer.isAdmin) redirect(PAGE)
+
+  const settings = await getNotificationSettings()
+  const webhook = settings?.discord_webhook?.trim()
+  const email = settings?.notification_email?.trim()
+
+  const results: string[] = []
+  if (webhook) {
+    const r = await postDiscordWebhook(webhook, buildTestEmbed())
+    results.push(r.ok ? 'Discord: sent' : `Discord: ${r.error}`)
+  }
+  if (email) {
+    const r = await sendAlertEmailResult({ to: email, ...buildTestEmail() })
+    results.push(r.ok ? 'Email: sent' : `Email: ${r.reason}`)
+  }
+
+  const tested = results.length === 0 ? 'none' : results.join(' · ')
+  redirect(`${PAGE}?${new URLSearchParams({ tested })}`)
 }
