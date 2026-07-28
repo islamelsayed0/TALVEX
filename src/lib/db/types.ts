@@ -512,18 +512,24 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          status_page_enabled: boolean
+          status_page_slug: string | null
         }
         Insert: {
           clerk_org_id: string
           created_at?: string
           id?: string
           name: string
+          status_page_enabled?: boolean
+          status_page_slug?: string | null
         }
         Update: {
           clerk_org_id?: string
           created_at?: string
           id?: string
           name?: string
+          status_page_enabled?: boolean
+          status_page_slug?: string | null
         }
         Relationships: []
       }
@@ -828,8 +834,6 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
-
 
 // Convenience aliases used by the data layer.
 export type Organization = Tables<"organizations">
