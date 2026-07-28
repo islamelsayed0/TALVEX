@@ -8,6 +8,7 @@ import type { AiProvider, ApiKeyEventType } from '@/lib/db/types'
 import { Card } from '../../_overview/ui'
 import { formatUtc, primaryButton } from '../../monitors/ui'
 import { FormError, ticketFieldClass } from '../../tickets/ui'
+import { SettingsNav } from '../nav'
 import { deleteApiKeyAction, saveApiKeyAction } from './actions'
 
 export const metadata = { title: 'Settings — Talvex' }
@@ -84,6 +85,8 @@ export default async function SettingsPage({
           Manage your workspace, team and integrations.
         </p>
       </div>
+
+      <SettingsNav />
 
       {banner ? (
         <Card className="mb-[18px] px-5 py-4 text-sm text-card-foreground">

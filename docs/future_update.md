@@ -11,6 +11,44 @@ added the CI migration drift guard. See docs/DECISIONS.md for all three.
 
 ---
 
+## Ops: watch the watcher, and re-verify the prod secret alignment periodically
+
+**Raised 2026-07-27** after the monitor sweep silently stopped: cron-job.org
+had auto disabled the job (405, because it was POSTing to a route that only
+had GET deployed at the time), and separately the live `CRON_SECRET` had
+drifted from `.env.local`, so authenticated calls 401'd. Both were invisible
+until an email arrived and chat also failed to decrypt its key. See the
+2026-07-27 external scheduler decision, which names this residual: nothing
+watches the watcher.
+
+**What.** Two follow ups.
+
+1. **A heartbeat for the external sweep.** cron-job.org calling the endpoint is
+   the only thing keeping monitoring alive, and its own health is unmonitored.
+   Add a dead man's switch: record the last successful sweep time (a timestamp
+   the sweep writes, or a healthchecks.io style ping the sweep makes at the end)
+   and surface a loud "monitoring has not run in N minutes" state on the admin
+   dashboard, so a stopped scheduler is visible in the product, not only in a
+   cron-job.org email. Vercel Pro cron is the first party alternative if the
+   third party residual keeps biting.
+
+2. **A periodic prod config self check.** The outage was really a secret
+   alignment drift between `.env.local`, Vercel, and cron-job.org, plus a key
+   encrypted under a different `API_KEY_ENCRYPTION_SECRET` than prod runs. Worth
+   a small, safe check to run on a schedule (or before each deploy): confirm the
+   authenticated sweep returns 200 (secret aligned + service role good) and that
+   the chat send path can decrypt at least one org key (secret aligned + key
+   re-encrypted under the live secret). Read only, no secrets logged. This is
+   the "check back later that everything is still ok" the owner asked for.
+
+**Why not now.** Both are real features (a schema touch for the heartbeat, a
+guarded diagnostic endpoint for the self check) that deserve their own task and
+tests, not a bolt on while shipping F10. The immediate incident is resolved:
+the sweep is green again and chat decrypts. Capture the hardening; build it when
+the notifications feature it protects has settled.
+
+---
+
 ## Assistant: gate the floating popup on entitlement once billing lands
 
 **Raised 2026-07-27** when the floating Talvex AI popup shipped for everyone. The

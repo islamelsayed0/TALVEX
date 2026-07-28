@@ -202,6 +202,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          last_notified_at: string | null
           last_reopened_at: string | null
           monitor_id: string
           opened_at: string
@@ -213,6 +214,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          last_notified_at?: string | null
           last_reopened_at?: string | null
           monitor_id: string
           opened_at: string
@@ -224,6 +226,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          last_notified_at?: string | null
           last_reopened_at?: string | null
           monitor_id?: string
           opened_at?: string
@@ -457,6 +460,47 @@ export type Database = {
             foreignKeyName: "org_members_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_notification_settings: {
+        Row: {
+          alert_cooldown_minutes: number
+          created_at: string
+          discord_webhook: string | null
+          email_on_open: boolean
+          email_on_resolve: boolean
+          notification_email: string | null
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          alert_cooldown_minutes?: number
+          created_at?: string
+          discord_webhook?: string | null
+          email_on_open?: boolean
+          email_on_resolve?: boolean
+          notification_email?: string | null
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          alert_cooldown_minutes?: number
+          created_at?: string
+          discord_webhook?: string | null
+          email_on_open?: boolean
+          email_on_resolve?: boolean
+          notification_email?: string | null
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_notification_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -816,6 +860,8 @@ export type ApiKeyEvent = Tables<"api_key_events">
 export type ApiKeyEventType = "added" | "replaced" | "deleted"
 /** The AI providers an org may bring a key for. One active per provider. */
 export type AiProvider = "anthropic" | "openai" | "google"
+// Notifications (F10).
+export type OrgNotificationSettings = Tables<"org_notification_settings">
 export type ChatConversation = Tables<"chat_conversations">
 export type ChatMessage = Tables<"chat_messages">
 export type ChatConversationStatus = "open" | "resolved" | "escalated"

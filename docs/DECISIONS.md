@@ -6,6 +6,36 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-27 — The sweep runs every 5 minutes from an external scheduler, superseding the daily Vercel cron
+
+**Decided.** The monitor sweep is no longer scheduled by Vercel Cron. An
+external scheduler (cron-job.org, configured by hand in its dashboard) invokes
+the sweep every 5 minutes. The `crons` block is gone from `vercel.json`. The
+contract the scheduler must honor: `POST /api/cron/check-monitors` with an
+`Authorization: Bearer <CRON_SECRET>` header, expecting a 200. The route now
+exports POST alongside GET (same handler, same auth);
+`isAuthorizedCronRequest` already accepted any caller presenting the bearer
+token and fails closed without it, so no auth code changed. This supersedes
+the 2026-07-23 entry "Monitor checks sweep daily on Vercel Hobby."
+
+**Why.** Notifications (F10) landed. An alert that arrives up to a day after
+the outage is not an alert, and the BRD's success metric is failure to ticket
+under 90 seconds, which a daily sweep cannot approach. Vercel Hobby hard caps
+cron at once per day, so timeliness had to come from outside Vercel; an
+external scheduler calling an already authenticated endpoint costs nothing
+and changes no application code beyond the POST export.
+
+**Affects.** Confirmation rechecks, incident opens, auto resolves, and ticket
+auto closes all tighten from daily to roughly 5 minute granularity with no
+code change: the sweep was always granularity agnostic and reads each
+monitor's own `interval_seconds`. **The residual:** delivery now depends on a
+third party scheduler, and the status of the scheduler itself is unmonitored.
+If cron-job.org stops calling, checks quietly stop; nothing watches the
+watcher yet. Vercel Pro cron remains the first party alternative if that
+residual ever bites.
+
+---
+
 ## 2026-07-27 — The landing page is built now, and a master design document is the design entry point
 
 **Decided.** The public landing page (`/`) is implemented ahead of schedule,
