@@ -514,6 +514,7 @@ export type Database = {
           name: string
           status_page_enabled: boolean
           status_page_slug: string | null
+          timezone: string | null
         }
         Insert: {
           clerk_org_id: string
@@ -522,6 +523,7 @@ export type Database = {
           name: string
           status_page_enabled?: boolean
           status_page_slug?: string | null
+          timezone?: string | null
         }
         Update: {
           clerk_org_id?: string
@@ -530,6 +532,7 @@ export type Database = {
           name?: string
           status_page_enabled?: boolean
           status_page_slug?: string | null
+          timezone?: string | null
         }
         Relationships: []
       }
