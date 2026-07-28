@@ -1,7 +1,12 @@
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import path from 'node:path'
 
 export default defineConfig({
+  test: {
+    // tests/e2e holds Playwright scripts run against a live app, not Vitest
+    // units. They match the default spec glob, so exclude them explicitly.
+    exclude: [...configDefaults.exclude, 'tests/e2e/**'],
+  },
   resolve: {
     alias: {
       // The real 'server-only' package throws outside a React Server
