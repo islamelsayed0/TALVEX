@@ -15,6 +15,7 @@ export const ADMIN_NAV: readonly NavItem[] = [
   { label: 'Monitors', href: '/dashboard/monitors' },
   { label: 'Incidents', href: '/dashboard/incidents' },
   { label: 'Tickets', href: '/dashboard/tickets' },
+  { label: 'Articles', href: '/dashboard/articles' },
   { label: 'Help', href: '/dashboard/help' },
 ]
 

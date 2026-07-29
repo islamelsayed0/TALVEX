@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 import { getActiveOrgViewer } from '@/lib/auth/org-viewer'
 import { orgHasKey } from '@/lib/db/api-keys'
+import { listArticles } from '@/lib/db/articles'
 import { countOpenIncidents } from '@/lib/db/incidents'
 
 import { ghostButton, primaryButton } from '../monitors/ui'
@@ -63,14 +64,18 @@ const COMMON: CommonTopic[] = [
  * detail, so it does not link there).
  */
 export default async function HelpHomePage() {
-  const [user, hasKey, viewer, openIncidents] = await Promise.all([
+  const [user, hasKey, viewer, openIncidents, articles] = await Promise.all([
     currentUser(),
     orgHasKey(),
     getActiveOrgViewer(),
     countOpenIncidents(),
+    listArticles(),
   ])
   const firstName = user?.firstName ?? 'there'
   const topicHref = hasKey ? CHAT_HREF : TICKET_HREF
+  // What this session can actually read (RLS already decided); the door only
+  // appears when there is something behind it.
+  const readableArticles = articles.filter((a) => a.status === 'published').length
 
   return (
     <main className="mx-auto w-full max-w-[600px] flex-1 animate-fade-up px-6 pt-8 pb-20">
@@ -119,6 +124,28 @@ export default async function HelpHomePage() {
           My requests
         </Link>
       </div>
+
+      {readableArticles > 0 ? (
+        <Link
+          href="/dashboard/help/articles"
+          className="mt-3.5 flex items-center gap-3 rounded-nested border border-card-border bg-tile p-[15px] transition-colors hover:bg-card-hover"
+        >
+          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-[9px] bg-tile text-muted-foreground">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-foreground">
+              Browse help articles
+            </span>
+            <span className="mt-0.5 block text-[12.5px] text-quiet">
+              Guides from your IT team, answers without the wait
+            </span>
+          </span>
+        </Link>
+      ) : null}
 
       {!hasKey && viewer.isAdmin ? (
         <p className="mt-3.5 text-center text-xs text-quiet">

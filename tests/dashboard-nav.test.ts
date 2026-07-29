@@ -21,6 +21,7 @@ describe('role aware nav', () => {
       'Monitors',
       'Incidents',
       'Tickets',
+      'Articles',
       'Help',
     ])
   })

@@ -54,6 +54,56 @@ export type Database = {
           },
         ]
       }
+      articles: {
+        Row: {
+          audience_tags: string[]
+          body: string
+          category: string | null
+          created_at: string
+          created_by: string
+          id: string
+          org_id: string
+          published_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audience_tags?: string[]
+          body: string
+          category?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          org_id: string
+          published_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audience_tags?: string[]
+          body?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          org_id?: string
+          published_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "articles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -477,18 +527,21 @@ export type Database = {
           created_at: string
           org_id: string
           role: string
+          tags: string[]
         }
         Insert: {
           clerk_user_id: string
           created_at?: string
           org_id: string
           role: string
+          tags?: string[]
         }
         Update: {
           clerk_user_id?: string
           created_at?: string
           org_id?: string
           role?: string
+          tags?: string[]
         }
         Relationships: [
           {
@@ -734,6 +787,7 @@ export type Database = {
       clerk_is_org_admin: { Args: never; Returns: boolean }
       clerk_user_id: { Args: never; Returns: string }
       is_org_admin: { Args: { p_org_id: string }; Returns: boolean }
+      member_audience_tags: { Args: never; Returns: string[] }
       org_api_key_providers: { Args: never; Returns: string[] }
       org_has_api_key: { Args: never; Returns: boolean }
       status_page_is_public: { Args: { p_org_id: string }; Returns: boolean }
@@ -923,3 +977,12 @@ export type AuditAction =
   | "status_page_slug_changed"
   | "timezone_changed"
   | "notification_settings_changed"
+  | "article_created"
+  | "article_published"
+  | "article_unpublished"
+  | "article_updated"
+  | "article_deleted"
+  | "member_tags_changed"
+// Knowledge base (F14).
+export type Article = Tables<"articles">
+export type ArticleStatus = "draft" | "published"

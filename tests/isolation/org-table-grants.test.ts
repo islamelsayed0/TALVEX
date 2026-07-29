@@ -175,24 +175,29 @@ describe('organizations is read only for every signed in session', () => {
 })
 
 describe('org_members: exactly the capability migration 001 intended, no wider', () => {
-  it('an org admin may correct a role in their own org', async () => {
-    // The capability migration 001 wrote its insert and update policies for.
-    // The backfill preserves it deliberately: narrowing grants is not licence
-    // to quietly remove a power the schema already granted.
+  it('an org admin cannot change a role since migration 014: roles are webhook only', async () => {
+    // Migration 001 wrote a correction path (admin insert and role update)
+    // that no application code ever used; migration 014 retired it when it
+    // added the tags column grant, because keeping the role grant alongside
+    // the new tags policy would have widened who can write roles. The
+    // posture this suite now proves is the narrower one: authenticated
+    // reaches org_members.tags and nothing else, and every role change
+    // arrives from Clerk through the service role.
     const { error } = await asAdminA()
       .from('org_members')
       .update({ role: 'technician' })
       .eq('org_id', orgAId)
       .eq('clerk_user_id', seed.targetA)
-    expect(error).toBeNull()
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('42501')
 
-    const { data: updated } = await service
+    const { data: intact } = await service
       .from('org_members')
       .select('role')
       .eq('org_id', orgAId)
       .eq('clerk_user_id', seed.targetA)
       .single()
-    expect(updated).toEqual({ role: 'technician' })
+    expect(intact).toEqual({ role: 'member' })
   })
 
   it('an org admin cannot move a membership to another person', async () => {
