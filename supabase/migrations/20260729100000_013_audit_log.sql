@@ -45,7 +45,12 @@ create table public.audit_log (
       'api_key_added',
       'api_key_replaced',
       'api_key_deleted',
-      'monitor_deleted'
+      'monitor_deleted',
+      'status_page_enabled',
+      'status_page_disabled',
+      'status_page_slug_changed',
+      'timezone_changed',
+      'notification_settings_changed'
     )
   )
 );
@@ -60,6 +65,34 @@ comment on column public.audit_log.detail is
 -- The screen reads one org's log newest first; this is that exact question.
 create index audit_log_org_id_occurred_at_idx
   on public.audit_log (org_id, occurred_at desc);
+
+-- ---------------------------------------------------------------------------
+-- Immutability, enforced above the grant layer. Grants stop user sessions,
+-- but the service role holds ALL by convention and could rewrite history;
+-- this trigger closes that. Every update raises. Deletes raise too, with
+-- one carve out: when the owning org row is already gone, the delete is the
+-- org cascade and the log dies with its org by design. A direct delete of
+-- log rows while the org exists raises for every caller, service role
+-- included.
+
+create function public.audit_log_block_rewrite()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if tg_op = 'DELETE'
+     and not exists (select 1 from public.organizations where id = old.org_id) then
+    return old;
+  end if;
+  raise exception 'audit_log is append only: % is not allowed', tg_op;
+end;
+$$;
+
+create trigger audit_log_block_rewrite
+before update or delete on public.audit_log
+for each row execute function public.audit_log_block_rewrite();
 
 -- ---------------------------------------------------------------------------
 -- Fanout triggers. Each is SECURITY DEFINER because the sessions whose
@@ -177,6 +210,88 @@ create trigger audit_monitors_delete
 after delete on public.monitors
 for each row execute function public.audit_monitors_delete();
 
+-- Settings changes on organizations: the status page opt in (migration 011)
+-- and the usage timezone (migration 012), the two admin writable columns the
+-- narrow update policies expose. Fires only on real change; the idempotent
+-- webhook name upsert touches neither column and records nothing. One status
+-- page row per statement: a flip of the enabled flag IS the action, and a
+-- slug change is its own action only when the flag did not move. Detail
+-- carries the changed field names and never the values: what changed is the
+-- audit fact, the current value is the org's configuration.
+create function public.audit_organizations_settings_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor text := public.clerk_user_id();
+begin
+  if old.status_page_enabled is distinct from new.status_page_enabled then
+    insert into public.audit_log (org_id, action, actor, detail)
+    values (
+      new.id,
+      case when new.status_page_enabled then 'status_page_enabled'
+           else 'status_page_disabled' end,
+      v_actor,
+      jsonb_build_object('changed',
+        case when old.status_page_slug is distinct from new.status_page_slug
+             then jsonb_build_array('status_page_enabled', 'status_page_slug')
+             else jsonb_build_array('status_page_enabled') end)
+    );
+  elsif old.status_page_slug is distinct from new.status_page_slug then
+    insert into public.audit_log (org_id, action, actor, detail)
+    values (new.id, 'status_page_slug_changed', v_actor,
+            jsonb_build_object('changed', jsonb_build_array('status_page_slug')));
+  end if;
+
+  if old.timezone is distinct from new.timezone then
+    insert into public.audit_log (org_id, action, actor, detail)
+    values (new.id, 'timezone_changed', v_actor,
+            jsonb_build_object('changed', jsonb_build_array('timezone')));
+  end if;
+
+  return null;
+end;
+$$;
+
+create trigger audit_organizations_settings_change
+after update on public.organizations
+for each row execute function public.audit_organizations_settings_change();
+
+-- Notification settings changes. One row per changed statement, carrying the
+-- changed column names alone: the values are alert destinations (an email
+-- address, a webhook URL) and never belong in the log. The diff walks the
+-- row as jsonb so a column added later is covered without editing this
+-- function; bookkeeping columns and the identity are excluded.
+create function public.audit_notification_settings_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_changed text[];
+begin
+  select coalesce(array_agg(n.key order by n.key), '{}'::text[])
+    into v_changed
+  from jsonb_each(to_jsonb(new)) as n(key, value)
+  where n.value is distinct from to_jsonb(old) -> n.key
+    and n.key not in ('org_id', 'created_at', 'updated_at');
+  if coalesce(array_length(v_changed, 1), 0) > 0
+     and exists (select 1 from public.organizations where id = new.org_id) then
+    insert into public.audit_log (org_id, action, actor, detail)
+    values (new.org_id, 'notification_settings_changed', public.clerk_user_id(),
+            jsonb_build_object('changed', to_jsonb(v_changed)));
+  end if;
+  return null;
+end;
+$$;
+
+create trigger audit_notification_settings_change
+after update on public.org_notification_settings
+for each row execute function public.audit_notification_settings_change();
+
 -- ---------------------------------------------------------------------------
 -- RLS. Enabled before any policy so a mistake below fails closed, not open.
 
@@ -215,3 +330,6 @@ grant all on table public.audit_log to service_role;
 revoke execute on function public.audit_org_members_role_change() from public, anon, authenticated;
 revoke execute on function public.audit_org_api_keys_change() from public, anon, authenticated;
 revoke execute on function public.audit_monitors_delete() from public, anon, authenticated;
+revoke execute on function public.audit_organizations_settings_change() from public, anon, authenticated;
+revoke execute on function public.audit_notification_settings_change() from public, anon, authenticated;
+revoke execute on function public.audit_log_block_rewrite() from public, anon, authenticated;

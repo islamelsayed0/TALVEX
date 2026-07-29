@@ -22,6 +22,11 @@ export const AUDIT_ACTIONS: readonly AuditAction[] = [
   'api_key_replaced',
   'api_key_deleted',
   'monitor_deleted',
+  'status_page_enabled',
+  'status_page_disabled',
+  'status_page_slug_changed',
+  'timezone_changed',
+  'notification_settings_changed',
   'article_created',
   'article_published',
   'article_unpublished',
@@ -36,6 +41,11 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   api_key_replaced: 'AI provider key replaced',
   api_key_deleted: 'AI provider key deleted',
   monitor_deleted: 'Monitor deleted',
+  status_page_enabled: 'Status page enabled',
+  status_page_disabled: 'Status page disabled',
+  status_page_slug_changed: 'Status page slug changed',
+  timezone_changed: 'Usage timezone changed',
+  notification_settings_changed: 'Notification settings changed',
   article_created: 'Article created',
   article_published: 'Article published',
   article_unpublished: 'Article unpublished',
@@ -70,6 +80,14 @@ function detailStrings(detail: AuditEntry['detail'], key: string): string[] | nu
   return value.every((v) => typeof v === 'string') ? (value as string[]) : null
 }
 
+/** The changed field names a settings row carries, as prose. Field names are
+ * the whole detail by design: values are configuration, not audit facts. */
+function changedFieldsSummary(detail: AuditEntry['detail']): string {
+  const changed = detailStrings(detail, 'changed')
+  if (!changed || changed.length === 0) return ''
+  return changed.map((f) => f.replaceAll('_', ' ')).join(', ')
+}
+
 /**
  * The one line of supporting facts under an action label, built from the
  * structured detail the trigger recorded. Falls back to nothing rather than
@@ -95,6 +113,12 @@ export function auditDetailSummary(entry: {
     }
     case 'monitor_deleted':
       return detailString(entry.detail, 'name') ?? ''
+    case 'status_page_enabled':
+    case 'status_page_disabled':
+    case 'status_page_slug_changed':
+    case 'timezone_changed':
+    case 'notification_settings_changed':
+      return changedFieldsSummary(entry.detail)
     case 'article_created':
     case 'article_published':
     case 'article_unpublished':

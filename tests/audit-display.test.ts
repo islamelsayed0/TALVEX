@@ -90,6 +90,27 @@ describe('auditDetailSummary', () => {
     ).toBe('all tags removed')
   })
 
+  it('describes settings changes by changed field names, never values', () => {
+    expect(
+      auditDetailSummary({
+        action: 'status_page_enabled',
+        detail: { changed: ['status_page_enabled', 'status_page_slug'] },
+      }),
+    ).toBe('status page enabled, status page slug')
+    expect(
+      auditDetailSummary({
+        action: 'timezone_changed',
+        detail: { changed: ['timezone'] },
+      }),
+    ).toBe('timezone')
+    expect(
+      auditDetailSummary({
+        action: 'notification_settings_changed',
+        detail: { changed: ['discord_webhook', 'email_on_open'] },
+      }),
+    ).toBe('discord webhook, email on open')
+  })
+
   it('degrades to an empty string on missing or malformed detail', () => {
     expect(auditDetailSummary({ action: 'member_role_changed', detail: {} })).toBe('')
     expect(auditDetailSummary({ action: 'monitor_deleted', detail: null })).toBe('')

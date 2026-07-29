@@ -20,7 +20,14 @@ import {
 //     session (actor = their Clerk id) or the service role (actor NULL, the
 //     webhook shape).
 //   - APPEND ONLY: no session can insert, update, or delete log rows, admins
-//     included; the grants withhold the verbs entirely.
+//     included; the grants withhold the verbs entirely. Above the grants,
+//     the block rewrite trigger raises on update and delete for EVERY
+//     caller, service role included, so history cannot be rewritten even by
+//     the role that bypasses RLS; the one carve out is the org cascade,
+//     where the log dies with its org.
+//   - SETTINGS FANOUT: the status page opt in, the usage timezone, and the
+//     notification settings each record their change with the changed field
+//     names and never the values, and only on a real change.
 //   - ADMIN ONLY, ORG SCOPED: members read nothing; admins read their own
 //     org's log and see zero rows of another org's.
 //   - NO SECRETS: key rows carry provider and last four only, never the
@@ -178,6 +185,117 @@ describe('the fanout records each sensitive action exactly once', () => {
     }
   })
 
+  it('enabling the status page records the flip with field names, never the slug value', async () => {
+    const slug = `audit-slug-${runId.slice(0, 8)}`
+    const { error } = await asUser(seed.adminA, seed.orgA.clerk_org_id, 'legacy')
+      .from('organizations')
+      .update({ status_page_enabled: true, status_page_slug: slug })
+      .eq('id', orgAId)
+    expect(error).toBeNull()
+
+    const { data } = await auditRowsA('status_page_enabled')
+    expect(data).toHaveLength(1)
+    expect(data![0].actor).toBe(seed.adminA)
+    expect(data![0].detail).toEqual({
+      changed: ['status_page_enabled', 'status_page_slug'],
+    })
+    // Field names are the whole detail: the value never reaches the log.
+    expect(JSON.stringify(data![0])).not.toContain(slug)
+  })
+
+  it('a slug rename while enabled is its own action; disable is another; no values anywhere', async () => {
+    const asAdminA = asUser(seed.adminA, seed.orgA.clerk_org_id, 'v2')
+    const renamed = `audit-slug-b-${runId.slice(0, 8)}`
+    await asAdminA
+      .from('organizations')
+      .update({ status_page_slug: renamed })
+      .eq('id', orgAId)
+    await asAdminA
+      .from('organizations')
+      .update({ status_page_enabled: false })
+      .eq('id', orgAId)
+
+    const slugRows = await auditRowsA('status_page_slug_changed')
+    expect(slugRows.data).toHaveLength(1)
+    expect(slugRows.data![0].detail).toEqual({ changed: ['status_page_slug'] })
+    expect(JSON.stringify(slugRows.data![0])).not.toContain(renamed)
+
+    const disabled = await auditRowsA('status_page_disabled')
+    expect(disabled.data).toHaveLength(1)
+    expect(disabled.data![0].detail).toEqual({ changed: ['status_page_enabled'] })
+  })
+
+  it('a timezone change records once, and an unchanged write records nothing', async () => {
+    const asAdminA = asUser(seed.adminA, seed.orgA.clerk_org_id, 'legacy')
+    for (let i = 0; i < 2; i += 1) {
+      const { error } = await asAdminA
+        .from('organizations')
+        .update({ timezone: 'America/New_York' })
+        .eq('id', orgAId)
+      expect(error).toBeNull()
+    }
+
+    const { data } = await auditRowsA('timezone_changed')
+    expect(data).toHaveLength(1)
+    expect(data![0].actor).toBe(seed.adminA)
+    expect(data![0].detail).toEqual({ changed: ['timezone'] })
+    expect(JSON.stringify(data![0])).not.toContain('America/New_York')
+  })
+
+  it('the webhook name upsert touches no audited column and records nothing', async () => {
+    const { error } = await service
+      .from('organizations')
+      .update({ name: 'Audit Test Org A renamed' })
+      .eq('id', orgAId)
+    expect(error).toBeNull()
+    const { data } = await service
+      .from('audit_log')
+      .select('action')
+      .eq('org_id', orgAId)
+      .in('action', [
+        'status_page_enabled',
+        'status_page_disabled',
+        'status_page_slug_changed',
+        'timezone_changed',
+      ])
+    // Still exactly the four rows the tests above created: enable, rename,
+    // disable, and the timezone change.
+    expect(data).toHaveLength(4)
+  })
+
+  it('notification settings changes record changed field names, never destinations', async () => {
+    const email = `alerts-${runId.slice(0, 8)}@example.com`
+    const asAdminA = asUser(seed.adminA, seed.orgA.clerk_org_id, 'v2')
+    // Creating the row is configuration appearing, not changing: AFTER
+    // UPDATE only, so the insert records nothing.
+    const ins = await asAdminA.from('org_notification_settings').insert({
+      org_id: orgAId,
+      notification_email: email,
+    })
+    expect(ins.error).toBeNull()
+
+    const upd = await asAdminA
+      .from('org_notification_settings')
+      .update({ notification_email: `b-${email}`, email_on_open: false })
+      .eq('org_id', orgAId)
+    expect(upd.error).toBeNull()
+
+    // An unchanged write records nothing.
+    const same = await asAdminA
+      .from('org_notification_settings')
+      .update({ email_on_open: false })
+      .eq('org_id', orgAId)
+    expect(same.error).toBeNull()
+
+    const { data } = await auditRowsA('notification_settings_changed')
+    expect(data).toHaveLength(1)
+    expect(data![0].actor).toBe(seed.adminA)
+    expect(data![0].detail).toEqual({
+      changed: ['email_on_open', 'notification_email'],
+    })
+    expect(JSON.stringify(data![0])).not.toContain(email)
+  })
+
   it('deleting a monitor records the deletion with the monitor name', async () => {
     const { data: monitor, error: monErr } = await service
       .from('monitors')
@@ -219,6 +337,34 @@ describe('the log is append only for every session', () => {
     const del = await asAdminA.from('audit_log').delete().eq('org_id', orgAId)
     expect(del.error).not.toBeNull()
     expect(del.error!.code).toBe('42501')
+  })
+
+  it('not even the service role can rewrite history: update and delete raise', async () => {
+    // Grants stop the API roles; the block rewrite trigger stops the one
+    // role grants cannot, because the service role bypasses RLS and holds
+    // ALL. History survives everything except its org's own deletion.
+    const { count } = await service
+      .from('audit_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', orgAId)
+    expect(count).toBeGreaterThan(0)
+
+    const upd = await service
+      .from('audit_log')
+      .update({ action: 'monitor_deleted' })
+      .eq('org_id', orgAId)
+    expect(upd.error).not.toBeNull()
+    expect(upd.error!.message).toContain('append only')
+
+    const del = await service.from('audit_log').delete().eq('org_id', orgAId)
+    expect(del.error).not.toBeNull()
+    expect(del.error!.message).toContain('append only')
+
+    const after = await service
+      .from('audit_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', orgAId)
+    expect(after.count).toBe(count)
   })
 })
 

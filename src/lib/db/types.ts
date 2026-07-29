@@ -600,6 +600,8 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          status_page_enabled: boolean
+          status_page_slug: string | null
           timezone: string | null
         }
         Insert: {
@@ -607,6 +609,8 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          status_page_enabled?: boolean
+          status_page_slug?: string | null
           timezone?: string | null
         }
         Update: {
@@ -614,6 +618,8 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          status_page_enabled?: boolean
+          status_page_slug?: string | null
           timezone?: string | null
         }
         Relationships: []
@@ -784,6 +790,7 @@ export type Database = {
       member_audience_tags: { Args: never; Returns: string[] }
       org_api_key_providers: { Args: never; Returns: string[] }
       org_has_api_key: { Args: never; Returns: boolean }
+      status_page_is_public: { Args: { p_org_id: string }; Returns: boolean }
       upsert_monitor_daily_rollups: {
         Args: { p_day: string }
         Returns: undefined
@@ -965,6 +972,11 @@ export type AuditAction =
   | "api_key_replaced"
   | "api_key_deleted"
   | "monitor_deleted"
+  | "status_page_enabled"
+  | "status_page_disabled"
+  | "status_page_slug_changed"
+  | "timezone_changed"
+  | "notification_settings_changed"
   | "article_created"
   | "article_published"
   | "article_unpublished"

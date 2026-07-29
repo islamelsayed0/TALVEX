@@ -58,3 +58,20 @@ export async function createOrgScopedClient() {
 
   return { client, orgId }
 }
+
+/**
+ * A Supabase client with NO session, for the public status page (BRD F9). It
+ * carries only the anon publishable key, so every query runs as the anon role
+ * and sees exactly what the anon RLS policies in migration 011 expose: the
+ * narrow status columns of orgs that have opted their page public, and nothing
+ * else. Never use this inside the dashboard; the org scoped client above is the
+ * only tenant read path. There is no session to forward and no org to scope to,
+ * so this is synchronous.
+ */
+export function createAnonClient() {
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false } },
+  )
+}

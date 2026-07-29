@@ -6,6 +6,43 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-29 — The audit log defers ticket and incident fanout to their existing trails
+
+**Decided.** Migration 013's audit fanout covers role, key, monitor, status
+page, timezone, and notification settings actions. Ticket and incident
+activity stays in ticket_events and incident_events for now; the unified log
+consolidates them in a later migration. Accepted at the F12 review.
+
+---
+
+## 2026-07-28 — Status page org enumeration is an accepted residual; migrations 011 and 012 applied together at the F9 close
+
+**Decided.** The enumeration residual in migration 011 is accepted as shipped.
+Anyone holding the public key can list the names and slugs of every org that
+has enabled its status page, because the anon SELECT policy on organizations
+("anon read enabled status page orgs") is table wide, gated only on
+`status_page_is_public(id)`, rather than parameterized by the requested slug.
+
+**Why.** Enabling a status page is opting into being public: the page exists
+to be shared, and search engines surface the same names and slugs anyway. The
+column scoped grants already cap what a listing can reveal to `id`, `name`,
+and `status_page_slug`; `url`, `clerk_org_id`, and every other column stay
+ungranted, and disabled orgs remain invisible.
+
+**Affects.** Nothing today. The named future mitigation, if enumeration ever
+matters: replace the table policy with a slug parameterized SECURITY DEFINER
+function, so anon can resolve one known slug to its org but can never list.
+
+**Also recorded here, on migration ordering.** F11 (migration 012, timezone)
+merged to main without its apply step, so the shared project sat at migration
+010 while main carried 012; the drift guard surfaced the gap during the F9
+close, which is the guard working as designed. Both 011 and 012 are applied
+together at that close, in filename order, so the applied history stays
+ordered, replay from zero stays correct, and nothing needed repair beyond
+running the apply.
+
+---
+
 ## 2026-07-27 — The sweep runs every 5 minutes from an external scheduler, superseding the daily Vercel cron
 
 **Decided.** The monitor sweep is no longer scheduled by Vercel Cron. An
