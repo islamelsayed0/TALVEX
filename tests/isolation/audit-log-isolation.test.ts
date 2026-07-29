@@ -119,26 +119,22 @@ describe('the fanout records each sensitive action exactly once', () => {
     expect(data).toHaveLength(1)
   })
 
-  it('a role change by an admin session records that admin as the actor', async () => {
-    // The migration 001 membership update policy reads the token role claim
-    // (it predates the is_org_admin column authority), so the token must
-    // carry the admin claim for the update to match the row at all.
+  it('no session can change a role since migration 014, so the webhook is the only role writer', async () => {
+    // Migration 014 removed the vestigial 001 correction path when it added
+    // the tags column grant: role updates are refused at the grant for every
+    // authenticated session, admin claim or not, and only the service role
+    // (the Clerk webhook) changes roles. The audit trail therefore records
+    // role changes with actor NULL, the system.
     const { error } = await asUser(seed.adminA, seed.orgA.clerk_org_id, 'legacy', 'admin')
       .from('org_members')
       .update({ role: 'member' })
       .eq('org_id', orgAId)
       .eq('clerk_user_id', seed.memberA)
-    expect(error).toBeNull()
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('42501')
 
-    const { data } = await service
-      .from('audit_log')
-      .select()
-      .eq('org_id', orgAId)
-      .eq('action', 'member_role_changed')
-      .order('occurred_at', { ascending: true })
-    expect(data).toHaveLength(2)
-    expect(data![1].actor).toBe(seed.adminA)
-    expect(data![1].detail).toMatchObject({ old_role: 'technician', new_role: 'member' })
+    const { data } = await auditRowsA('member_role_changed')
+    expect(data).toHaveLength(1)
   })
 
   it('the key lifecycle records added, replaced, deleted with provider and last four only', async () => {

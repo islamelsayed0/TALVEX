@@ -25,7 +25,7 @@ describe('auditActionLabel', () => {
   })
 
   it('falls back to the raw action for vocabulary this build does not know', () => {
-    expect(auditActionLabel('article_published')).toBe('article_published')
+    expect(auditActionLabel('billing_plan_changed')).toBe('billing_plan_changed')
   })
 })
 
@@ -53,6 +53,43 @@ describe('auditDetailSummary', () => {
     ).toBe('Website')
   })
 
+  it('describes article actions by title, never body content', () => {
+    for (const action of [
+      'article_created',
+      'article_published',
+      'article_unpublished',
+      'article_deleted',
+    ]) {
+      expect(
+        auditDetailSummary({ action, detail: { title: 'Printer guide' } }),
+      ).toBe('Printer guide')
+    }
+  })
+
+  it('describes an article update with its changed field names', () => {
+    expect(
+      auditDetailSummary({
+        action: 'article_updated',
+        detail: { title: 'Printer guide', changed: ['title', 'audience_tags'] },
+      }),
+    ).toBe('Printer guide (title, audience tags)')
+  })
+
+  it('describes a tag change by the tags as assigned, or their removal', () => {
+    expect(
+      auditDetailSummary({
+        action: 'member_tags_changed',
+        detail: { target_user_id: 'user_1', tags: ['onsite', 'finance'] },
+      }),
+    ).toBe('onsite, finance')
+    expect(
+      auditDetailSummary({
+        action: 'member_tags_changed',
+        detail: { target_user_id: 'user_1', tags: [] },
+      }),
+    ).toBe('all tags removed')
+  })
+
   it('degrades to an empty string on missing or malformed detail', () => {
     expect(auditDetailSummary({ action: 'member_role_changed', detail: {} })).toBe('')
     expect(auditDetailSummary({ action: 'monitor_deleted', detail: null })).toBe('')
@@ -70,6 +107,15 @@ describe('auditTargetUserId', () => {
         detail: { target_user_id: 'user_9' },
       }),
     ).toBe('user_9')
+  })
+
+  it('extracts the target of a tag change', () => {
+    expect(
+      auditTargetUserId({
+        action: 'member_tags_changed',
+        detail: { target_user_id: 'user_3', tags: [] },
+      }),
+    ).toBe('user_3')
   })
 
   it('is null for actions without a target and for malformed detail', () => {

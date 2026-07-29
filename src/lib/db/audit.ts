@@ -22,6 +22,12 @@ export const AUDIT_ACTIONS: readonly AuditAction[] = [
   'api_key_replaced',
   'api_key_deleted',
   'monitor_deleted',
+  'article_created',
+  'article_published',
+  'article_unpublished',
+  'article_updated',
+  'article_deleted',
+  'member_tags_changed',
 ]
 
 const ACTION_LABELS: Record<AuditAction, string> = {
@@ -30,6 +36,12 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   api_key_replaced: 'AI provider key replaced',
   api_key_deleted: 'AI provider key deleted',
   monitor_deleted: 'Monitor deleted',
+  article_created: 'Article created',
+  article_published: 'Article published',
+  article_unpublished: 'Article unpublished',
+  article_updated: 'Article updated',
+  article_deleted: 'Article deleted',
+  member_tags_changed: 'Member tags changed',
 }
 
 /** Human label for an action. Unknown values (a newer vocabulary than this
@@ -46,6 +58,16 @@ function detailString(detail: AuditEntry['detail'], key: string): string | null 
   }
   const value = detail[key]
   return typeof value === 'string' ? value : null
+}
+
+/** A detail value when it is an array of strings, else null. */
+function detailStrings(detail: AuditEntry['detail'], key: string): string[] | null {
+  if (typeof detail !== 'object' || detail === null || Array.isArray(detail)) {
+    return null
+  }
+  const value = detail[key]
+  if (!Array.isArray(value)) return null
+  return value.every((v) => typeof v === 'string') ? (value as string[]) : null
 }
 
 /**
@@ -73,6 +95,23 @@ export function auditDetailSummary(entry: {
     }
     case 'monitor_deleted':
       return detailString(entry.detail, 'name') ?? ''
+    case 'article_created':
+    case 'article_published':
+    case 'article_unpublished':
+    case 'article_deleted':
+      return detailString(entry.detail, 'title') ?? ''
+    case 'article_updated': {
+      const title = detailString(entry.detail, 'title')
+      const changed = detailStrings(entry.detail, 'changed')
+      if (!title) return ''
+      if (!changed || changed.length === 0) return title
+      return `${title} (${changed.map((f) => f.replaceAll('_', ' ')).join(', ')})`
+    }
+    case 'member_tags_changed': {
+      const tags = detailStrings(entry.detail, 'tags')
+      if (!tags) return ''
+      return tags.length === 0 ? 'all tags removed' : tags.join(', ')
+    }
     default:
       return ''
   }
@@ -84,7 +123,9 @@ export function auditTargetUserId(entry: {
   action: string
   detail: AuditEntry['detail']
 }): string | null {
-  if (entry.action !== 'member_role_changed') return null
+  if (entry.action !== 'member_role_changed' && entry.action !== 'member_tags_changed') {
+    return null
+  }
   return detailString(entry.detail, 'target_user_id')
 }
 
