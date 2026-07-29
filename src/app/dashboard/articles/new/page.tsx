@@ -4,7 +4,7 @@ import { collectAudienceTags, collectCategories, listArticles } from '@/lib/db/a
 import { createArticleAction } from '../actions'
 import { ArticleForm } from '../ui'
 
-export const metadata = { title: 'New article — Talvex' }
+export const metadata = { title: 'New document — Talvex' }
 
 /**
  * Write an article. Every article is born a draft; publishing is a separate
@@ -28,7 +28,7 @@ export default async function NewArticlePage({
   return (
     <main className="flex flex-1 flex-col gap-6 p-8">
       <div>
-        <h1 className="text-title text-foreground">New article</h1>
+        <h1 className="text-title text-foreground">New document</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           Drafts stay private to admins until you publish.
         </p>

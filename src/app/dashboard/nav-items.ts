@@ -15,15 +15,24 @@ export const ADMIN_NAV: readonly NavItem[] = [
   { label: 'Monitors', href: '/dashboard/monitors' },
   { label: 'Incidents', href: '/dashboard/incidents' },
   { label: 'Tickets', href: '/dashboard/tickets' },
-  { label: 'Articles', href: '/dashboard/articles' },
+  { label: 'Documents', href: '/dashboard/articles' },
+  { label: 'Inventory', href: '/dashboard/inventory' },
   { label: 'Help', href: '/dashboard/help' },
 ]
 
-// Members never see Monitors, Incidents, the admin Tickets queue, or org
-// Settings. Home is the Help front door; My requests is their own tickets.
+// Members never see Monitors, Incidents, Inventory, the admin Tickets queue,
+// or org Settings. Home is the Help front door; My requests is their own
+// tickets. Documents is the reading list, the same screen the Get Help door
+// opens: the F15 rider puts what a member needs one click from anywhere, and
+// two paths to the same place is intended. The label says Documents for both
+// roles while the routes differ by role: admins land on management, members
+// on reading.
+// Home is exact so reading a document (a /dashboard/help subpath) lights
+// Documents alone, not both.
 export const MEMBER_NAV: readonly NavItem[] = [
-  { label: 'Home', href: '/dashboard/help' },
+  { label: 'Home', href: '/dashboard/help', exact: true },
   { label: 'My requests', href: '/dashboard/tickets' },
+  { label: 'Documents', href: '/dashboard/help/articles' },
 ]
 
 export function navFor(isAdmin: boolean): readonly NavItem[] {

@@ -21,14 +21,31 @@ describe('role aware nav', () => {
       'Monitors',
       'Incidents',
       'Tickets',
-      'Articles',
+      'Documents',
+      'Inventory',
       'Help',
     ])
   })
 
-  it('gives members only Home and My requests', () => {
+  it('gives members Home, My requests, and Documents', () => {
     expect(navFor(false)).toBe(MEMBER_NAV)
-    expect(MEMBER_NAV.map((i) => i.label)).toEqual(['Home', 'My requests'])
+    expect(MEMBER_NAV.map((i) => i.label)).toEqual([
+      'Home',
+      'My requests',
+      'Documents',
+    ])
+  })
+
+  it('sends each role to its own Documents surface', () => {
+    // The F15 rider: one label, two destinations. Admins manage at
+    // /dashboard/articles; members read at /dashboard/help/articles, the
+    // same screen the Get Help door opens.
+    expect(ADMIN_NAV.find((i) => i.label === 'Documents')!.href).toBe(
+      '/dashboard/articles',
+    )
+    expect(MEMBER_NAV.find((i) => i.label === 'Documents')!.href).toBe(
+      '/dashboard/help/articles',
+    )
   })
 
   it('never offers a member an admin only route', () => {
@@ -37,6 +54,8 @@ describe('role aware nav', () => {
       '/dashboard',
       '/dashboard/monitors',
       '/dashboard/incidents',
+      '/dashboard/articles',
+      '/dashboard/inventory',
       '/dashboard/settings/api-keys',
     ]) {
       expect(memberHrefs).not.toContain(adminOnly)

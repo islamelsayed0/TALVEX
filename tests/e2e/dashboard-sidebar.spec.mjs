@@ -92,8 +92,8 @@ async function navLabels(page) {
 
   const labels = await navLabels(page)
   check(
-    'admin nav has Overview/Monitors/Incidents/Tickets/Help',
-    ['Overview', 'Monitors', 'Incidents', 'Tickets', 'Help'].every((l) => labels.some((x) => x.includes(l))),
+    'admin nav has Overview/Monitors/Incidents/Tickets/Documents/Inventory/Help',
+    ['Overview', 'Monitors', 'Incidents', 'Tickets', 'Documents', 'Inventory', 'Help'].every((l) => labels.some((x) => x.includes(l))),
     JSON.stringify(labels),
   )
   check('admin sees Settings entry', (await page.locator('a[href="/dashboard/settings/api-keys"]').count()) > 0)
@@ -170,10 +170,10 @@ async function navLabels(page) {
   await page.goto(`${BASE}/dashboard/help`, { waitUntil: 'domcontentloaded' })
   await shot(page, 'member-01-help')
   const labels = await navLabels(page)
-  check('member nav has Home + My requests',
-    ['Home', 'My requests'].every((l) => labels.some((x) => x.includes(l))), JSON.stringify(labels))
-  check('member nav omits admin items (Monitors/Incidents)',
-    !labels.some((x) => x.includes('Monitors') || x.includes('Incidents')), JSON.stringify(labels))
+  check('member nav has Home + My requests + Documents',
+    ['Home', 'My requests', 'Documents'].every((l) => labels.some((x) => x.includes(l))), JSON.stringify(labels))
+  check('member nav omits admin items (Monitors/Incidents/Inventory)',
+    !labels.some((x) => x.includes('Monitors') || x.includes('Incidents') || x.includes('Inventory')), JSON.stringify(labels))
   check('member does NOT see Settings entry',
     (await page.locator('a[href="/dashboard/settings/api-keys"]').count()) === 0)
 

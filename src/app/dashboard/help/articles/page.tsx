@@ -6,7 +6,7 @@ import { Card } from '../../_overview/ui'
 import { ghostButton } from '../../monitors/ui'
 import { ticketFieldClass } from '../../tickets/ui'
 
-export const metadata = { title: 'Help articles — Talvex' }
+export const metadata = { title: 'Documents — Talvex' }
 
 /**
  * The member reading list (F14), a door off Get Help. RLS is the entire
@@ -35,7 +35,7 @@ export default async function HelpArticlesPage({
     <main className="mx-auto w-full max-w-[720px] flex-1 animate-fade-up px-6 pt-[30px] pb-[72px]">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-title text-foreground">Help articles</h1>
+          <h1 className="text-title text-foreground">Documents</h1>
           <p className="mt-1.5 text-[14px] text-quiet">
             Guides from your IT team.
           </p>
@@ -50,7 +50,7 @@ export default async function HelpArticlesPage({
           type="search"
           name="q"
           defaultValue={q}
-          placeholder="Search articles"
+          placeholder="Search documents"
           className={`${ticketFieldClass} h-11 flex-1`}
         />
         <button type="submit" className={`${ghostButton} h-11 flex-none px-4 py-0`}>
@@ -61,7 +61,7 @@ export default async function HelpArticlesPage({
       {articles.length === 0 ? (
         <Card className="p-8">
           <h2 className="text-base font-semibold text-card-foreground">
-            {q ? 'Nothing matches' : 'No articles here yet'}
+            {q ? 'Nothing matches' : 'No documents here yet'}
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {q

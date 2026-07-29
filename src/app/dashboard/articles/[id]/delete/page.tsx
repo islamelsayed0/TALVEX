@@ -7,7 +7,7 @@ import { getArticle } from '@/lib/db/articles'
 import { ghostButton, primaryButton } from '../../../monitors/ui'
 import { deleteArticleAction } from '../../actions'
 
-export const metadata = { title: 'Delete article — Talvex' }
+export const metadata = { title: 'Delete document — Talvex' }
 
 /**
  * The plain confirmation for deletion, the monitors idiom: its own page,
@@ -32,12 +32,12 @@ export default async function DeleteArticlePage({
           Delete {article.title}?
         </h1>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          This removes the article for every reader. There is no undo.
+          This removes the document for every reader. There is no undo.
         </p>
         <form action={deleteArticleAction} className="flex items-center gap-3">
           <input type="hidden" name="id" value={article.id} />
           <button type="submit" className={primaryButton}>
-            Delete article
+            Delete document
           </button>
           <Link href={`/dashboard/articles/${article.id}/edit`} className={ghostButton}>
             Cancel

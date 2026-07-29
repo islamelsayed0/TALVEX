@@ -90,6 +90,29 @@ describe('auditDetailSummary', () => {
     ).toBe('all tags removed')
   })
 
+  it('describes inventory actions by item name, never notes content', () => {
+    for (const action of ['inventory_item_created', 'inventory_item_deleted']) {
+      expect(
+        auditDetailSummary({ action, detail: { name: 'Toner cartridge' } }),
+      ).toBe('Toner cartridge')
+    }
+  })
+
+  it('describes an inventory update with its changed field names', () => {
+    expect(
+      auditDetailSummary({
+        action: 'inventory_item_updated',
+        detail: { name: 'Toner cartridge', changed: ['quantity', 'min_stock'] },
+      }),
+    ).toBe('Toner cartridge (quantity, min stock)')
+    expect(
+      auditDetailSummary({
+        action: 'inventory_item_updated',
+        detail: { name: 'Toner cartridge' },
+      }),
+    ).toBe('Toner cartridge')
+  })
+
   it('describes settings changes by changed field names, never values', () => {
     expect(
       auditDetailSummary({

@@ -151,8 +151,25 @@ let articleUrl = ''
 
   await page.goto(`${BASE}/dashboard/help`, { waitUntil: 'domcontentloaded' })
   check(
-    'member sees the Browse help articles door',
-    (await page.locator('a[href="/dashboard/help/articles"]').count()) === 1,
+    'member sees the Browse documents door on Get Help',
+    (await page.locator('main a[href="/dashboard/help/articles"]').count()) === 1,
+  )
+
+  // The F15 rider: Documents is in the sidebar for members too, opening the
+  // same reading list the Get Help door opens. Two paths, one place.
+  const sidebarDocs = page.locator(
+    'nav[aria-label="Primary"] a[href="/dashboard/help/articles"]',
+  )
+  check('member sees Documents in the sidebar', (await sidebarDocs.count()) === 1)
+  check(
+    'the sidebar entry is labeled Documents',
+    ((await sidebarDocs.innerText().catch(() => '')) || '').includes('Documents'),
+  )
+  await sidebarDocs.click()
+  await page.waitForURL('**/dashboard/help/articles')
+  check(
+    'the sidebar Documents entry opens the reading list',
+    (await page.getByRole('link', { name: PUBLISHED_TITLE }).count()) === 1,
   )
 
   await page.goto(`${BASE}/dashboard/help/articles`, { waitUntil: 'domcontentloaded' })

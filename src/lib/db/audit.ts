@@ -33,6 +33,9 @@ export const AUDIT_ACTIONS: readonly AuditAction[] = [
   'article_updated',
   'article_deleted',
   'member_tags_changed',
+  'inventory_item_created',
+  'inventory_item_updated',
+  'inventory_item_deleted',
 ]
 
 const ACTION_LABELS: Record<AuditAction, string> = {
@@ -52,6 +55,9 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   article_updated: 'Article updated',
   article_deleted: 'Article deleted',
   member_tags_changed: 'Member tags changed',
+  inventory_item_created: 'Inventory item added',
+  inventory_item_updated: 'Inventory item updated',
+  inventory_item_deleted: 'Inventory item deleted',
 }
 
 /** Human label for an action. Unknown values (a newer vocabulary than this
@@ -124,6 +130,16 @@ export function auditDetailSummary(entry: {
     case 'article_unpublished':
     case 'article_deleted':
       return detailString(entry.detail, 'title') ?? ''
+    case 'inventory_item_created':
+    case 'inventory_item_deleted':
+      return detailString(entry.detail, 'name') ?? ''
+    case 'inventory_item_updated': {
+      const name = detailString(entry.detail, 'name')
+      const changed = detailStrings(entry.detail, 'changed')
+      if (!name) return ''
+      if (!changed || changed.length === 0) return name
+      return `${name} (${changed.map((f) => f.replaceAll('_', ' ')).join(', ')})`
+    }
     case 'article_updated': {
       const title = detailString(entry.detail, 'title')
       const changed = detailStrings(entry.detail, 'changed')

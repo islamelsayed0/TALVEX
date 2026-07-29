@@ -138,7 +138,7 @@ export default async function HelpHomePage() {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium text-foreground">
-              Browse help articles
+              Browse documents
             </span>
             <span className="mt-0.5 block text-[12.5px] text-quiet">
               Guides from your IT team, answers without the wait

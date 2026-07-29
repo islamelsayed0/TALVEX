@@ -7,7 +7,7 @@ import { getArticle } from '@/lib/db/articles'
 import { ghostButton } from '../../../monitors/ui'
 import { MarkdownView } from '../markdown-view'
 
-export const metadata = { title: 'Help articles — Talvex' }
+export const metadata = { title: 'Documents — Talvex' }
 
 /**
  * One article, rendered from markdown to React elements server side (never
@@ -33,7 +33,7 @@ export default async function HelpArticlePage({
           href="/dashboard/help/articles"
           className="text-[13px] font-medium text-quiet transition-colors hover:text-foreground"
         >
-          ← All articles
+          ← All documents
         </Link>
       </div>
 
