@@ -14,6 +14,7 @@ const TABS = [
   { href: '/dashboard/settings/api-keys', label: 'AI providers' },
   { href: '/dashboard/settings/notifications', label: 'Notifications' },
   { href: '/dashboard/settings/usage', label: 'Usage' },
+  { href: '/dashboard/settings/audit', label: 'Audit' },
 ]
 
 export function SettingsNav() {

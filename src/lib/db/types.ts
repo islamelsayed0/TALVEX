@@ -54,6 +54,41 @@ export type Database = {
           },
         ]
       }
+      audit_log: {
+        Row: {
+          action: string
+          actor: string | null
+          detail: Json
+          id: string
+          occurred_at: string
+          org_id: string
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          detail?: Json
+          id?: string
+          occurred_at?: string
+          org_id: string
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          detail?: Json
+          id?: string
+          occurred_at?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_conversations: {
         Row: {
           created_at: string
@@ -833,7 +868,6 @@ export const Constants = {
 } as const
 
 
-
 // Convenience aliases used by the data layer.
 export type Organization = Tables<"organizations">
 export type OrgMember = Tables<"org_members">
@@ -869,3 +903,11 @@ export type ChatConversation = Tables<"chat_conversations">
 export type ChatMessage = Tables<"chat_messages">
 export type ChatConversationStatus = "open" | "resolved" | "escalated"
 export type ChatRole = "user" | "assistant"
+// Audit log (F12).
+export type AuditEntry = Tables<"audit_log">
+export type AuditAction =
+  | "member_role_changed"
+  | "api_key_added"
+  | "api_key_replaced"
+  | "api_key_deleted"
+  | "monitor_deleted"
