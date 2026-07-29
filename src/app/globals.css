@@ -502,6 +502,32 @@
     z-index: 0;
   }
 
+  /* Everything below the hero sits on the solid page background so body copy
+   * never competes with the video: the wrapper fades from transparent (video
+   * still glows through behind the first product frame) to opaque within its
+   * first ~340px, and stays solid to the footer. */
+  .landing-body {
+    background: linear-gradient(180deg, transparent, var(--background) 340px);
+  }
+
+  /* Scroll entrance for landing sections: the same fadeUp the app uses on
+   * mount, driven by the element entering the viewport. Pure CSS progressive
+   * enhancement: browsers without animation-timeline render everything static.
+   * The global reduced motion rule zeroes durations, which scroll driven
+   * animations ignore, so they are switched off here explicitly. */
+  @supports (animation-timeline: view()) {
+    .scroll-reveal {
+      animation: fadeUp linear both;
+      animation-timeline: view();
+      animation-range: entry 5% entry 35%;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .scroll-reveal {
+        animation: none;
+      }
+    }
+  }
+
   /* ------------------------------------------------------------------
    * Clerk element treatments (docs/design/README.md).
    *
