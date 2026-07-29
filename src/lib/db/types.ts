@@ -182,6 +182,7 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          grounded_article_ids: Json | null
           id: string
           input_tokens: number | null
           model: string | null
@@ -194,6 +195,7 @@ export type Database = {
           content: string
           conversation_id: string
           created_at?: string
+          grounded_article_ids?: Json | null
           id?: string
           input_tokens?: number | null
           model?: string | null
@@ -206,6 +208,7 @@ export type Database = {
           content?: string
           conversation_id?: string
           created_at?: string
+          grounded_article_ids?: Json | null
           id?: string
           input_tokens?: number | null
           model?: string | null

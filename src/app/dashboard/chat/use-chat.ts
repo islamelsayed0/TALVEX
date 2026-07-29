@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import type { GroundingCitation } from '@/lib/chat/retrieval'
 import type { AiProvider, ChatRole } from '@/lib/db/types'
 import type { ProviderOption } from './ui'
 
@@ -19,7 +20,15 @@ import type { ProviderOption } from './ui'
  * chat history.
  */
 
-export type PaneMessage = { id: string; role: ChatRole; content: string }
+export type PaneMessage = {
+  id: string
+  role: ChatRole
+  content: string
+  /** Knowledge base articles this assistant reply drew from, already scoped
+   * to what this viewer may read. Absent on user turns and ungrounded
+   * replies. */
+  citations?: GroundingCitation[]
+}
 
 export function useChat({
   conversationId: initialConversationId,
@@ -89,6 +98,9 @@ export function useChat({
           id: data.assistant.id,
           role: 'assistant',
           content: data.assistant.content,
+          citations: Array.isArray(data.assistant.citations)
+            ? data.assistant.citations
+            : undefined,
         },
       ])
     } catch {

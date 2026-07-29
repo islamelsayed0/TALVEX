@@ -95,3 +95,47 @@ export async function setConversationStatus(
 }
 
 export { TITLE_MAX }
+
+/**
+ * Resolve the persisted grounding ids on a thread's assistant messages to
+ * citation cards, THROUGH THE VIEWER'S OWN SCOPED READ. The stored column
+ * holds ids alone; whether an id renders is decided here by the same
+ * articles policy that governs Get Help. An article the viewer cannot read
+ * now (audience tag removed since the reply, unpublished, deleted, another
+ * org) resolves to no row and its card is OMITTED entirely, not shown as a
+ * dead title: the F14 contract says an article outside your audience leaves
+ * no trace, and a title is a trace. Published is filtered explicitly for
+ * the same reason as retrieval: an admin's own RLS admits drafts.
+ */
+export async function resolveGroundingCitations(
+  messages: ChatMessage[],
+): Promise<Map<string, Array<{ id: string; title: string }>>> {
+  const idsByMessage = new Map<string, string[]>()
+  for (const m of messages) {
+    if (m.role !== 'assistant' || !Array.isArray(m.grounded_article_ids)) continue
+    const ids = m.grounded_article_ids.filter(
+      (v): v is string => typeof v === 'string',
+    )
+    if (ids.length > 0) idsByMessage.set(m.id, ids)
+  }
+  const resolved = new Map<string, Array<{ id: string; title: string }>>()
+  const allIds = [...new Set([...idsByMessage.values()].flat())]
+  if (allIds.length === 0) return resolved
+
+  const { client } = await createOrgScopedClient()
+  const { data, error } = await client
+    .from('articles')
+    .select('id, title')
+    .eq('status', 'published')
+    .in('id', allIds)
+  if (error) throw error
+  const titles = new Map(data.map((a) => [a.id, a.title]))
+
+  for (const [messageId, ids] of idsByMessage) {
+    const citations = ids
+      .filter((id) => titles.has(id))
+      .map((id) => ({ id, title: titles.get(id)! }))
+    if (citations.length > 0) resolved.set(messageId, citations)
+  }
+  return resolved
+}

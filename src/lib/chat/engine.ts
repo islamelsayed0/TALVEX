@@ -11,6 +11,14 @@ import { readProviderKey } from './key-vault'
 import { generateReply, type ChatTurn } from './providers'
 import { isAiProvider } from './providers-meta'
 import { checkChatRateLimit } from './rate-limit'
+import {
+  composeGrounding,
+  EMPTY_GROUNDING,
+  extractSearchTerms,
+  retrieveGroundingArticles,
+  type Grounding,
+  type GroundingCitation,
+} from './retrieval'
 import { SYSTEM_PROMPT } from './system-prompt'
 
 /**
@@ -83,6 +91,10 @@ export type SendOutcome = {
     provider: AiProvider
     model: string
     createdAt: string
+    /** Articles that grounded this reply, for the reference cards. The ids
+     * came from the caller's own scoped read, so they are already articles
+     * this user may open. Empty when the reply was ungrounded. */
+    citations: GroundingCitation[]
   }
 }
 
@@ -179,6 +191,23 @@ export async function sendChatMessage(input: {
     { role: 'user', content: message },
   ]
 
+  // Knowledge base grounding (the F14 follow up). Retrieval runs on
+  // `client`, the org scoped client built above from THIS request's session,
+  // so the F14 visibility contract decides what the chat may see: the same
+  // articles this user could open in Get Help, and nothing else. The service
+  // role never touches articles. Any retrieval failure degrades to an
+  // ungrounded answer; grounding is an enhancement, never a gate, and a
+  // failure here must not take the chat down or tempt a wider client.
+  let grounding: Grounding = EMPTY_GROUNDING
+  try {
+    const previousUserTurn = history.filter((t) => t.role === 'user').at(-1)?.content
+    const terms = extractSearchTerms(message, previousUserTurn)
+    const articles = await retrieveGroundingArticles(client, terms)
+    grounding = composeGrounding(articles, terms)
+  } catch {
+    grounding = EMPTY_GROUNDING
+  }
+
   // Read and decrypt the key in request scope, then call the provider. Nothing
   // is written until this succeeds.
   const apiKey = await readProviderKey(orgUuid, provider)
@@ -190,7 +219,9 @@ export async function sendChatMessage(input: {
   const reply = await generateReply({
     provider,
     apiKey,
-    system: SYSTEM_PROMPT,
+    system: grounding.section
+      ? `${SYSTEM_PROMPT}\n\n${grounding.section}`
+      : SYSTEM_PROMPT,
     messages: turns,
   })
 
@@ -245,6 +276,12 @@ export async function sendChatMessage(input: {
       model: reply.model,
       input_tokens: reply.inputTokens,
       output_tokens: reply.outputTokens,
+      // Ids only, never article content. What renders later goes back
+      // through the viewer's own scoped articles read (migration 015).
+      grounded_article_ids:
+        grounding.citations.length > 0
+          ? grounding.citations.map((c) => c.id)
+          : null,
     })
     .select('id, created_at')
     .single()
@@ -259,6 +296,7 @@ export async function sendChatMessage(input: {
       provider,
       model: reply.model,
       createdAt: assistantRow.created_at,
+      citations: grounding.citations,
     },
   }
 }

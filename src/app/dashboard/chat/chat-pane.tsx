@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 
 import { bubble, bubbleRow, roleLabel } from './chat-style'
+import { ArticleCitations } from './citations'
 import type { ProviderOption } from './ui'
 import { type PaneMessage, useChat } from './use-chat'
 
@@ -71,6 +72,9 @@ export function ChatPane({
               <div className={bubbleRow[m.role]}>
                 <div className={bubble[m.role]}>{m.content}</div>
               </div>
+              {m.role === 'assistant' && m.citations?.length ? (
+                <ArticleCitations citations={m.citations} />
+              ) : null}
               <span
                 className={`px-1 text-xs text-quiet ${
                   m.role === 'user' ? 'text-right' : 'text-left'

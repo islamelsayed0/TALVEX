@@ -1,6 +1,8 @@
 import { AI_PROVIDER_LABELS } from '@/lib/chat/providers-meta'
+import type { GroundingCitation } from '@/lib/chat/retrieval'
 import type { AiProvider, ChatMessage } from '@/lib/db/types'
 import { bubble, bubbleRow, roleLabel } from './chat-style'
+import { ArticleCitations } from './citations'
 
 /**
  * Server rendered chat pieces (no client components here). The interactive pane
@@ -24,19 +26,29 @@ export function DisclosureLine() {
 export function Transcript({
   messages,
   userLabel = roleLabel.user,
+  citationsById,
 }: {
   messages: ChatMessage[]
   userLabel?: string
+  /** Grounding citations per assistant message id, already resolved through
+   * THIS viewer's scoped articles read (resolveGroundingCitations). Absent
+   * entries render nothing, which is how an article outside the viewer's
+   * audience stays traceless. */
+  citationsById?: Map<string, GroundingCitation[]>
 }) {
   return (
     <div className="flex flex-col gap-3">
       {messages.map((m) => {
         const role = m.role as 'user' | 'assistant'
+        const citations = citationsById?.get(m.id)
         return (
           <div key={m.id} className="flex flex-col gap-1">
             <div className={bubbleRow[role]}>
               <div className={bubble[role]}>{m.content}</div>
             </div>
+            {role === 'assistant' && citations?.length ? (
+              <ArticleCitations citations={citations} />
+            ) : null}
             <span
               className={`px-1 text-xs text-quiet ${
                 role === 'user' ? 'text-right' : 'text-left'

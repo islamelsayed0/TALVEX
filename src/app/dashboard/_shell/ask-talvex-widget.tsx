@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useId, useRef, useState } from 'react'
 
 import { bubble, bubbleRow } from '../chat/chat-style'
+import { ArticleCitations } from '../chat/citations'
 import { DisclosureLine, fullChatHref, type ProviderOption } from '../chat/ui'
 import { useChat } from '../chat/use-chat'
 
@@ -137,8 +138,13 @@ export function AskTalvexWidget({
                   </div>
                 ) : (
                   messages.map((m) => (
-                    <div key={m.id} className={bubbleRow[m.role]}>
-                      <div className={bubble[m.role]}>{m.content}</div>
+                    <div key={m.id} className="flex flex-col gap-1">
+                      <div className={bubbleRow[m.role]}>
+                        <div className={bubble[m.role]}>{m.content}</div>
+                      </div>
+                      {m.role === 'assistant' && m.citations?.length ? (
+                        <ArticleCitations citations={m.citations} />
+                      ) : null}
                     </div>
                   ))
                 )}
