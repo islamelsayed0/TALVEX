@@ -15,6 +15,7 @@ const TABS = [
   { href: '/dashboard/settings/notifications', label: 'Notifications' },
   { href: '/dashboard/settings/status-page', label: 'Status page' },
   { href: '/dashboard/settings/usage', label: 'Usage' },
+  { href: '/dashboard/settings/audit', label: 'Audit' },
 ]
 
 export function SettingsNav() {

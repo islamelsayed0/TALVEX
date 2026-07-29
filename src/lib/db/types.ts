@@ -54,6 +54,41 @@ export type Database = {
           },
         ]
       }
+      audit_log: {
+        Row: {
+          action: string
+          actor: string | null
+          detail: Json
+          id: string
+          occurred_at: string
+          org_id: string
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          detail?: Json
+          id?: string
+          occurred_at?: string
+          org_id: string
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          detail?: Json
+          id?: string
+          occurred_at?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_conversations: {
         Row: {
           created_at: string
@@ -701,6 +736,7 @@ export type Database = {
       is_org_admin: { Args: { p_org_id: string }; Returns: boolean }
       org_api_key_providers: { Args: never; Returns: string[] }
       org_has_api_key: { Args: never; Returns: boolean }
+      status_page_is_public: { Args: { p_org_id: string }; Returns: boolean }
       upsert_monitor_daily_rollups: {
         Args: { p_day: string }
         Returns: undefined
@@ -838,6 +874,7 @@ export const Constants = {
   },
 } as const
 
+
 // Convenience aliases used by the data layer.
 export type Organization = Tables<"organizations">
 export type OrgMember = Tables<"org_members">
@@ -873,3 +910,16 @@ export type ChatConversation = Tables<"chat_conversations">
 export type ChatMessage = Tables<"chat_messages">
 export type ChatConversationStatus = "open" | "resolved" | "escalated"
 export type ChatRole = "user" | "assistant"
+// Audit log (F12).
+export type AuditEntry = Tables<"audit_log">
+export type AuditAction =
+  | "member_role_changed"
+  | "api_key_added"
+  | "api_key_replaced"
+  | "api_key_deleted"
+  | "monitor_deleted"
+  | "status_page_enabled"
+  | "status_page_disabled"
+  | "status_page_slug_changed"
+  | "timezone_changed"
+  | "notification_settings_changed"
