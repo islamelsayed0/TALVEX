@@ -340,6 +340,59 @@ export type Database = {
           },
         ]
       }
+      inventory_items: {
+        Row: {
+          buy_url: string | null
+          created_at: string
+          id: string
+          item_number: string | null
+          location: string | null
+          min_stock: number
+          name: string
+          notes: string | null
+          org_id: string
+          quantity: number
+          serial_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          buy_url?: string | null
+          created_at?: string
+          id?: string
+          item_number?: string | null
+          location?: string | null
+          min_stock?: number
+          name: string
+          notes?: string | null
+          org_id: string
+          quantity?: number
+          serial_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          buy_url?: string | null
+          created_at?: string
+          id?: string
+          item_number?: string | null
+          location?: string | null
+          min_stock?: number
+          name?: string
+          notes?: string | null
+          org_id?: string
+          quantity?: number
+          serial_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monitor_checks: {
         Row: {
           checked_at: string
@@ -789,6 +842,7 @@ export type Database = {
       clerk_active_org_id: { Args: never; Returns: string }
       clerk_is_org_admin: { Args: never; Returns: boolean }
       clerk_user_id: { Args: never; Returns: string }
+      inventory_access_gate: { Args: never; Returns: boolean }
       is_org_admin: { Args: { p_org_id: string }; Returns: boolean }
       member_audience_tags: { Args: never; Returns: string[] }
       org_api_key_providers: { Args: never; Returns: string[] }
@@ -986,6 +1040,11 @@ export type AuditAction =
   | "article_updated"
   | "article_deleted"
   | "member_tags_changed"
+  | "inventory_item_created"
+  | "inventory_item_updated"
+  | "inventory_item_deleted"
 // Knowledge base (F14).
 export type Article = Tables<"articles">
 export type ArticleStatus = "draft" | "published"
+// Inventory (F15).
+export type InventoryItem = Tables<"inventory_items">

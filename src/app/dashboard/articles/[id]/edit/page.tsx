@@ -15,7 +15,7 @@ import { updateArticleAction } from '../../actions'
 import { ArticleForm, ArticleStatusBadge, articleFormDefaults } from '../../ui'
 import type { ArticleStatus } from '@/lib/db/types'
 
-export const metadata = { title: 'Edit article — Talvex' }
+export const metadata = { title: 'Edit document — Talvex' }
 
 /**
  * Edit, publish, unpublish, or head to deletion. Publish state is its own
@@ -54,7 +54,7 @@ export default async function EditArticlePage({
     <main className="flex flex-1 flex-col gap-6 p-8">
       <div className="flex max-w-[640px] flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-title text-foreground">Edit article</h1>
+          <h1 className="text-title text-foreground">Edit document</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
             Saving changes keeps the current publish state.
           </p>

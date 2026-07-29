@@ -60,6 +60,14 @@ const Articles: Icon = (p) => (
   </svg>
 )
 
+const Inventory: Icon = (p) => (
+  <svg {...base(p)}>
+    <path d="M21 8 12 3 3 8v8l9 5 9-5z" />
+    <path d="M3 8l9 5 9-5" />
+    <path d="M12 13v8" />
+  </svg>
+)
+
 const Help: Icon = (p) => (
   <svg {...base(p)}>
     <circle cx="12" cy="12" r="9" />
@@ -75,5 +83,7 @@ export const NAV_ICON: Record<string, Icon> = {
   '/dashboard/incidents': Incidents,
   '/dashboard/tickets': Tickets,
   '/dashboard/articles': Articles,
+  '/dashboard/help/articles': Articles,
+  '/dashboard/inventory': Inventory,
   '/dashboard/help': Help,
 }

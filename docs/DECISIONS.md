@@ -6,6 +6,20 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-29 — The knowledge base joins the sidebar as Documents, for every role
+
+**Decided.** Reversing the F14 ruling that members reach article reading
+through Get Help only: the sidebar entry is renamed Documents and is visible
+to every role. Admins land on the management screen exactly as before;
+members land on the reading list, the same screen the Get Help door opens,
+and that door stays too, so two paths to the same place is intended. User
+facing copy says Documents everywhere; route paths, code identifiers, and
+the audit action names keep the article vocabulary, because renaming those
+would need a migration for zero user value. Why: the thing a member needs
+should be one click from anywhere.
+
+---
+
 ## 2026-07-29 — The audit log defers ticket and incident fanout to their existing trails
 
 **Decided.** Migration 013's audit fanout covers role, key, monitor, status

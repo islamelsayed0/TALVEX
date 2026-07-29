@@ -14,7 +14,7 @@ export function ArticleCitations({ citations }: { citations: GroundingCitation[]
   if (citations.length === 0) return null
   return (
     <div className="flex max-w-[85%] flex-col gap-1.5">
-      <span className="px-1 text-[11px] text-quiet">From your help articles</span>
+      <span className="px-1 text-[11px] text-quiet">From your documents</span>
       {citations.map((c) => (
         <Link
           key={c.id}

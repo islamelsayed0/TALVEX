@@ -140,7 +140,7 @@ export function ArticleForm({
             ))}
           </datalist>
           <span className="text-[11.5px] text-quiet">
-            Groups articles for readers. Leave empty for General.
+            Groups documents for readers. Leave empty for General.
           </span>
         </label>
 

@@ -50,17 +50,17 @@ function validated(input: ArticleInput): ValidatedArticle {
   const body = input.body.trim()
   const category = input.category.trim()
   if (title === '') {
-    throw new ArticleValidationError('Give the article a title.')
+    throw new ArticleValidationError('Give the document a title.')
   }
   if (title.length > TITLE_MAX) {
     throw new ArticleValidationError('Keep the title under 200 characters.')
   }
   if (body === '') {
-    throw new ArticleValidationError('Write the article body first.')
+    throw new ArticleValidationError('Write the document body first.')
   }
   if (body.length > BODY_MAX) {
     throw new ArticleValidationError(
-      'That article is very long. Keep it under 50,000 characters.',
+      'That document is very long. Keep it under 50,000 characters.',
     )
   }
   if (category.length > CATEGORY_MAX) {
