@@ -6,6 +6,15 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-29 — The audit log defers ticket and incident fanout to their existing trails
+
+**Decided.** Migration 013's audit fanout covers role, key, monitor, status
+page, timezone, and notification settings actions. Ticket and incident
+activity stays in ticket_events and incident_events for now; the unified log
+consolidates them in a later migration. Accepted at the F12 review.
+
+---
+
 ## 2026-07-28 — Status page org enumeration is an accepted residual; migrations 011 and 012 applied together at the F9 close
 
 **Decided.** The enumeration residual in migration 011 is accepted as shipped.

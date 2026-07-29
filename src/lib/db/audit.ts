@@ -22,6 +22,11 @@ export const AUDIT_ACTIONS: readonly AuditAction[] = [
   'api_key_replaced',
   'api_key_deleted',
   'monitor_deleted',
+  'status_page_enabled',
+  'status_page_disabled',
+  'status_page_slug_changed',
+  'timezone_changed',
+  'notification_settings_changed',
 ]
 
 const ACTION_LABELS: Record<AuditAction, string> = {
@@ -30,6 +35,11 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   api_key_replaced: 'AI provider key replaced',
   api_key_deleted: 'AI provider key deleted',
   monitor_deleted: 'Monitor deleted',
+  status_page_enabled: 'Status page enabled',
+  status_page_disabled: 'Status page disabled',
+  status_page_slug_changed: 'Status page slug changed',
+  timezone_changed: 'Usage timezone changed',
+  notification_settings_changed: 'Notification settings changed',
 }
 
 /** Human label for an action. Unknown values (a newer vocabulary than this
@@ -46,6 +56,24 @@ function detailString(detail: AuditEntry['detail'], key: string): string | null 
   }
   const value = detail[key]
   return typeof value === 'string' ? value : null
+}
+
+/** A detail value when it is an array of strings, else null. */
+function detailStrings(detail: AuditEntry['detail'], key: string): string[] | null {
+  if (typeof detail !== 'object' || detail === null || Array.isArray(detail)) {
+    return null
+  }
+  const value = detail[key]
+  if (!Array.isArray(value)) return null
+  return value.every((v) => typeof v === 'string') ? (value as string[]) : null
+}
+
+/** The changed field names a settings row carries, as prose. Field names are
+ * the whole detail by design: values are configuration, not audit facts. */
+function changedFieldsSummary(detail: AuditEntry['detail']): string {
+  const changed = detailStrings(detail, 'changed')
+  if (!changed || changed.length === 0) return ''
+  return changed.map((f) => f.replaceAll('_', ' ')).join(', ')
 }
 
 /**
@@ -73,6 +101,12 @@ export function auditDetailSummary(entry: {
     }
     case 'monitor_deleted':
       return detailString(entry.detail, 'name') ?? ''
+    case 'status_page_enabled':
+    case 'status_page_disabled':
+    case 'status_page_slug_changed':
+    case 'timezone_changed':
+    case 'notification_settings_changed':
+      return changedFieldsSummary(entry.detail)
     default:
       return ''
   }
