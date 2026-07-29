@@ -512,6 +512,8 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          status_page_enabled: boolean
+          status_page_slug: string | null
           timezone: string | null
         }
         Insert: {
@@ -519,6 +521,8 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          status_page_enabled?: boolean
+          status_page_slug?: string | null
           timezone?: string | null
         }
         Update: {
@@ -526,6 +530,8 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          status_page_enabled?: boolean
+          status_page_slug?: string | null
           timezone?: string | null
         }
         Relationships: []
@@ -831,8 +837,6 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
-
 
 // Convenience aliases used by the data layer.
 export type Organization = Tables<"organizations">
