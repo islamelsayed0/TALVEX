@@ -3,7 +3,12 @@ import { notFound } from 'next/navigation'
 
 import { UNKNOWN_MEMBER, resolveUserNames } from '@/lib/auth/user-names'
 import { listKeyProviders } from '@/lib/db/api-keys'
-import { getChatViewer, getConversation, listMessages } from '@/lib/db/chat'
+import {
+  getChatViewer,
+  getConversation,
+  listMessages,
+  resolveGroundingCitations,
+} from '@/lib/db/chat'
 import { getTicketForConversation } from '@/lib/db/tickets'
 import type { ChatConversationStatus, TicketStatus } from '@/lib/db/types'
 import { ghostButton } from '../../monitors/ui'
@@ -51,10 +56,15 @@ export default async function ConversationPage({
   const isCreator = conversation.created_by === viewer.userId
   const escalated = status === 'escalated'
 
+  // Grounding cards resolve through THIS viewer's scoped articles read, so a
+  // card only exists for an article they could open in Get Help right now.
+  const citationsById = await resolveGroundingCitations(messages)
+
   const paneMessages = messages.map((m) => ({
     id: m.id,
     role: m.role as 'user' | 'assistant',
     content: m.content,
+    citations: citationsById.get(m.id),
   }))
 
   return (
@@ -88,6 +98,7 @@ export default async function ConversationPage({
         ) : (
           <Transcript
             messages={messages}
+            citationsById={citationsById}
             userLabel={
               isCreator
                 ? 'You'
