@@ -12,7 +12,8 @@
     "screenshots:login": "node scripts/capture-screenshots.mjs login",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "db:dump": "d=backups/$(date -u +%Y%m%dT%H%M%SZ) && mkdir -p $d && supabase db dump --linked -f $d/schema.sql && supabase db dump --linked --data-only --use-copy -f $d/data.sql && echo \"Dumped to $d. This file holds every tenant row: do not commit it, delete it when you are done.\""
   },
   "dependencies": {
     "@clerk/nextjs": "^7.5.21",

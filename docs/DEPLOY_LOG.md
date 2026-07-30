@@ -448,3 +448,64 @@ Clerk ids) against production: 1 organization, 1 membership, 2 monitors and 1
 ticket visible, `clerk_active_org_id()` resolving the org and
 `clerk_is_org_admin()` returning true. As `anon`, the same read is refused with
 `42501: permission denied for table organizations`. Both halves behave.
+
+---
+
+## 2026-07-30 — Migration 018 applied, and the restore drill run for the first time
+
+Two entries, both against the shared project `rdfuzadtraxzrrthhnnp`.
+
+### Migration 018 (platform_heartbeat) applied to production
+
+`npx supabase db push --linked`, preceded by a `--dry-run` that listed exactly
+one pending migration. Applied under the exact filename version
+`20260730120000`, so the drift guard stays aligned: 18 migration files, 18
+ledger rows, same versions.
+
+Verified after: `list_migrations` shows `018_platform_heartbeat`;
+`get_advisors` reports no new security lint (the three pre existing
+SECURITY DEFINER warnings are unchanged); the seeded row exists with null
+timestamps, which is the intended "has not reported yet" state.
+
+Applied ahead of the code, which is safe here because the table is additive
+and the running deployment does not read it. Nothing is user visible until the
+branch merges and deploys. Note that the drift guard now expects that merge:
+leaving the branch unmerged indefinitely is the state the guard is designed to
+complain about.
+
+### Restore drill (BRD S6, second clause) — PASSED
+
+First run of the procedure now written in `docs/RUNBOOK.md` section 4.
+
+- **Dump:** `supabase db dump --linked` for schema, then `--data-only
+  --use-copy` for data. Schema 95K, data 304K.
+- **Restore target:** the local stack, after dropping and recreating the
+  `public` schema. Production was not touched, and could not have been: the
+  one project backs every environment, which is exactly why the drill restores
+  locally.
+- **Schema restore:** 0 errors.
+- **Data restore:** 7 errors, all `relation "storage.<table>" does not exist`
+  (buckets, buckets_analytics, buckets_vectors, objects, s3_multipart_uploads,
+  s3_multipart_uploads_parts, vector_indexes). The local stack does not run the
+  Storage service and Talvex stores no files, so those tables are empty and
+  their absence is harmless. No error named a `public.` table. This expected
+  noise is documented in the runbook so a future operator does not read it as
+  a failed restore.
+- **Row counts after restore:** organizations 3, org_members 4, monitors 11,
+  monitor_checks 1149, monitor_daily_rollups 833, incidents 12,
+  incident_events 8, tickets 7, ticket_events 7, ticket_comments 0,
+  chat_conversations 3, chat_messages 32, articles 6, inventory_items 9,
+  audit_log 18, org_api_keys 1, api_key_events 1,
+  org_notification_settings 1, platform_heartbeat 1. Matches production.
+- **The actual assertion:** `npx vitest run tests/isolation` against the
+  restored database — **18 files, 358 tests, all passing**. Every RLS policy,
+  grant, trigger, and check constraint survived the round trip. A restore that
+  merely exits zero proves nothing; this is what proves it.
+- **Cleanup:** `npm run db:reset` returned the local stack to migration state,
+  and the dump files were deleted. They held every tenant row and were written
+  outside the repository.
+
+**Still not met, and not fixable here:** point in time recovery. It is a paid
+add on on a paid plan and this Supabase organization is on the free plan. S6
+is partly met and should be reported that way. RPO remains "whenever the
+operator last ran `npm run db:dump`".
