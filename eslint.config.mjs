@@ -12,6 +12,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The design handoff prototype bundle, which is gitignored but sits in
+    // the working tree. ESLint does not read .gitignore, so ignoring it there
+    // is not enough: without this line `npm run lint` reports two errors and
+    // eight warnings from a generated export that is not our source, and a
+    // lint run that is always red is a lint run nobody reads. CI never saw
+    // this, because CI only ever checks out tracked files.
+    "design_handoff_talvex_app/**",
   ]),
   // All application logging goes through src/lib/log.ts, which emits one line
   // of JSON with a fixed field set and a closed union of event names. This

@@ -233,6 +233,8 @@ both have cost real debugging time:
 - **A plain redeploy can reuse the original deployment's environment
   snapshot.** After setting or changing any variable, push a commit.
 
-Preview deployments currently have **no** environment variables set, so preview
-builds have no working auth or database. That is a dashboard task and is
-tracked in `docs/DEPLOY_LOG.md`.
+Preview deployments are **partly** configured: seven variables target Preview,
+but the four `NEXT_PUBLIC_*` values, `CLERK_SECRET_KEY`, and
+`SUPABASE_SERVICE_ROLE_KEY` do not. Those are exactly auth and database, so a
+preview build still has neither and the practical conclusion is unchanged.
+Finishing it is a dashboard task, tracked in `docs/DEPLOY_LOG.md`.

@@ -11,7 +11,46 @@ added the CI migration drift guard. See docs/DECISIONS.md for all three.
 
 ---
 
-## Ops: watch the watcher, and re-verify the prod secret alignment periodically
+## Process: the chat isolation CI flake, carried as a known cost
+
+**Raised 2026-07-30**, at the portfolio close out, so the cost is written down
+rather than absorbed silently every time it happens.
+
+**What is observed.** `tests/isolation/chat-isolation.test.ts` has failed during
+its seeding step with an error raised upstream of the assertions, on a run where
+nothing in the chat suite, the chat code, or migration 008 had been touched. The
+same commit passes when the job is rerun. Nothing about the failure implicates
+the change under test, which is exactly what makes it expensive: the first
+reading of a red isolation check is always "this branch broke tenant
+isolation", and that reading costs real attention before the rerun clears it.
+
+**Why it is not chased now.** A flake that has not been captured has not been
+diagnosed. **No run log in the repository's Actions history records this
+failure**, which is the honest state of the evidence: it has been seen, and it
+has not been kept. Chasing it therefore starts by keeping one, not by
+theorizing, and that is a debugging session rather than a task.
+
+**What picking it up looks like.**
+
+1. **Capture one.** The next time it goes red, save the job log before
+   rerunning. `gh run view <id> --log-failed > flake.log` takes a second and is
+   the whole difference between an anecdote and a bug report.
+2. **Read the seeding path specifically.** The suite seeds through PostgREST
+   against a stack that has just started. The candidates worth eliminating in
+   order: PostgREST's schema cache not yet reloaded after `supabase start`, so
+   an insert hits a table the API layer does not know about yet; a container not
+   fully healthy when the first request lands; and the clock skew rejection
+   (PGRST303) that `src/lib/db/fetch-retry.ts` already exists to absorb in the
+   app, which the isolation suite's own client does not use.
+3. **Fix the cause, never the symptom.** A retry wrapper around the seed is
+   acceptable if the cause is genuinely a readiness race and the retry is
+   scoped to seeding. Loosening, skipping, or conditionally running an isolation
+   assertion is not, under any diagnosis (CLAUDE.md rule 8).
+
+**The cost of leaving it.** A rerun. The risk is habituation: a suite that is
+sometimes red for no reason trains its reader to rerun first and think second,
+and that is precisely the reflex that would wave through a real isolation
+failure one day.
 
 **Raised 2026-07-27** after the monitor sweep silently stopped: cron-job.org
 had auto disabled the job (405, because it was POSTing to a route that only

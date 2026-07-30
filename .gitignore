@@ -47,3 +47,12 @@ next-env.d.ts
 
 # database dumps (npm run db:dump). These hold every tenant row.
 /backups
+
+# design handoff bundle, kept locally and deliberately not committed. These
+# are large generated prototype exports, not source. The tracked design entry
+# point is docs/design/DESIGN.md, and docs/design/handoff/README.md is the
+# reconciled copy of the bundle's own README (see the 2026-07-24 decision).
+# The .dc.html prototypes have no tracked counterpart and are not meant to;
+# nothing here is deleted, it is simply not the repository's business.
+/design_handoff_talvex_app/
+/Talvex Landing.dc.html

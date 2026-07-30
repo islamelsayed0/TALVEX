@@ -6,6 +6,147 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-30 — Where the build differs from the BRD, written down before the close out
+
+**Decided.** Four places where what shipped is not what `docs/BRD.md` describes
+are recorded here as rulings rather than left as undocumented drift. This log
+supersedes the BRD where they disagree, so the BRD text stays as written and
+these entries are the correction.
+
+**1. F15 shipped as consumables stock, not asset inventory.** BRD F15 asks for
+"devices and licenses per org: type, assignee, warranty, notes, CSV import and
+export". Migration 016 built something narrower and different in kind: name,
+optional org scoped item number, free text serial, location, quantity, minimum
+stock, buy link, notes, with low stock derived rather than stored. There is no
+device type, no assignee, no warranty date, and no CSV in either direction.
+
+*Why.* The persona that pays for this is a solo consultant restocking toner,
+cables, and spare drives, and the question they ask is "what am I about to run
+out of". That is a quantity and a threshold. An asset register answers a
+different question, "who has which laptop", which needs assignee to mean a
+person, warranty to mean a date worth alerting on, and a link to tickets and
+monitors for it to earn its keep. Half building it would have produced a table
+with fields nobody fills in. Admin only on every verb was the same call: stock
+levels are a purchasing matter, not something every member needs on screen.
+
+*Affects.* An asset register is a future feature and not a completion of this
+one; it gets its own columns, its own policies, and its own decision entry.
+Report F15 as met in the consumables sense and say so, never as the BRD line.
+CSV import and export is not deferred work in progress, it is unbuilt.
+
+**2. The role ladder is two roles, and each of the other two has a trigger.**
+BRD F1 names owner, admin, technician, and member. Migration 001's check
+constraint accepts all four and always has; what the product actually assigns
+is two. `src/lib/db/clerk-sync.ts` maps Clerk's `org:admin` to admin and
+everything else to member, and there is no in app role management screen, so
+owner and technician are reachable only by a hand written database row.
+
+*Why, and what activates each.* Four tiers cost a clause in every policy and a
+case in every isolation test, and a solo MSP is all four roles at once, so the
+cost is paid before anyone benefits. **Technician activates together with
+ticket assignment**, because both answer the same question, whose desk is this
+on, and a technician tier with nothing to be assigned is a label. **Owner
+activates with billing (F13)**, because that is the first capability that
+should belong to one person and not to every admin. Neither is a maybe; both
+are named triggers, and when the trigger arrives the tier is built rather than
+debated again.
+
+*Affects.* Any surface that reasons about roles today may assume two. The
+member settings screen already carries display labels for all four, which is
+correct: a hand written technician row must render as Technician, not as a
+blank. Report F1 as met for isolation and tenancy, and as two of four roles.
+
+**3. The hard phase gate is retired.** The BRD's risk table (section 14) makes
+scope creep's mitigation "phase gates are hard: nothing from Phase 2 starts
+until every MVP feature (F1 to F12) is shipped and demoed". F1 to F12 did all
+ship first, in order, but F14 and F15 then shipped while F13, the first Phase 2
+item by number, has not been started, and the demo the gate names (C3) has not
+been recorded yet. The gate as written is therefore not what happened, and
+pretending otherwise would be the drift.
+
+*Why.* The BRD contradicts its own gate three rows later in the same table,
+which prescribes "retrieval from the org knowledge base (F14) prioritized early
+in Phase 2" as the mitigation for AI answers damaging trust. Shipping the AI chat
+and then holding back the thing that makes its answers grounded, in order to
+build billing for nobody, would have honored the ordering and damaged the
+product. F13 also has no customer to bill, and building a billing surface
+against zero revenue is the exact scope creep the gate was written to prevent.
+
+*Affects.* Feature order is now argued on merit, one feature per PR, and each
+departure from BRD numbering is recorded here. The gate's real intent, that
+Phase 2 does not consume the MVP, is still honored and is now the standard;
+the numbered ordering is not. A BRD close out reports the MVP against F1 to
+F12 and lists F14 and F15 separately as early Phase 2, never blended.
+
+**4. Ticket priority and assignment are deferred until a real queue needs
+triage.** BRD F5 asks for "status, priority, comments, internal notes, and
+assignment". Tickets shipped with status, comments, and an immutable system
+trail. There is no priority column, no assignee, and no separate internal note
+type on `public.tickets`.
+
+*Why.* Priority and assignment are triage, and triage is what you build when a
+queue is long enough that reading it top to bottom stops working. No org here
+has that queue. Shipping them early produces the worst version of both: a
+priority field everybody sets to high, and an assignee field that is always the
+one admin. Assignment also wants the technician tier to mean something, which
+is ruling 2 above, so building it now would force that tier early for no gain.
+
+*Affects.* Both land together with technician when a real queue exists, per the
+sketch already in `docs/future_update.md`. Internal notes are a separate
+question and stay unbuilt; comments are visible to the submitter by design, and
+adding a hidden comment type changes the trail's honesty story, so it needs its
+own ruling. Report F5 as met for lifecycle and the trail, not for triage.
+
+---
+
+## 2026-07-30 — The three SECURITY DEFINER advisories are answered, not ignored
+
+**Decided.** Supabase `get_advisors` reports three SECURITY DEFINER warnings on
+the shared project. All three name functions this schema built on purpose, each
+with a pinned empty `search_path` and grants narrowed to exactly one role. They
+are correct as they stand and are not to be "fixed" by a later reader acting on
+the lint alone.
+
+**The three, and why each is definer:**
+
+- `status_page_is_public(uuid)`, migration 011, executable by `anon` alone
+  (revoked from `public` and `authenticated`). Definer so an anon policy can
+  test `organizations.status_page_enabled` without anon ever holding a
+  privilege on that column. It returns one boolean about whether an already
+  public page is public, so there is nothing to leak.
+- `member_audience_tags()`, migration 014, executable by `authenticated` and
+  `service_role` (revoked from `public` and `anon`). Definer so the articles
+  policy reads the caller's own tags without depending on another table's
+  select policy from inside a policy evaluation. It takes no argument, so
+  there is no way to point it at another user.
+- `org_api_key_providers()`, migration 007, executable by `authenticated`.
+  Definer so a member can drive the chat provider picker while holding no
+  access to `org_api_keys` at all, not even select. It returns provider names,
+  never the key and never its last four.
+
+**Verified on the shared project, not assumed from the files:** all three
+report `prosecdef = true` with `proconfig = search_path=""`. An empty
+search_path is what stops the definer rights being turned against us by a
+caller who controls their own schema path, and it is why every body above
+qualifies its tables as `public.`.
+
+**Why the advisory stays.** It is a lint about a shape, not a finding about
+these functions, and the shape is deliberate three times over. Revoking execute
+would break the status page for anonymous visitors, break article audience
+targeting, and break the chat provider picker. Switching them to invoker would
+defeat the entire reason each exists.
+
+**Affects.** A future SECURITY DEFINER function is added the same way or not at
+all: pinned empty search_path, execute revoked from `public` and every role
+that does not need it, a comment saying what it may answer, and an entry here.
+**If `get_advisors` ever reports a fourth, it is not covered by this entry and
+must be investigated on its own terms.** The audit fanout triggers from
+migration 013 are also definer and are correctly absent from this list: a
+trigger function is not callable over the REST API, so there is nothing to
+revoke.
+
+---
+
 ## 2026-07-30 — Platform state gets one table, and the only `using (true)` in the schema
 
 **Decided.** `platform_heartbeat` (migration 018) is a single row table
