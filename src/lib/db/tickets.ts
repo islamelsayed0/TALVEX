@@ -61,10 +61,18 @@ export type TicketInput = {
  * existing ticket screens need no churn. */
 export type TicketViewer = OrgViewer
 
-/** One trail entry: a user comment or a system event, ready to interleave. */
-export type TrailItem =
-  | { kind: 'comment'; at: string; comment: TicketComment }
-  | { kind: 'event'; at: string; event: TicketEvent }
+/**
+ * One trail entry: a user comment or a system event, ready to interleave.
+ *
+ * Generic over both row shapes, defaulting to the full rows the ticket detail
+ * page renders. The daily digest reads the same trail to decide whether a
+ * ticket is waiting on a reply, but deliberately selects no comment bodies
+ * (emails never carry content), so it interleaves narrower rows. Parameterising
+ * the type is what lets both reuse one definition of what a trail is.
+ */
+export type TrailItem<C = TicketComment, E = TicketEvent> =
+  | { kind: 'comment'; at: string; comment: C }
+  | { kind: 'event'; at: string; event: E }
 
 const TITLE_MAX = 200
 const BODY_MAX = 10_000
@@ -118,13 +126,13 @@ export function sortTicketsForQueue(tickets: Ticket[]): Ticket[] {
  * ruling; interleaved here for rendering. On a timestamp tie the system
  * event comes first, so "created" always opens the trail.
  */
-export function interleaveTrail(
-  comments: TicketComment[],
-  events: TicketEvent[],
-): TrailItem[] {
-  const items: TrailItem[] = [
-    ...events.map((event): TrailItem => ({ kind: 'event', at: event.occurred_at, event })),
-    ...comments.map((comment): TrailItem => ({ kind: 'comment', at: comment.created_at, comment })),
+export function interleaveTrail<
+  C extends { created_at: string },
+  E extends { occurred_at: string },
+>(comments: C[], events: E[]): TrailItem<C, E>[] {
+  const items: TrailItem<C, E>[] = [
+    ...events.map((event): TrailItem<C, E> => ({ kind: 'event', at: event.occurred_at, event })),
+    ...comments.map((comment): TrailItem<C, E> => ({ kind: 'comment', at: comment.created_at, comment })),
   ]
   return items.sort(
     (a, b) =>

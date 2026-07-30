@@ -6,6 +6,55 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-30 — The daily digest ships ungated; packaging waits for F13
+
+**Decided.** The daily digest is enabled for every organization from the
+moment migration 017 lands. Nothing in this PR encodes a plan check: no
+entitlement flag, no lock icon, no upgrade prompt, and no plan language in
+any copy. The only gate is the one an admin controls, the digest_enabled
+toggle in notification settings.
+
+The packaging INTENT is that the digest becomes a paid tier feature when
+billing (F13) ships. That intent is recorded here and nowhere else. When F13
+arrives it will add the entitlement check in one place; until then, writing a
+disabled gate now would mean shipping dead code that reads as a promise.
+
+**Incident alerts stay ungated forever**, regardless of what F13 does to the
+digest. An alert that a monitored system is down is the product working, not
+a feature tier: an org that cannot be told its site is down is not being sold
+a cheaper plan, it is being sold a broken one. Migration 010 already says
+this; it is repeated here because F13 will be the moment someone is tempted.
+
+**Why the digest is different.** It is a convenience over data the org can
+already see on screens it already has. Withholding it withholds no fact.
+
+**Two smaller rulings made in the same PR**, recorded because both constrain
+later work:
+
+*Awaiting a reply counts comments, never status changes.* A ticket's trail
+carries comments and system events. Only a comment is a reply; a
+status_changed event is bookkeeping. An admin moving a ticket to in_progress
+has told the requester nothing, so counting it would silently drop the ticket
+out of the digest while the person who opened it is still waiting. Suppressing
+is the dangerous direction, so events are skipped and the last comment
+decides. A ticket with no comments is awaiting a reply. If a real 'replied'
+event type is ever added, this is the function that must learn about it
+(isAwaitingReply in src/lib/notifications/digest.ts).
+
+*The ledger records that a day is settled, not that an email was sent.*
+digest_last_sent_on is stamped on a quiet day too, when composition produced
+nothing. Without that, the digest stays due all day, and an incident opening
+at two in the afternoon would fire a "your day" email in the afternoon.
+Alerting in the moment is the incident alert's job; the digest is a morning
+briefing and stays one.
+
+**Affects.** F13 adds the entitlement check for the digest in exactly one
+place and must not touch incident alerts. Anything later that reads a ticket
+trail to decide who owes whom a response should reuse isAwaitingReply rather
+than restate the rule.
+
+---
+
 ## 2026-07-29 — The knowledge base joins the sidebar as Documents, for every role
 
 **Decided.** Reversing the F14 ruling that members reach article reading

@@ -613,6 +613,9 @@ export type Database = {
         Row: {
           alert_cooldown_minutes: number
           created_at: string
+          digest_enabled: boolean
+          digest_last_sent_on: string | null
+          digest_send_time: string
           discord_webhook: string | null
           email_on_open: boolean
           email_on_resolve: boolean
@@ -623,6 +626,9 @@ export type Database = {
         Insert: {
           alert_cooldown_minutes?: number
           created_at?: string
+          digest_enabled?: boolean
+          digest_last_sent_on?: string | null
+          digest_send_time?: string
           discord_webhook?: string | null
           email_on_open?: boolean
           email_on_resolve?: boolean
@@ -633,6 +639,9 @@ export type Database = {
         Update: {
           alert_cooldown_minutes?: number
           created_at?: string
+          digest_enabled?: boolean
+          digest_last_sent_on?: string | null
+          digest_send_time?: string
           discord_webhook?: string | null
           email_on_open?: boolean
           email_on_resolve?: boolean
