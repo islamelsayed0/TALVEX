@@ -26,7 +26,21 @@ describe('the pre commit hook', () => {
   })
 
   it('scans the staged changes rather than the working tree or the history', () => {
-    expect(hook).toContain('gitleaks protect --staged')
+    expect(hook).toContain('gitleaks git --staged')
+  })
+
+  it('does not use the retired protect spelling', () => {
+    // `gitleaks protect` still runs in 8.30.1 but is gone from the tool's
+    // list of available commands. Pinning this stops it drifting back in.
+    //
+    // Only the executable lines are checked. The comments above deliberately
+    // name the old spelling to explain why it was left behind, and a test
+    // that read those would be asserting prose rather than behaviour.
+    const commands = hook
+      .split('\n')
+      .filter((line) => !line.trimStart().startsWith('#'))
+      .join('\n')
+    expect(commands).not.toMatch(/gitleaks\s+protect/)
   })
 
   it('redacts findings, so a secret is not printed into terminal scrollback', () => {

@@ -23,6 +23,13 @@ if ! command -v gitleaks >/dev/null 2>&1; then
   exit 1
 fi
 
-# --staged scans what is about to be committed, not the whole history.
+# `git --staged` scans what is about to be committed, not the whole history.
 # --redact keeps any finding out of the terminal and out of scrollback.
-gitleaks protect --staged --redact
+#
+# Note the subcommand: `gitleaks protect` was the old spelling and still runs
+# in 8.30.1, but it no longer appears in the tool's own list of available
+# commands, which is how a command announces it is on its way out. It detects
+# correctly today. The day it is removed the hook would refuse every commit
+# until someone edited this line, so moving early costs nothing and avoids
+# discovering it during an unrelated piece of work.
+gitleaks git --staged --redact
