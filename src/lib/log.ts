@@ -41,6 +41,7 @@ export type LogEvent =
   // The five minute sweep, its steps, and the daily digest that rides it.
   | 'cron.sweep.complete'
   | 'cron.sweep.steps_failed'
+  | 'cron.heartbeat.stamp_failed'
   | 'cron.monitors.list_failed'
   | 'cron.incidents.list_failed'
   | 'cron.incidents.stamp_failed'

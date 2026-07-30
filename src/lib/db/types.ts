@@ -689,6 +689,36 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_heartbeat: {
+        Row: {
+          duration_ms: number
+          id: string
+          last_run_at: string | null
+          last_success_at: string | null
+          run_count: number
+          step_failures: number
+          updated_at: string
+        }
+        Insert: {
+          duration_ms?: number
+          id?: string
+          last_run_at?: string | null
+          last_success_at?: string | null
+          run_count?: number
+          step_failures?: number
+          updated_at?: string
+        }
+        Update: {
+          duration_ms?: number
+          id?: string
+          last_run_at?: string | null
+          last_success_at?: string | null
+          run_count?: number
+          step_failures?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ticket_comments: {
         Row: {
           author: string
@@ -1057,3 +1087,6 @@ export type Article = Tables<"articles">
 export type ArticleStatus = "draft" | "published"
 // Inventory (F15).
 export type InventoryItem = Tables<"inventory_items">
+
+// The sweep heartbeat. Platform state, one row, not scoped to any org.
+export type PlatformHeartbeat = Tables<"platform_heartbeat">

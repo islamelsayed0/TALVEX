@@ -38,6 +38,66 @@ describe('joinNames', () => {
   })
 })
 
+describe('deriveVerdict suppresses its claim when the sweep is stale', () => {
+  /**
+   * This is the regression guard for a real production incident. The sweep
+   * stopped, every monitor kept its last known status of up, and the Overview
+   * went on announcing "All systems are operational" in confident large type
+   * for hours. These assertions exist so that behaviour cannot come back.
+   */
+  it('does not claim all is well when nothing has been checked recently', () => {
+    const v = deriveVerdict({
+      downNames: [],
+      openIncidents: 0,
+      openTickets: 0,
+      upCount: 12,
+      sweepStale: true,
+    })
+    expect(v.tone).toBe('unknown')
+    expect(v.title).not.toBe('All systems are operational')
+    expect(v.title).toBe('System health is unknown')
+    expect(v.subtitle).toContain('stale')
+  })
+
+  it('suppresses rather than stacks: a stale sweep outranks even a down monitor', () => {
+    // A down monitor observed by a dead sweep is a stale observation too, so
+    // reporting the outage as current would be its own false claim.
+    const v = deriveVerdict({
+      downNames: ['Booking API'],
+      openIncidents: 3,
+      openTickets: 2,
+      upCount: 4,
+      sweepStale: true,
+    })
+    expect(v.tone).toBe('unknown')
+    expect(v.subtitle).not.toContain('Booking API')
+  })
+
+  it('leaves the verdict untouched when the sweep is fresh', () => {
+    const v = deriveVerdict({
+      downNames: [],
+      openIncidents: 0,
+      openTickets: 0,
+      upCount: 12,
+      sweepStale: false,
+    })
+    expect(v.tone).toBe('clear')
+    expect(v.title).toBe('All systems are operational')
+  })
+
+  it('defaults to making a claim when no freshness is supplied', () => {
+    // Every existing caller predates the flag; none of them should change
+    // meaning by omission.
+    const v = deriveVerdict({
+      downNames: [],
+      openIncidents: 0,
+      openTickets: 0,
+      upCount: 3,
+    })
+    expect(v.tone).toBe('clear')
+  })
+})
+
 describe('deriveVerdict', () => {
   it('reports the down systems by name', () => {
     const v = deriveVerdict({

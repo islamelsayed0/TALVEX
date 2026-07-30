@@ -2,6 +2,7 @@ import { currentUser } from '@clerk/nextjs/server'
 import Link from 'next/link'
 
 import { requireAdmin } from '@/lib/auth/org-viewer'
+import { readSweepHeartbeat } from '@/lib/db/heartbeat'
 import { listIncidents } from '@/lib/db/incidents'
 import {
   listMonitorsWithRecentChecks,
@@ -9,6 +10,7 @@ import {
 } from '@/lib/db/monitors'
 import { listTickets } from '@/lib/db/tickets'
 import type { TicketStatus } from '@/lib/db/types'
+import { sweepIsStale } from '@/lib/monitoring/heartbeat'
 
 import { monitorStatus } from './monitors/ui'
 import {
@@ -49,12 +51,13 @@ export default async function OverviewPage() {
   const now = new Date()
   const nowMs = now.getTime()
 
-  const [user, monitors, trend, incidents, tickets] = await Promise.all([
+  const [user, monitors, trend, incidents, tickets, sweep] = await Promise.all([
     currentUser(),
     listMonitorsWithRecentChecks(),
     responseTrend(),
     listIncidents(),
     listTickets(),
+    readSweepHeartbeat(nowMs),
   ])
 
   const withStatus = monitors.map((m) => ({ m, status: monitorStatus(m) }))
@@ -73,11 +76,15 @@ export default async function OverviewPage() {
   const openTickets = counts.open + counts.inProgress
   const openIncidentCount = incidents.open.length
 
+  // Staleness suppresses the verdict rather than decorating it. Every monitor
+  // below keeps its last known status when the sweep dies, so without this the
+  // page would report "All systems are operational" from data hours old.
   const verdict = deriveVerdict({
     downNames: down.map((x) => x.m.name),
     openIncidents: openIncidentCount,
     openTickets,
     upCount: up.length,
+    sweepStale: sweepIsStale(sweep),
   })
 
   const oldestOpen = incidents.open[incidents.open.length - 1]

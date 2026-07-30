@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 
 import { getActiveOrgViewer } from "@/lib/auth/org-viewer";
 import { listKeyProviders } from "@/lib/db/api-keys";
+import { readSweepHeartbeat } from "@/lib/db/heartbeat";
+import { sweepBannerCopy } from "@/lib/monitoring/heartbeat";
 
 import { DashboardShell } from "./_shell/dashboard-shell";
 import { toProviderOptions } from "./chat/ui";
@@ -34,12 +36,22 @@ export default async function DashboardLayout({
   // input) and which providers to offer. Presence only; no key material.
   const keyProviders = await listKeyProviders();
 
+  // The stale sweep banner lives in the layout, not on the Overview page, and
+  // that placement is the point: when monitoring dies, a Monitors table full of
+  // green "Up" rows is exactly as misleading as the Overview claiming all is
+  // well. Whichever page an admin is on should say the data is stale.
+  //
+  // Admins only. A member cannot enable a scheduler or check an environment
+  // variable, so for them this is alarm without a remedy.
+  const sweepBanner = isAdmin ? sweepBannerCopy(await readSweepHeartbeat()) : null;
+
   return (
     <DashboardShell
       isAdmin={isAdmin}
       navItems={navFor(isAdmin)}
       hasKey={keyProviders.length > 0}
       providers={toProviderOptions(keyProviders)}
+      sweepBanner={sweepBanner}
     >
       {children}
     </DashboardShell>

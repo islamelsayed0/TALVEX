@@ -517,6 +517,39 @@ function requestBaseUrl(request: Request): string {
   return `${proto}://${host}`
 }
 
+/**
+ * Records that the sweep ran (migration 018). This is what makes a dead
+ * scheduler visible: without it, every screen keeps rendering its last values
+ * and the product reports health from data that stopped updating, which is
+ * the failure this table exists for.
+ *
+ * Wrapped so it can never fail the sweep. A heartbeat write that throws would
+ * turn an observability feature into an outage, and the checks and incident
+ * writes above have already succeeded by the time this runs. A missed stamp
+ * costs one interval of freshness and the next sweep corrects it.
+ */
+async function stampHeartbeat(db: Db, startedMs: number, stepFailures: number): Promise<void> {
+  const ranAt = new Date().toISOString()
+  try {
+    const { error } = await db
+      .from('platform_heartbeat')
+      .update({
+        last_run_at: ranAt,
+        // Only a clean sweep advances last_success_at, so a sweep that keeps
+        // running with a failing step is visibly distinct from a healthy one.
+        ...(stepFailures === 0 ? { last_success_at: ranAt } : {}),
+        // run_count is not sent: the trigger on this table increments it, so
+        // there is no read before write and no lost update.
+        step_failures: stepFailures,
+        duration_ms: Date.now() - startedMs,
+      })
+      .eq('id', 'sweep')
+    if (error) logError('cron.heartbeat.stamp_failed', 'failed', { error: error.message })
+  } catch (err) {
+    logError('cron.heartbeat.stamp_failed', 'failed', { error: errorName(err) })
+  }
+}
+
 async function runSweep(request: Request) {
   if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
@@ -750,6 +783,11 @@ async function runSweep(request: Request) {
       reasons: failures.join('; '),
     })
   }
+  // The heartbeat, after everything else and before the response. A sweep
+  // that got this far ran, whether or not every step inside it succeeded, and
+  // that distinction is exactly what last_run_at and last_success_at carry.
+  await stampHeartbeat(db, now, failures.length)
+
   logInfo('cron.sweep.complete', failures.length > 0 ? 'failed' : 'ok', {
     active: monitors.length,
     due: due.length,
