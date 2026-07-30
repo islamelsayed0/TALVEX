@@ -1,0 +1,43 @@
+# Watches the watcher.
+#
+# The monitoring sweep has already stopped silently once in production: the
+# external scheduler auto disabled its job after a 405 while CRON_SECRET had
+# drifted, and nothing noticed. Nothing inside the deployment can catch that,
+# because the sweep is also what sends the alerts. This job runs somewhere
+# else, asks the platform whether its sweep is fresh, and goes red when it is
+# not. GitHub emails the repository owner on a failed scheduled run.
+#
+# Chosen over a hosted dead man's switch service on purpose: this lives in the
+# repository where it is reviewable in a pull request and needs no new secret.
+# A third party dashboard nobody reviews is precisely how the original
+# scheduler disabled itself without anyone finding out.
+#
+# Honest limits, so nobody mistakes this for a pager:
+#   - GitHub disables scheduled workflows after 60 days of repository
+#     inactivity.
+#   - Scheduled runs are best effort and are delayed under load.
+#   - This runs only on the default branch.
+# The claim is that the maximum time monitoring can be dead and unnoticed drops
+# from unbounded to roughly 45 minutes. Vercel Pro cron is the first party fix
+# that removes the third party scheduler entirely.
+
+name: heartbeat
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sweep-is-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask the platform whether its sweep is fresh
+        # The endpoint answers 503 when the sweep is stale, so --fail is the
+        # whole assertion. --show-error keeps the reason in the job log.
+        run: |
+          curl --fail --silent --show-error --max-time 30 \
+            https://talvex-chi.vercel.app/api/ops/heartbeat
