@@ -545,9 +545,24 @@ async function stampHeartbeat(db: Db, startedMs: number, stepFailures: number): 
         duration_ms: Date.now() - startedMs,
       })
       .eq('id', 'sweep')
-    if (error) logError('cron.heartbeat.stamp_failed', 'failed', { error: error.message })
+    // Reported: a heartbeat that stops being written makes the external
+    // watcher go red, so the operator should know it was the stamp that broke
+    // rather than the sweep.
+    if (error) {
+      logError(
+        'cron.heartbeat.stamp_failed',
+        'failed',
+        { error: error.message },
+        { report: true },
+      )
+    }
   } catch (err) {
-    logError('cron.heartbeat.stamp_failed', 'failed', { error: errorName(err) })
+    logError(
+      'cron.heartbeat.stamp_failed',
+      'failed',
+      { error: errorName(err) },
+      { report: true },
+    )
   }
 }
 
@@ -805,10 +820,15 @@ async function runSweep(request: Request) {
   const digests = await runDailyDigests(db, now, requestBaseUrl(request))
 
   if (failures.length > 0) {
-    logError('cron.sweep.steps_failed', 'failed', {
-      steps: failures.length,
-      reasons: failures.join('; '),
-    })
+    // Reported to the operator channel: this is the platform failing, not one
+    // org's configuration, and it is the aggregate rather than the per org
+    // noise, so it cannot page every five minutes for a single bad setting.
+    logError(
+      'cron.sweep.steps_failed',
+      'failed',
+      { steps: failures.length, reasons: failures.join('; ') },
+      { report: true },
+    )
   }
   // The heartbeat, after everything else and before the response. A sweep
   // that got this far ran, whether or not every step inside it succeeded, and
