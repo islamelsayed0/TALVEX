@@ -122,19 +122,31 @@ stack ([`src/app/page.tsx`](../../src/app/page.tsx) + the client
 [`_landing/hero-background.tsx`](../../src/app/_landing/hero-background.tsx)).
 
 - **Structure:** sticky header (wordmark, `.liquid-glass` nav pill, auth link) →
-  hero "One *calm* place" → product shot → "what your staff sees" → the problem →
-  what Talvex is + the rule → how you find out → how it's built → who it's for →
-  start free → footer.
+  hero "One *calm* place" → product proof (overview shot, the grounded chat
+  split, status page + inventory pair) → the problem → what Talvex is + the rule
+  → features (hairline definition rows, one per shipped capability) → how it's
+  built → who it's for → start free → footer.
+- **Copy lives in one module:** every prose string is in
+  [`src/app/_landing/copy.ts`](../../src/app/_landing/copy.ts), guarded by
+  `tests/landing-copy.test.ts` (no hyphens, "documents" never "articles", no
+  claims the code cannot back — nothing automatic about tickets, no SMS, no
+  quiet hours, nothing implying HIPAA or certification).
 - **Background:** a muted, looping, self-hosted video (`public/landing/hero.mp4`)
   under a fixed vignette. Muting is guaranteed three ways (attribute, reassert on
   mount, volume pinned to 0) — there is no audio we ever want to hear.
-- **Product shots are real:** the two framed screenshots are the actual
-  `dashboard-home-dark` and `get-help-dark` captures, not mockups.
-- **Copy is honest and hyphen free:** it only names what ships. The alert
-  channels are **Email, Discord, and recovery alerts** — matching BRD F10 (Email
-  + Discord on every tier), not SMS or quiet hours, which are not built.
+- **Product shots are real:** the four framed screenshots in `public/landing/`
+  (overview with the sidebar, a chat citing documents, the public status page,
+  the inventory list with a Low stock chip) are captured from the running app's
+  Northwind Dental demo org, not mockups. Retake them when the screens change;
+  a stale screenshot is treated as a false claim.
+- **Motion:** hero fades up on mount (`animate-fade-up`); sections use
+  `.scroll-reveal`, a CSS only `animation-timeline: view()` entrance that
+  degrades to static in unsupporting browsers and is off under reduced motion.
 - **Auth aware:** CTAs and the header link swap via Clerk `Show` — signed-out
   sees *Start free* / *Sign in*, signed-in sees *Go to dashboard*.
+- **Verification:** `tests/e2e/landing.spec.mjs` runs against a live app — the
+  shots resolve, the sign up CTA reaches the Clerk widget, the rendered text
+  keeps the no hyphen rule, and a phone viewport never scrolls sideways.
 
 ---
 
