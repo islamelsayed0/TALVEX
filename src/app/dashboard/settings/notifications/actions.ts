@@ -7,6 +7,7 @@ import { getActiveOrgViewer } from '@/lib/auth/org-viewer'
 import {
   NotificationSettingsValidationError,
   getNotificationSettings,
+  saveDigestSettings,
   saveNotificationSettings,
 } from '@/lib/db/notification-settings'
 import { buildTestEmbed, postDiscordWebhook } from '@/lib/notifications/discord'
@@ -53,6 +54,42 @@ export async function saveNotificationSettingsAction(
 
   revalidatePath(PAGE)
   redirect(`${PAGE}?saved=1`)
+}
+
+/**
+ * Saves the daily digest settings. Separate from the alerts form above so
+ * saving one never rewrites the other; the digest columns are the only ones
+ * this touches. Same admin gate, same validation carried back in the query
+ * string. The sweep's ledger column is not writable from any user session, so
+ * nothing here can affect when a digest has already been sent.
+ */
+export async function saveDigestSettingsAction(
+  formData: FormData,
+): Promise<void> {
+  const viewer = await getActiveOrgViewer()
+  if (!viewer.isAdmin) redirect(PAGE)
+
+  const input = {
+    digestEnabled: formData.get('digest_enabled') === 'on',
+    digestSendTime: String(formData.get('digest_send_time') ?? ''),
+  }
+
+  let failure: string | null = null
+  try {
+    await saveDigestSettings(input)
+  } catch (err) {
+    if (err instanceof NotificationSettingsValidationError) {
+      failure = err.message
+    } else {
+      throw err
+    }
+  }
+  if (failure !== null) {
+    redirect(`${PAGE}?${new URLSearchParams({ error: failure })}`)
+  }
+
+  revalidatePath(PAGE)
+  redirect(`${PAGE}?saved=digest`)
 }
 
 /**

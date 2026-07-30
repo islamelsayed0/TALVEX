@@ -66,8 +66,14 @@ export function isValidTimezone(tz: string): boolean {
 // July there, and a message sent in the early Tokyo hours of July 1 (still
 // June 30 in UTC) counts as July in Tokyo.
 
-/** The wall clock in a zone at a UTC instant, read back as numbers. */
-function wallClockParts(ms: number, timeZone: string) {
+/**
+ * The wall clock in a zone at a UTC instant, read back as numbers. Exported
+ * because the daily digest asks the same question of the same authority: it
+ * needs the org's local date and local time of day to decide whether a digest
+ * is due. One implementation, so the two features can never disagree about
+ * what time it is somewhere.
+ */
+export function zonedWallClock(ms: number, timeZone: string) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
     hourCycle: 'h23',
@@ -90,9 +96,13 @@ function wallClockParts(ms: number, timeZone: string) {
   }
 }
 
-/** The zone's UTC offset at an instant, in milliseconds. */
-function zoneOffsetMs(ms: number, timeZone: string): number {
-  const w = wallClockParts(ms, timeZone)
+/**
+ * The zone's UTC offset at an instant, in milliseconds. Exported for the same
+ * reason as zonedWallClock: the digest converts a local send time back to an
+ * instant with the identical two pass technique used by monthStartUtcMs below.
+ */
+export function zoneOffsetMs(ms: number, timeZone: string): number {
+  const w = zonedWallClock(ms, timeZone)
   const asUtc = Date.UTC(w.year, w.month - 1, w.day, w.hour, w.minute, w.second)
   // Round to whole seconds: formatToParts carries no milliseconds.
   return asUtc - Math.floor(ms / 1000) * 1000
@@ -103,7 +113,7 @@ export function zonedYearMonth(
   ms: number,
   timeZone: string,
 ): { year: number; month: number } {
-  const w = wallClockParts(ms, timeZone)
+  const w = zonedWallClock(ms, timeZone)
   return { year: w.year, month: w.month }
 }
 
@@ -465,6 +475,31 @@ export async function saveOrgTimezone(
   }
   const { error } = await query
   if (error) throw error
+}
+
+/**
+ * The org's stored timezone, or the default while it is still unset. The one
+ * authority (migration 012) for anything that has to say what time it is for
+ * this org: the usage screen buckets by it, and the notifications screen names
+ * it in the digest copy so an admin picking a send time knows whose clock it
+ * is read against.
+ */
+export async function getOrgTimezone(): Promise<{
+  timezone: string
+  stored: boolean
+}> {
+  const { client, orgId } = await createOrgScopedClient()
+  const { data, error } = await client
+    .from('organizations')
+    .select('timezone')
+    .eq('clerk_org_id', orgId)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) throw new OrgNotSyncedError()
+  return {
+    timezone: data.timezone ?? DEFAULT_TIMEZONE,
+    stored: data.timezone !== null,
+  }
 }
 
 /** The zones the runtime supports, for the settings select. */

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 
 import { createAdminClient } from '@/lib/db/admin'
+import { isLowStock } from '@/lib/db/inventory'
+import { interleaveTrail } from '@/lib/db/tickets'
+import { DEFAULT_TIMEZONE } from '@/lib/db/usage'
 import { runMonitorCheck } from '@/lib/monitoring/check'
 import { isAuthorizedCronRequest } from '@/lib/monitoring/cron-auth'
 import {
@@ -10,10 +13,23 @@ import {
   type IncidentEventInput,
 } from '@/lib/monitoring/incident-engine'
 import {
+  composeDigest,
+  digestDueCheck,
+  digestSection,
+  digestWindowStartMs,
+  isAwaitingReply,
+  waitingSinceMs,
+  type DigestData,
+  type DigestSchedule,
+  type DigestTicket,
+  type DigestTrailItem,
+} from '@/lib/notifications/digest'
+import {
   notifyIncidentEvent,
   type IncidentNotifyEvent,
   type NotifyChannelSettings,
 } from '@/lib/notifications/dispatch'
+import { sendAlertEmailResult } from '@/lib/notifications/email'
 
 /**
  * The cron sweep (architecture ruling for Phase 1 Task 1). An external
@@ -39,6 +55,12 @@ import {
  * from applyIncidentAction, after the incident write, never before.
  * Settings are fetched once per sweep per org. A notification failure is
  * logged and swallowed; it never fails the sweep or the incident write.
+ *
+ * The daily digest: the same sweep also sends each org's one email a day, at
+ * the time that org chose, in that org's own timezone. It runs after all the
+ * work above, reads what that work has just settled, and cannot fail the
+ * sweep. No new scheduler and no new cron entry: the 5 minute cadence is what
+ * makes a 07:30 setting land at 07:30 or a few minutes after.
  *
  * Tickets (Phase 1 Task 3): the same sweep also closes tickets that have
  * sat resolved for more than 7 days (same route, same auth, per ruling).
@@ -217,6 +239,284 @@ async function appendEvents(
     })),
   )
   if (error) throw new Error(`writing timeline events: ${error.message}`)
+}
+
+// ---------------------------------------------------------------------------
+// The daily digest. One email per org per day, at the time the org chose, in
+// the org's own timezone. It rides THIS sweep: no new scheduler, no new cron
+// entry, no queue. Every 5 minutes the sweep asks which orgs have it enabled,
+// whose local clock has reached their chosen time, and who has not already
+// been sent today.
+//
+// Failure discipline is the F10 rule, unchanged: never throw. One org's
+// gather, compose, or send failure is logged and swallowed, so it cannot
+// touch another org's digest, the monitor checks, or this route's response. A
+// send that fails does NOT stamp the ledger, so the next sweep five minutes
+// later tries the same org again.
+//
+// Content rule (ruling 5): titles, names, counts, ages, and links only. The
+// queries below select no ticket description, no comment body, and no
+// inventory notes, so there is no content in memory for the email to carry.
+
+type DigestSettingsRow = {
+  org_id: string
+  notification_email: string | null
+  digest_send_time: string
+  digest_last_sent_on: string | null
+}
+
+/**
+ * Everything one org's digest reports. Service role reads, so RLS is bypassed
+ * and every query is explicitly scoped by org_id: that eq() IS the tenant
+ * boundary here, exactly as it is everywhere else in this route.
+ *
+ * The two ticket sections are disjoint on purpose. A ticket that arrived
+ * inside this digest's window is reported as new; one that arrived before it
+ * and is still unanswered is reported as waiting. Without the split the same
+ * overnight ticket would appear twice in one email under two headings.
+ */
+async function gatherDigestData(
+  db: Db,
+  orgId: string,
+  windowStartMs: number,
+): Promise<DigestData> {
+  const [incidentsRes, ticketsRes, inventoryRes] = await Promise.all([
+    db
+      .from('incidents')
+      .select('id, opened_at, monitors(name)')
+      .eq('org_id', orgId)
+      .eq('status', 'open')
+      .order('opened_at', { ascending: true }),
+    db
+      .from('tickets')
+      .select('id, title, submitted_by, created_at')
+      .eq('org_id', orgId)
+      .in('status', ['open', 'in_progress']),
+    db
+      .from('inventory_items')
+      .select('id, name, quantity, min_stock')
+      .eq('org_id', orgId),
+  ])
+  if (incidentsRes.error) throw new Error(incidentsRes.error.message)
+  if (ticketsRes.error) throw new Error(ticketsRes.error.message)
+  if (inventoryRes.error) throw new Error(inventoryRes.error.message)
+
+  const tickets = ticketsRes.data
+  const ticketIds = tickets.map((t) => t.id)
+
+  // The trail behind every unsettled ticket, in two queries rather than two
+  // per ticket. Note the columns: author and timestamps, never a body.
+  const trailByTicket = new Map<string, DigestTrailItem[]>()
+  if (ticketIds.length > 0) {
+    const [commentsRes, eventsRes] = await Promise.all([
+      db
+        .from('ticket_comments')
+        .select('ticket_id, author, created_at')
+        .in('ticket_id', ticketIds),
+      db
+        .from('ticket_events')
+        .select('ticket_id, occurred_at')
+        .in('ticket_id', ticketIds),
+    ])
+    if (commentsRes.error) throw new Error(commentsRes.error.message)
+    if (eventsRes.error) throw new Error(eventsRes.error.message)
+
+    for (const id of ticketIds) {
+      trailByTicket.set(
+        id,
+        // The shared tickets logic decides what a trail is and how it orders;
+        // the digest only reads the result.
+        interleaveTrail(
+          commentsRes.data.filter((c) => c.ticket_id === id),
+          eventsRes.data.filter((e) => e.ticket_id === id),
+        ),
+      )
+    }
+  }
+
+  const awaiting: DigestTicket[] = []
+  const arrived: DigestTicket[] = []
+  for (const ticket of tickets) {
+    const createdMs = Date.parse(ticket.created_at)
+    if (createdMs >= windowStartMs) {
+      arrived.push({
+        ticketId: ticket.id,
+        title: ticket.title,
+        sinceIso: ticket.created_at,
+      })
+      continue
+    }
+    const trail = trailByTicket.get(ticket.id) ?? []
+    if (!isAwaitingReply(ticket.submitted_by, trail)) continue
+    awaiting.push({
+      ticketId: ticket.id,
+      title: ticket.title,
+      sinceIso: new Date(
+        waitingSinceMs(
+          { submittedBy: ticket.submitted_by, createdAtIso: ticket.created_at },
+          trail,
+        ),
+      ).toISOString(),
+    })
+  }
+  // Longest wait first in both: the top of the email is the top of the queue.
+  awaiting.sort((a, b) => Date.parse(a.sinceIso) - Date.parse(b.sinceIso))
+  arrived.sort((a, b) => Date.parse(a.sinceIso) - Date.parse(b.sinceIso))
+
+  // Low stock is derived, never stored (F15 ruling 2), so it is the F15
+  // helper that decides, not a repeated comparison here.
+  const lowStock = inventoryRes.data
+    .filter((item) => isLowStock({ quantity: item.quantity, min_stock: item.min_stock }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((item) => ({
+      itemId: item.id,
+      name: item.name,
+      quantity: item.quantity,
+      minStock: item.min_stock,
+    }))
+
+  return {
+    openIncidents: digestSection(
+      incidentsRes.data.map((incident) => ({
+        incidentId: incident.id,
+        monitorName: incident.monitors?.name ?? 'Deleted monitor',
+        openedAtIso: incident.opened_at,
+      })),
+    ),
+    awaitingReply: digestSection(awaiting),
+    newTickets: digestSection(arrived),
+    lowStock: digestSection(lowStock),
+  }
+}
+
+/**
+ * Sends every digest that is due at this instant. Returns counts only; no
+ * tenant data, no addresses, and no subject lines are ever logged.
+ *
+ * Settings are fetched once for the whole run (the F10 batching idiom), and
+ * the org timezones they depend on in one more query, so the cost of the
+ * digest on a sweep where nothing is due is two reads.
+ */
+async function runDailyDigests(
+  db: Db,
+  nowMs: number,
+  baseUrl: string,
+): Promise<{ due: number; sent: number; quiet: number; failed: number }> {
+  const counts = { due: 0, sent: 0, quiet: 0, failed: 0 }
+
+  const { data: rows, error } = await db
+    .from('org_notification_settings')
+    .select('org_id, notification_email, digest_send_time, digest_last_sent_on')
+    .eq('digest_enabled', true)
+  if (error) {
+    console.error('cron check-monitors: listing digest settings failed:', error.message)
+    return counts
+  }
+  // Ruling 4: the recipient is the org's notification email. With nowhere to
+  // send it, there is nothing to do and nothing to stamp.
+  const enabled = (rows as DigestSettingsRow[])
+    .map((row) => ({ row, to: (row.notification_email ?? '').trim() }))
+    .filter((entry) => entry.to !== '')
+  if (enabled.length === 0) return counts
+
+  // organizations.timezone is the F11 authority (migration 012). An org that
+  // has not had one detected yet falls back to the same default the rest of
+  // the app uses, so the digest never waits on a zone to exist.
+  const zoneByOrg = new Map<string, string>()
+  const { data: orgs, error: orgsError } = await db
+    .from('organizations')
+    .select('id, timezone')
+    .in('id', enabled.map((entry) => entry.row.org_id))
+  if (orgsError) {
+    console.error('cron check-monitors: reading org timezones failed:', orgsError.message)
+    return counts
+  }
+  for (const org of orgs) {
+    zoneByOrg.set(org.id, org.timezone ?? DEFAULT_TIMEZONE)
+  }
+
+  for (const { row, to } of enabled) {
+    const schedule: DigestSchedule = {
+      timeZone: zoneByOrg.get(row.org_id) ?? DEFAULT_TIMEZONE,
+      sendTime: row.digest_send_time,
+      lastSentOn: row.digest_last_sent_on,
+    }
+    const { due, today } = digestDueCheck(schedule, nowMs)
+    if (!due) continue
+    counts.due++
+
+    try {
+      const data = await gatherDigestData(
+        db,
+        row.org_id,
+        digestWindowStartMs(schedule, nowMs),
+      )
+      const email = composeDigest(data, { baseUrl, nowMs })
+
+      // The quiet day ruling: composition returned nothing, so nothing is
+      // sent. The ledger IS still stamped, because today's digest is settled.
+      // Leaving it unstamped would mean the next sweep asks again, and an
+      // incident opening at two in the afternoon would fire a "your day"
+      // email in the afternoon. Alerting on that is the incident alert's job;
+      // the digest is a morning briefing and stays one.
+      if (email === null) {
+        counts.quiet++
+        await stampDigestSent(db, row.org_id, today)
+        continue
+      }
+
+      // sendAlertEmailResult, not sendAlertEmail: the fire and forget sender
+      // swallows provider failures, which would let a failed send stamp the
+      // ledger and lose the day's digest silently. Reporting the outcome is
+      // what makes "a failed send is retried on the next sweep" true.
+      const result = await sendAlertEmailResult({
+        to,
+        subject: email.subject,
+        text: email.text,
+      })
+      if (!result.ok) {
+        counts.failed++
+        console.error(`cron check-monitors: digest send failed (${result.reason})`)
+        continue
+      }
+      counts.sent++
+      await stampDigestSent(db, row.org_id, today)
+    } catch (err) {
+      // Swallowed on purpose: an unstamped ledger means the next sweep
+      // retries this org, and no other org is affected.
+      counts.failed++
+      console.error(
+        'cron check-monitors: digest failed for one org:',
+        err instanceof Error ? err.message : String(err),
+      )
+    }
+  }
+
+  return counts
+}
+
+/** The dedup ledger write. Service role only; no user session can touch it. */
+async function stampDigestSent(db: Db, orgId: string, today: string): Promise<void> {
+  const { error } = await db
+    .from('org_notification_settings')
+    .update({ digest_last_sent_on: today })
+    .eq('org_id', orgId)
+  if (error) {
+    console.error('cron check-monitors: stamping digest_last_sent_on failed:', error.message)
+  }
+}
+
+/**
+ * The origin to build dashboard links from, taken from the request the
+ * scheduler made, the same way the status page settings screen derives the
+ * public status URL. The route is bearer token protected, so the only caller
+ * able to influence this header is one that already holds CRON_SECRET.
+ */
+function requestBaseUrl(request: Request): string {
+  const url = new URL(request.url)
+  const host = request.headers.get('host') ?? url.host
+  const proto = host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https'
+  return `${proto}://${host}`
 }
 
 async function runSweep(request: Request) {
@@ -445,6 +745,10 @@ async function runSweep(request: Request) {
   }
   const ticketsClosed = autoClosed?.length ?? 0
 
+  // The daily digest, last: it reads what the work above has just settled, and
+  // it can never fail the sweep. Its own errors are counted and logged inside.
+  const digests = await runDailyDigests(db, now, requestBaseUrl(request))
+
   if (failures.length > 0) {
     console.error(`cron check-monitors: ${failures.length} step(s) failed:`, failures.join('; '))
   }
@@ -452,7 +756,9 @@ async function runSweep(request: Request) {
     `cron check-monitors: ${due.length} due of ${monitors.length} active, ` +
       `${up} up, ${down} down; incidents ${incidentCounts.opened} opened, ` +
       `${incidentCounts.reopened} reopened, ${incidentCounts.resolved} resolved; ` +
-      `tickets ${ticketsClosed} auto closed`,
+      `tickets ${ticketsClosed} auto closed; ` +
+      `digests ${digests.due} due, ${digests.sent} sent, ${digests.quiet} quiet, ` +
+      `${digests.failed} failed`,
   )
 
   return NextResponse.json({
@@ -462,6 +768,7 @@ async function runSweep(request: Request) {
     down,
     incidents: incidentCounts,
     ticketsClosed,
+    digests,
     failures: failures.length,
   })
 }

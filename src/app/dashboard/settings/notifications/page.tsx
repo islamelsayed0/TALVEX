@@ -2,14 +2,17 @@ import { requireAdmin } from '@/lib/auth/org-viewer'
 import {
   COOLDOWN_MAX_MINUTES,
   COOLDOWN_MIN_MINUTES,
+  DEFAULT_DIGEST_SEND_TIME,
   getNotificationSettings,
 } from '@/lib/db/notification-settings'
+import { getOrgTimezone } from '@/lib/db/usage'
 
 import { Card } from '../../_overview/ui'
 import { ghostButton, primaryButton } from '../../monitors/ui'
 import { FormError, ticketFieldClass } from '../../tickets/ui'
 import { SettingsNav } from '../nav'
 import {
+  saveDigestSettingsAction,
   saveNotificationSettingsAction,
   sendTestNotificationAction,
 } from './actions'
@@ -34,14 +37,22 @@ export default async function NotificationSettingsPage({
 
   await requireAdmin()
 
-  const settings = await getNotificationSettings()
+  const [settings, org] = await Promise.all([
+    getNotificationSettings(),
+    getOrgTimezone(),
+  ])
 
-  const saved = asString(sp.saved) === '1'
+  const savedParam = asString(sp.saved)
+  const saved = savedParam === '1'
+  const savedDigest = savedParam === 'digest'
   const error = asString(sp.error)
   const tested = asString(sp.tested)
   const hasChannel = Boolean(
     settings?.notification_email || settings?.discord_webhook,
   )
+  // The column is a SQL time, so PostgREST returns 'HH:MM:SS'; the input
+  // offers 'HH:MM' and the database refuses a seconds component anyway.
+  const digestTime = (settings?.digest_send_time ?? DEFAULT_DIGEST_SEND_TIME).slice(0, 5)
 
   return (
     <main className="mx-auto w-full max-w-[780px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
@@ -57,6 +68,12 @@ export default async function NotificationSettingsPage({
       {saved ? (
         <Card className="mb-[18px] px-5 py-4 text-sm text-card-foreground">
           Saved. Alerts will use these settings from the next check.
+        </Card>
+      ) : null}
+
+      {savedDigest ? (
+        <Card className="mb-[18px] px-5 py-4 text-sm text-card-foreground">
+          Saved. Your digest settings take effect from tomorrow morning.
         </Card>
       ) : null}
 
@@ -184,6 +201,67 @@ export default async function NotificationSettingsPage({
             </p>
           ) : null}
         </div>
+      </Card>
+
+      {/* The daily digest. Its own card and its own form: it saves
+          independently of the alert channels above, and the copy has to carry
+          three promises plainly, so it needs the room. */}
+      <Card className="mt-[18px] px-[22px] py-5">
+        <h2 className="text-base font-semibold text-foreground">Daily digest</h2>
+        <p className="mt-1 text-[12.5px] text-quiet">
+          One email each morning with what needs attention: open incidents,
+          tickets waiting on a reply, tickets that arrived overnight, and
+          anything low on stock. Titles, counts and links only, never the
+          contents of a ticket.
+        </p>
+
+        <form
+          action={saveDigestSettingsAction}
+          className="mt-5 flex flex-col gap-4"
+          autoComplete="off"
+        >
+          <label className="flex items-center gap-2.5 text-sm text-foreground">
+            <input
+              name="digest_enabled"
+              type="checkbox"
+              defaultChecked={settings?.digest_enabled ?? false}
+              className="h-4 w-4 accent-(--status-up)"
+            />
+            Send me the daily digest
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[12.5px] text-muted-foreground">Send time</span>
+            <input
+              name="digest_send_time"
+              type="time"
+              required
+              defaultValue={digestTime}
+              className={`${ticketFieldClass} h-11 max-w-[160px]`}
+            />
+            <span className="text-[12px] text-quiet">
+              Around this time in your organization&rsquo;s timezone,{' '}
+              {org.timezone}. Talvex checks every few minutes, so the email
+              arrives at your chosen time or a few minutes after.
+            </span>
+          </label>
+
+          <p className="border-t border-divider pt-4 text-[12px] text-quiet">
+            If there is nothing that needs you, there is no email. Talvex does
+            not send an all clear. An email arriving means something is waiting.
+          </p>
+
+          <p className="text-[12px] text-quiet">
+            It goes to the notification email above. Set one first, or the
+            digest has nowhere to go.
+          </p>
+
+          <div>
+            <button type="submit" className={primaryButton}>
+              Save digest settings
+            </button>
+          </div>
+        </form>
       </Card>
     </main>
   )
