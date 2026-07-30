@@ -155,6 +155,41 @@ whichever comes first.
 
 ---
 
+## 2026-07-30 — The migration drift guard is never merged over
+
+**Decided.** When the drift guard is red and correct, the fix is to reshape the
+work until it goes green. It is never overridden, and a pull request is never
+merged past it, even though `migration-drift` is not in the required checks
+list and GitHub would permit the merge.
+
+**The case that produced this rule.** Migration 018 was applied to the shared
+project ahead of its code, per apply then merge, and its file lived on the
+branch carrying that code. Main therefore recorded 17 migrations against a
+database that had run 18, and the guard reported version `20260730120000` as
+applied with nothing to explain it. That is exactly what the guard is for, and
+it stayed red on the first branch in the landing order.
+
+Two wrong answers were available and both were declined: merging with the check
+red, on the grounds that it was understood and self resolving, and reordering
+the landing so the branch carrying the file went first, which would have
+squashed two unrelated pieces of work into one commit. The third answer is the
+one taken: a branch containing only the migration file, byte identical to what
+the database ran, merged on its own. No code read the table yet, so the file
+alone was inert, and the guard went green because the drift genuinely ended.
+
+**Why the rule rather than the judgement call.** A guard overridden once
+because the override was defensible is a guard whose next override only has to
+be defensible too. The reason this one exists is that the live database was
+three migrations behind merged code for a while and nobody knew, which broke
+the incident to ticket bridge in production silently. The value is in it being
+absolute.
+
+**Affects.** Anything that makes the guard red is a real condition to be fixed,
+not a check to be worked around. If the fix is genuinely a ledger repair,
+`npx supabase migration repair` is the tool and it gets its own decision entry.
+
+---
+
 ## 2026-07-30 — Backups are a drilled `pg_dump`, and S6 is partly unmet on purpose
 
 **Decided.** Point in time recovery is not enabled and cannot be: it is a paid
