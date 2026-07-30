@@ -49,7 +49,19 @@ Professional, human, short sentences. No robotic filler. No hyphens in any
 user facing text (product copy, emails, marketing); use en dashes or rewrite.
 
 ## Current phase
-Phase 1: core features. Scope is monitors, incidents, tickets, AI chat, and
-the incident to ticket bridge, in that order, one feature per PR. The landing
-page remains out of scope until the end of MVP. Phase 0 rules all remain in
-force.
+Portfolio close out. The foundation is complete and the feature era is behind
+us: BRD F1 to F12 have shipped, plus F14 (knowledge base) and F15 (inventory)
+out of Phase 2, plus the public landing page, plus a platform hardening block
+(rate limits, an external watcher, an operator error channel, self monitoring,
+a drilled restore, a pre commit secret scan). Where the build differs from the
+BRD, the difference is recorded in docs/DECISIONS.md, which supersedes the BRD.
+
+The work in front of us is not features. It is the thing the BRD names as
+purpose number one: interview material. README, an architecture diagram and
+technical write up, a demo script, a runbook for the domain and the Clerk
+production instance. One ticket lifecycle task is queued after that.
+
+Phase 0 and Phase 1 rules all remain in force. In particular: no direct pushes
+to main, every feature PR carries a test, the tenant isolation suite in
+tests/isolation/ is never skipped or weakened, and the migration drift guard is
+never merged over.

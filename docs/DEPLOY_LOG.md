@@ -509,3 +509,98 @@ First run of the procedure now written in `docs/RUNBOOK.md` section 4.
 add on on a paid plan and this Supabase organization is on the free plan. S6
 is partly met and should be reported that way. RPO remains "whenever the
 operator last ran `npm run db:dump`".
+
+---
+
+## 2026-07-30 — The hardening block landed, and the platform is now watching itself
+
+Catch up entry, written at 14:25 EDT at the close of the block. Nothing new was
+deployed to write it; every number below was read back from production or from
+the shared project and is what those systems reported at that moment. Where a
+step was performed by a human, it says so, because attribution is the point of
+this log.
+
+### What merged and deployed
+
+Eight pull requests, all merged to main and deployed by the Vercel git
+integration on the merge commit, in this order:
+
+| Time (EDT) | Commit | What |
+|---|---|---|
+| 10:47 | `cac9692` | Rate limits on the two public surfaces that had none (#41) |
+| 10:55 | `6af0dd5` | The external heartbeat watcher (#42) |
+| 10:59 | `8a41b68` | Structured logging and the operator error channel (#43) |
+| 11:05 | `4ffbb71` | Talvex monitors Talvex, and `/api/health` (#44) |
+| 11:09 | `2ef165c` | The backup and restore procedure (#45) |
+| 11:12 | `0de6535` | The pre commit secret scan (#46) |
+| 13:15 | `d54ebcd` | Move the hook to the gitleaks command that still exists (#48) |
+
+Migration 018 was the block's only schema change and is logged in the entry
+above. Nothing in this block needed a migration after it.
+
+### Self monitoring set up by hand, per runbook section 2
+
+Performed by Islam Elsayed in Clerk and in the app, which is the only way it
+can be performed: the runbook forbids inserting an `organizations` row
+directly, because a fabricated `clerk_org_id` breaks the invariant every RLS
+policy depends on.
+
+- A real Clerk organization named `Talvex`, synced into Postgres by the
+  existing webhook.
+- Three monitors created at **18:09:16 UTC**, all on a 300 second interval:
+  `https://talvex-chi.vercel.app/`, `/api/health`, and `/api/ops/heartbeat`.
+  Each is `up` as of the last sweep.
+- Status page enabled at slug `talvex`. `GET /status/talvex` returns 200.
+
+The circularity is deliberate and is recorded in the decision log: these three
+monitors are checked by the sweep whose health is in question, so they cannot
+catch a dead sweep. The GitHub workflow is what catches that.
+
+### The operator error channel is configured
+
+`OPS_DISCORD_WEBHOOK` was set in the Vercel project by Islam Elsayed at roughly
+14:00 EDT, in Production and Preview. Until then, platform failures were logged
+once and not posted, which is the documented unset behaviour. Nothing has been
+posted to it yet, because nothing has failed since it was set; that is a state
+worth knowing rather than a verification.
+
+### State read back from production at 14:25 EDT
+
+- `GET /api/health` → **200**. `GET /api/ops/heartbeat` → **200**,
+  `{"stale":false,"ageSeconds":39,"thresholdSeconds":900}`.
+- `platform_heartbeat`: last run **18:20:09 UTC**, **43 runs**, **0 step
+  failures**, last sweep **1822 ms**. The external scheduler is calling and the
+  sweep is finishing cleanly.
+- The `heartbeat` workflow is green on its 30 minute schedule; the most recent
+  scheduled run at 17:54 UTC succeeded.
+- Migration ledger: **18 rows, 18 files**, versions matching one for one. The
+  drift guard is green.
+- `get_advisors` security: three SECURITY DEFINER warnings, unchanged, all
+  three deliberate and now answered in `docs/DECISIONS.md`.
+- Test suite on this checkout: **57 files, 794 tests, all passing**, of which
+  the isolation suite is **18 files, 358 tests** against a local stack applied
+  from zero.
+
+### Two corrections to earlier statements in this log
+
+**Preview environment variables are no longer "none".** The Task 6 entry above
+and `docs/RUNBOOK.md` both said Preview had no environment variables at all.
+Seven of the thirteen now target Preview as well as Production:
+`OPS_DISCORD_WEBHOOK`, `RESEND_FROM`, `RESEND_API_KEY`,
+`API_KEY_ENCRYPTION_SECRET`, `CRON_SECRET`, `CLERK_WEBHOOK_SIGNING_SECRET`, and
+one orphan named below. **The conclusion is unchanged and the reason has
+narrowed:** the six still missing from Preview are the four `NEXT_PUBLIC_*`
+values, `CLERK_SECRET_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`, which are exactly
+auth and database, so a preview build still has neither. The runbook is
+corrected to say the precise thing rather than the round one.
+
+**An orphan variable exists in Vercel.** `REFRESH_TOKEN_SECRET` is set in
+Production and Preview and is referenced nowhere: not in `src/`, not in
+`scripts/`, not in `tests/`, and not in `.env.example`. It is almost certainly
+a leftover from a predecessor project. It is **recorded and not removed**,
+because deleting a production environment variable is not a documentation
+change; it is a one line dashboard action for the operator to take
+deliberately. `tests/env-hygiene.test.ts` asserts that every variable the app
+needs is documented, which is the direction that matters for safety; it does
+not and cannot see a variable that exists only in Vercel, which is how this
+survived. Nothing reads it, so nothing breaks either way.
