@@ -5,6 +5,7 @@ import { isLowStock } from '@/lib/db/inventory'
 import { interleaveTrail } from '@/lib/db/tickets'
 import { DEFAULT_TIMEZONE } from '@/lib/db/usage'
 import { errorName, logError, logInfo } from '@/lib/log'
+import { clientIp, createSlidingWindow } from '@/lib/rate-limit'
 import { runMonitorCheck } from '@/lib/monitoring/check'
 import { isAuthorizedCronRequest } from '@/lib/monitoring/cron-auth'
 import {
@@ -550,9 +551,35 @@ async function stampHeartbeat(db: Db, startedMs: number, stepFailures: number): 
   }
 }
 
+/**
+ * Two windows on this endpoint, for two different problems.
+ *
+ * Unauthorized attempts are limited per IP so the bearer check is not an
+ * unlimited guessing oracle. The real scheduler presents a valid token twelve
+ * times an hour and never touches this counter, so ten a minute costs it
+ * nothing while making a brute force slow enough to be pointless.
+ *
+ * Authorized invocations are limited globally because a valid token is not a
+ * licence to start unbounded concurrent sweeps: each one holds a service role
+ * client and runs for up to sixty seconds, so a misconfigured scheduler firing
+ * in a loop would stack them against the database.
+ */
+const unauthorizedWindow = createSlidingWindow({ max: 10, windowMs: 60_000 })
+const authorizedWindow = createSlidingWindow({ max: 20, windowMs: 60_000 })
+
 async function runSweep(request: Request) {
   if (!isAuthorizedCronRequest(request)) {
+    // Counted only on failure, and before any database work: a refused caller
+    // must never be able to make this route open a client.
+    const attempt = unauthorizedWindow.check(clientIp(request.headers))
+    if (!attempt.allowed) {
+      return NextResponse.json({ error: 'too many requests' }, { status: 429 })
+    }
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
+  if (!authorizedWindow.check('sweep').allowed) {
+    return NextResponse.json({ error: 'too many requests' }, { status: 429 })
   }
 
   const db = createAdminClient()
