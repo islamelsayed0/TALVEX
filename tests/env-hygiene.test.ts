@@ -29,6 +29,7 @@ describe('env hygiene', () => {
       'API_KEY_ENCRYPTION_SECRET',
       'RESEND_API_KEY',
       'RESEND_FROM',
+      'OPS_DISCORD_WEBHOOK',
     ]) {
       expect(example).toContain(name)
     }
