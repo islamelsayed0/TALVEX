@@ -11,46 +11,75 @@ added the CI migration drift guard. See docs/DECISIONS.md for all three.
 
 ---
 
-## Process: the chat isolation CI flake, carried as a known cost
+## Process: the chat isolation CI flake, now cited, and the audit that nearly buried it
 
-**Raised 2026-07-30**, at the portfolio close out, so the cost is written down
-rather than absorbed silently every time it happens.
+**Raised 2026-07-30** at the portfolio close out. This entry records two
+things: a real flake, and a near miss in how it was almost dismissed.
 
-**What is observed.** `tests/isolation/chat-isolation.test.ts` has failed during
-its seeding step with an error raised upstream of the assertions, on a run where
-nothing in the chat suite, the chat code, or migration 008 had been touched. The
-same commit passes when the job is rerun. Nothing about the failure implicates
-the change under test, which is exactly what makes it expensive: the first
-reading of a red isolation check is always "this branch broke tenant
-isolation", and that reading costs real attention before the rerun clears it.
+**The conflict, written down because it is the more useful half.** The Block A
+landing session reported that `tests/isolation/chat-isolation.test.ts` had
+failed twice in CI during that landing, seeding, upstream error, green on
+rerun. The close out audit then went looking for those failures and **found
+none**, and the entry was first written to say the flake was unwitnessed. The
+audit was wrong, and it was wrong in a way worth naming: it queried
+`gh run list` and `gh pr checks`, and **a rerun replaces a run's top level
+conclusion**, so a run that failed and then passed reports `success` and its
+failed attempt is invisible to every top level query. Searching for red runs
+finds nothing precisely because someone already made them green.
 
-**Why it is not chased now.** A flake that has not been captured has not been
-diagnosed. **No run log in the repository's Actions history records this
-failure**, which is the honest state of the evidence: it has been seen, and it
-has not been kept. Chasing it therefore starts by keeping one, not by
-theorizing, and that is a debugging session rather than a task.
+The query that actually sees it:
+
+```sh
+gh api "repos/<owner>/<repo>/actions/runs?per_page=100" \
+  --jq '.workflow_runs[] | select(.run_attempt > 1) | [.id, .name, .head_branch] | @tsv'
+gh run view <id> --attempt 1 --log-failed
+```
+
+**Both failures, cited.** Exactly two, exactly as reported, both on 2026-07-30
+during the Block A landing, both `quality` on attempt 1 with attempt 2 green:
+
+| Run | Branch | Failed at | Message |
+|---|---|---|---|
+| `30553918121` | `ops/backup-runbook` | `chat-isolation.test.ts:77`, the conversation insert | `Seeding conversation failed: An invalid response was received from the upstream server` |
+| `30554451292` | `ops/self-monitoring` | `chat-isolation.test.ts:93`, the messages insert | `Seeding messages failed: An invalid response was received from the upstream server` |
+
+Both runs: 1 file failed, 55 passed, all 28 chat tests skipped because the
+`beforeAll` threw. Neither branch touched the chat suite, the chat code, or
+migration 008.
+
+**What the evidence already rules out.** That wording is the API gateway's own
+502 body, not PostgREST's and not Postgres's, so nothing here is a policy, a
+grant, or a statement. One failure hit the **member's RLS client** and the other
+hit the **service role client**, at different statements, which rules out one
+role, one table, and one query shape. What is left is the API layer being
+transiently unavailable to a suite that starts hitting it hard immediately
+after `supabase start`.
 
 **What picking it up looks like.**
 
-1. **Capture one.** The next time it goes red, save the job log before
-   rerunning. `gh run view <id> --log-failed > flake.log` takes a second and is
-   the whole difference between an anecdote and a bug report.
-2. **Read the seeding path specifically.** The suite seeds through PostgREST
-   against a stack that has just started. The candidates worth eliminating in
-   order: PostgREST's schema cache not yet reloaded after `supabase start`, so
-   an insert hits a table the API layer does not know about yet; a container not
-   fully healthy when the first request lands; and the clock skew rejection
-   (PGRST303) that `src/lib/db/fetch-retry.ts` already exists to absorb in the
-   app, which the isolation suite's own client does not use.
-3. **Fix the cause, never the symptom.** A retry wrapper around the seed is
-   acceptable if the cause is genuinely a readiness race and the retry is
-   scoped to seeding. Loosening, skipping, or conditionally running an isolation
+1. **Reproduce against a cold stack.** Loop `npm run db:start` then
+   `npx vitest run tests/isolation` on a cold Docker, and watch for the 502.
+   The suite runs files concurrently, so chat is not special; it is just often
+   first into the gateway with a burst.
+2. **Confirm it is readiness, not load.** If a short wait or a gateway health
+   probe before the first request removes it, it is readiness. If it survives
+   that and tracks concurrency, it is load, and the fix is different.
+3. **Fix the cause, never the symptom.** A bounded retry on the transport, in
+   `tests/isolation/local-stack.ts` so every suite gets it once rather than
+   each file inventing its own, is acceptable **if** the diagnosis is a
+   readiness race. Loosening, skipping, or conditionally running an isolation
    assertion is not, under any diagnosis (CLAUDE.md rule 8).
 
-**The cost of leaving it.** A rerun. The risk is habituation: a suite that is
-sometimes red for no reason trains its reader to rerun first and think second,
-and that is precisely the reflex that would wave through a real isolation
-failure one day.
+**The cost of leaving it.** A rerun, roughly two minutes. The real cost is the
+reflex: a suite that is sometimes red for no reason teaches its reader to rerun
+first and think second, and that is exactly the habit that would wave through a
+genuine isolation failure. The second cost is the one this entry documents, that
+a rerun erases the evidence, so the next occurrence is again invisible to anyone
+who does not know to ask for attempt 1.
+
+---
+
+## Ops: watch the watcher, and re-verify the prod secret alignment periodically
 
 **Raised 2026-07-27** after the monitor sweep silently stopped: cron-job.org
 had auto disabled the job (405, because it was POSTing to a route that only
