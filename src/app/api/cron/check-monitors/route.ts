@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/db/admin'
 import { isLowStock } from '@/lib/db/inventory'
 import { interleaveTrail } from '@/lib/db/tickets'
 import { DEFAULT_TIMEZONE } from '@/lib/db/usage'
+import { errorName, logError, logInfo } from '@/lib/log'
 import { runMonitorCheck } from '@/lib/monitoring/check'
 import { isAuthorizedCronRequest } from '@/lib/monitoring/cron-auth'
 import {
@@ -134,7 +135,7 @@ async function notifyAndStamp(
     .update({ last_notified_at: new Date().toISOString() })
     .eq('id', incidentId)
   if (error) {
-    console.error('cron check-monitors: stamping last_notified_at failed:', error.message)
+    logError('cron.incidents.stamp_failed', 'failed', { error: error.message })
   }
 }
 
@@ -409,7 +410,7 @@ async function runDailyDigests(
     .select('org_id, notification_email, digest_send_time, digest_last_sent_on')
     .eq('digest_enabled', true)
   if (error) {
-    console.error('cron check-monitors: listing digest settings failed:', error.message)
+    logError('cron.digest.settings_failed', 'failed', { error: error.message })
     return counts
   }
   // Ruling 4: the recipient is the org's notification email. With nowhere to
@@ -428,7 +429,7 @@ async function runDailyDigests(
     .select('id, timezone')
     .in('id', enabled.map((entry) => entry.row.org_id))
   if (orgsError) {
-    console.error('cron check-monitors: reading org timezones failed:', orgsError.message)
+    logError('cron.digest.timezones_failed', 'failed', { error: orgsError.message })
     return counts
   }
   for (const org of orgs) {
@@ -476,7 +477,7 @@ async function runDailyDigests(
       })
       if (!result.ok) {
         counts.failed++
-        console.error(`cron check-monitors: digest send failed (${result.reason})`)
+        logError('cron.digest.send_failed', 'rejected', { reason: result.reason })
         continue
       }
       counts.sent++
@@ -485,10 +486,7 @@ async function runDailyDigests(
       // Swallowed on purpose: an unstamped ledger means the next sweep
       // retries this org, and no other org is affected.
       counts.failed++
-      console.error(
-        'cron check-monitors: digest failed for one org:',
-        err instanceof Error ? err.message : String(err),
-      )
+      logError('cron.digest.org_failed', 'failed', { error: errorName(err) })
     }
   }
 
@@ -502,7 +500,7 @@ async function stampDigestSent(db: Db, orgId: string, today: string): Promise<vo
     .update({ digest_last_sent_on: today })
     .eq('org_id', orgId)
   if (error) {
-    console.error('cron check-monitors: stamping digest_last_sent_on failed:', error.message)
+    logError('cron.digest.stamp_failed', 'failed', { error: error.message })
   }
 }
 
@@ -531,7 +529,7 @@ async function runSweep(request: Request) {
     .select('id, org_id, name, url, interval_seconds, last_checked_at, failing_since')
     .eq('active', true)
   if (monitorsError) {
-    console.error('cron check-monitors: listing monitors failed:', monitorsError.message)
+    logError('cron.monitors.list_failed', 'failed', { error: monitorsError.message })
     return NextResponse.json({ error: 'monitor listing failed' }, { status: 500 })
   }
 
@@ -556,7 +554,7 @@ async function runSweep(request: Request) {
       .in('monitor_id', due.map((m) => m.id))
       .eq('status', 'open')
     if (openError) {
-      console.error('cron check-monitors: listing open incidents failed:', openError.message)
+      logError('cron.incidents.list_failed', 'failed', { error: openError.message })
       return NextResponse.json({ error: 'incident listing failed' }, { status: 500 })
     }
     for (const incident of openIncidents) {
@@ -577,10 +575,7 @@ async function runSweep(request: Request) {
       )
       .in('org_id', orgIds)
     if (settingsError) {
-      console.error(
-        'cron check-monitors: listing notification settings failed:',
-        settingsError.message,
-      )
+      logError('cron.settings.list_failed', 'failed', { error: settingsError.message })
     } else {
       for (const row of settingsRows) {
         settingsByOrg.set(row.org_id, {
@@ -750,16 +745,25 @@ async function runSweep(request: Request) {
   const digests = await runDailyDigests(db, now, requestBaseUrl(request))
 
   if (failures.length > 0) {
-    console.error(`cron check-monitors: ${failures.length} step(s) failed:`, failures.join('; '))
+    logError('cron.sweep.steps_failed', 'failed', {
+      steps: failures.length,
+      reasons: failures.join('; '),
+    })
   }
-  console.log(
-    `cron check-monitors: ${due.length} due of ${monitors.length} active, ` +
-      `${up} up, ${down} down; incidents ${incidentCounts.opened} opened, ` +
-      `${incidentCounts.reopened} reopened, ${incidentCounts.resolved} resolved; ` +
-      `tickets ${ticketsClosed} auto closed; ` +
-      `digests ${digests.due} due, ${digests.sent} sent, ${digests.quiet} quiet, ` +
-      `${digests.failed} failed`,
-  )
+  logInfo('cron.sweep.complete', failures.length > 0 ? 'failed' : 'ok', {
+    active: monitors.length,
+    due: due.length,
+    up,
+    down,
+    incidents_opened: incidentCounts.opened,
+    incidents_reopened: incidentCounts.reopened,
+    incidents_resolved: incidentCounts.resolved,
+    tickets_auto_closed: ticketsClosed,
+    digests_due: digests.due,
+    digests_sent: digests.sent,
+    digests_quiet: digests.quiet,
+    digests_failed: digests.failed,
+  })
 
   return NextResponse.json({
     active: monitors.length,

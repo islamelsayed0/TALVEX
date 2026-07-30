@@ -230,7 +230,11 @@ describe('dispatch fans out by configuration', () => {
     await expect(
       notifyIncidentEvent(settings({ discordWebhook: WEBHOOK }), MONITOR, 'open', ctx, senders),
     ).resolves.toEqual({ attempted: true })
-    expect(errorSpy).toHaveBeenCalledWith('notifications: Discord returned HTTP 429')
+    // Logging is one line of JSON now (src/lib/log.ts), so the assertion is on
+    // the event name and the carried reason rather than a formatted sentence.
+    const line = JSON.parse(String(errorSpy.mock.calls[0][0]))
+    expect(line.event).toBe('notifications.dispatch.discord_rejected')
+    expect(line.detail.reason).toBe('Discord returned HTTP 429')
     errorSpy.mockRestore()
   })
 })
@@ -303,9 +307,9 @@ describe('email degrades gracefully without Resend configuration', () => {
     await sendAlertEmail({ to: 'ops@example.com', subject: 's', text: 't' })
     await sendAlertEmail({ to: 'ops@example.com', subject: 's', text: 't' })
     expect(errorSpy).toHaveBeenCalledTimes(1)
-    expect(errorSpy).toHaveBeenCalledWith(
-      'notifications: RESEND_API_KEY is not set; alert emails are skipped.',
-    )
+    const line = JSON.parse(String(errorSpy.mock.calls[0][0]))
+    expect(line.event).toBe('notifications.email.not_configured')
+    expect(line.detail.variable).toBe('RESEND_API_KEY')
     errorSpy.mockRestore()
   })
 
@@ -315,9 +319,9 @@ describe('email degrades gracefully without Resend configuration', () => {
     await sendAlertEmail({ to: 'ops@example.com', subject: 's', text: 't' })
     await sendAlertEmail({ to: 'ops@example.com', subject: 's', text: 't' })
     expect(errorSpy).toHaveBeenCalledTimes(1)
-    expect(errorSpy).toHaveBeenCalledWith(
-      'notifications: RESEND_FROM is not set; alert emails are skipped.',
-    )
+    const line = JSON.parse(String(errorSpy.mock.calls[0][0]))
+    expect(line.event).toBe('notifications.email.not_configured')
+    expect(line.detail.variable).toBe('RESEND_FROM')
     errorSpy.mockRestore()
   })
 })

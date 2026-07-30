@@ -10,6 +10,7 @@ import {
 } from '@/lib/chat/engine'
 import { EncryptionKeyError, KeyDecryptionError } from '@/lib/chat/encryption'
 import { ProviderError } from '@/lib/chat/providers'
+import { errorName, logError } from '@/lib/log'
 import { AdminConfigError } from '@/lib/db/admin'
 
 /**
@@ -92,7 +93,7 @@ export async function POST(req: Request): Promise<Response> {
     }
     // Log only the error NAME: never the message, which could carry context we
     // have not vetted for key material (ruling 4).
-    console.error('[chat] send failed:', err instanceof Error ? err.name : 'unknown')
+    logError('chat.send.failed', 'failed', { error: errorName(err) })
     return NextResponse.json(
       { error: 'Something went wrong. Please try again.' },
       { status: 500 },

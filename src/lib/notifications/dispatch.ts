@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { logError } from '@/lib/log'
+
 import {
   buildDownEmbed,
   buildRecoveredEmbed,
@@ -119,7 +121,7 @@ export async function notifyIncidentEvent(
     try {
       await senders.sendEmail({ to: email, subject: body.subject, text: body.text })
     } catch {
-      console.error('notifications: email dispatch failed')
+      logError('notifications.dispatch.email_failed', 'failed')
     }
   }
 
@@ -141,10 +143,14 @@ export async function notifyIncidentEvent(
     try {
       const result = await senders.postDiscord(webhook, embed)
       if (!result.ok) {
-        console.error(`notifications: ${result.error}`)
+        // result.error is a status line built by discord.ts, never the webhook
+        // URL and never the embed contents.
+        logError('notifications.dispatch.discord_rejected', 'rejected', {
+          reason: result.error,
+        })
       }
     } catch {
-      console.error('notifications: Discord dispatch failed')
+      logError('notifications.dispatch.discord_failed', 'failed')
     }
   }
 

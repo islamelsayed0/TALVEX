@@ -2,6 +2,8 @@ import 'server-only'
 
 import { Resend } from 'resend'
 
+import { logError } from '@/lib/log'
+
 /**
  * Alert emails via Resend (BRD F10). Ported from NetPulse
  * lib/notifications/resend-alerts.ts: the graceful degradation and the one
@@ -37,7 +39,9 @@ function resendConfig(): ResendConfig {
   if (!key) {
     if (!missingKeyLogged) {
       missingKeyLogged = true
-      console.error('notifications: RESEND_API_KEY is not set; alert emails are skipped.')
+      logError('notifications.email.not_configured', 'unavailable', {
+        variable: 'RESEND_API_KEY',
+      })
     }
     return { ok: false, reason: 'RESEND_API_KEY is not set in the deployment.' }
   }
@@ -45,7 +49,9 @@ function resendConfig(): ResendConfig {
   if (!from) {
     if (!missingFromLogged) {
       missingFromLogged = true
-      console.error('notifications: RESEND_FROM is not set; alert emails are skipped.')
+      logError('notifications.email.not_configured', 'unavailable', {
+        variable: 'RESEND_FROM',
+      })
     }
     return { ok: false, reason: 'RESEND_FROM is not set in the deployment.' }
   }
@@ -121,10 +127,10 @@ export async function sendAlertEmail(input: {
       text: input.text,
     })
     if (error) {
-      console.error(`notifications: Resend send failed (${error.name})`)
+      logError('notifications.email.send_failed', 'rejected', { provider_error: error.name })
     }
   } catch {
-    console.error('notifications: Resend send failed (request error)')
+    logError('notifications.email.send_failed', 'failed', { reason: 'request_error' })
   }
 }
 

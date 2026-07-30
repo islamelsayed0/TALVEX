@@ -2,6 +2,7 @@ import { verifyWebhook } from '@clerk/nextjs/webhooks'
 import { NextResponse, type NextRequest } from 'next/server'
 
 import { applyClerkEvent } from '@/lib/db/clerk-sync'
+import { logError, logInfo } from '@/lib/log'
 
 /**
  * Clerk webhook receiver. Syncs organizations and memberships into Postgres.
@@ -26,13 +27,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await applyClerkEvent(evt)
-    console.log(`clerk-webhook: ${evt.type} -> ${result.action}`)
+    logInfo('clerk.webhook.applied', 'ok', { event_type: evt.type, action: result.action })
     return NextResponse.json({ ok: true })
   } catch (err) {
-    console.error(
-      `clerk-webhook: ${evt.type} failed:`,
-      err instanceof Error ? err.message : 'unknown error',
-    )
+    // The message rather than the name, preserving what this route logged
+    // before the logger existed: a sync failure is usually a Postgres error
+    // whose text is the only thing that identifies which constraint bit.
+    logError('clerk.webhook.failed', 'failed', {
+      event_type: evt.type,
+      error: err instanceof Error ? err.message : 'unknown error',
+    })
     return NextResponse.json({ error: 'sync failed' }, { status: 500 })
   }
 }
