@@ -26,7 +26,16 @@ build are in [docs/DECISIONS.md](docs/DECISIONS.md).
 
 ## Local development
 
-Prerequisites: Node 22, npm, and Docker (for the local database).
+Prerequisites: Node 22, npm, Docker (for the local database), and
+[gitleaks](https://github.com/gitleaks/gitleaks) (`brew install gitleaks`) for
+the pre commit secret scan.
+
+`npm ci` points git at `.githooks/`, so every commit scans its staged changes
+for secrets first. The hook **fails closed** when gitleaks is missing rather
+than passing silently, because a guard that quietly stops guarding is worse
+than none. To commit without scanning, say so deliberately with
+`git commit --no-verify`. The hook is a convenience; the CI secret scan
+remains the boundary, since a local hook is bypassable.
 
 ```sh
 npm ci              # install dependencies (includes the pinned Supabase CLI)
