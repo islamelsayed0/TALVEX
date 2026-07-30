@@ -89,6 +89,19 @@ tenant rows is a capability worth not having.
 
 **Verify:** `BASE_URL=https://talvex-chi.vercel.app node tests/e2e/health.spec.mjs`
 
+### What this is not
+
+**Self monitoring cannot detect a dead sweep.** The three monitors above are
+checked by the same sweep whose health is in question, so when it stops, they
+stop being checked and the Talvex status page freezes showing whatever it last
+saw, which is usually all green. It will look reassuring at precisely the
+moment it should not.
+
+What it does catch, while the sweep is alive, is a dead deployment or a dead
+database. That is worth having. It is not a watcher, and it does not replace
+`.github/workflows/heartbeat.yml`. Do not let a BRD close out record S5 as
+covering what section 1 covers.
+
 **Note the circularity, and accept it deliberately:** the sweep is now checking
 Talvex from Talvex, so a total outage takes both the checker and the checked
 with it. That is inherent to self monitoring anywhere, and it is the reason the
@@ -115,7 +128,81 @@ workflow.
 
 ---
 
-## 4. Environment variables
+## 4. Backups and restore (BRD S6)
+
+**What cannot be done, stated plainly.** Supabase point in time recovery is a
+paid add on on a paid plan, and this project's Supabase organization is on the
+**free** plan. **S6's first clause, "point in time recovery enabled", is not
+met and cannot be met without spending money.** That is a budget decision, not
+an engineering one, and nothing below substitutes for it. Report S6 as partly
+met, never as green.
+
+Compounding it: one Supabase project backs local, preview, and production
+(decision log, 2026-07-23). There is nowhere to restore *to* without disturbing
+the only database, which is why the drill below restores into a local stack.
+
+**What is met:** S6's second clause, "restore procedure documented and tested
+once". The procedure is here and it has been run; see `docs/DEPLOY_LOG.md` for
+the dated result.
+
+### Taking a dump
+
+```bash
+npm run db:dump          # writes ./backups/<UTC timestamp>/{schema,data}.sql
+```
+
+`./backups/` is gitignored. **A dump contains every tenant row in the
+database.** Treat the file the way you would treat the database: do not commit
+it, do not put it in a shared drive, delete it when the drill is over.
+
+**When to take one by hand**, since nothing takes one on a schedule:
+
+- Before applying any migration that drops or rewrites a column.
+- Before any repair of `supabase_migrations.schema_migrations`.
+- Before the production project is split out from the shared one.
+
+### The restore drill
+
+The assertion is not that the commands exited zero. It is that the **isolation
+suite passes against the restored data**, which exercises every RLS policy,
+grant, trigger, and check constraint the schema is supposed to carry.
+
+```bash
+npm run db:start
+# wipe the local public schema, then load the dump into it
+docker exec -i supabase_db_TALVEX psql -U postgres -d postgres -q \
+  -c "drop schema if exists public cascade; create schema public;"
+docker exec -i supabase_db_TALVEX psql -U postgres -d postgres -q < backups/<ts>/schema.sql
+docker exec -i supabase_db_TALVEX psql -U postgres -d postgres -q < backups/<ts>/data.sql
+npx vitest run tests/isolation      # this passing is the proof
+npm run db:reset                    # put the local stack back to migration state
+```
+
+**Expect seven errors on the data step**, all of the form
+`relation "storage.<table>" does not exist`. The local stack does not run the
+Storage service and Talvex stores no files, so those tables are empty and their
+absence is harmless. Any error naming a `public.` table is real and must be
+investigated.
+
+### What this does not cover
+
+- **No schedule.** RPO is "whenever the operator last ran `npm run db:dump`".
+- **No off site copy.** The dump lives wherever it was written.
+- **No automated verification.** The drill is manual.
+
+Automated dumps into GitHub Actions artifacts were considered and **rejected**:
+it would put a second complete copy of the tenant database somewhere with
+weaker access controls and 90 day retention, which is a downgrade dressed as
+progress. When there is customer data worth protecting there will also be a
+budget, and the right answer then is the paid feature. Recorded so it is not
+proposed again as a free win.
+
+**This must change before the first real customer**, together with moving
+production to its own Supabase project. Those two decisions move as a pair.
+
+---
+
+## 5. Environment variables
 
 Every variable is documented in `.env.example`, which
 `tests/env-hygiene.test.ts` keeps honest. Two traps worth repeating because
