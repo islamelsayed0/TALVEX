@@ -147,7 +147,7 @@ export default function Home() {
             <FrameBar url="talvex.app/dashboard" />
             <div className="relative aspect-[16/10] overflow-hidden rounded-tile">
               <Image
-                src="/landing/overview-shot.png"
+                src="/landing/dashboard-shot.png"
                 alt={PROOF.overviewAlt}
                 fill
                 priority

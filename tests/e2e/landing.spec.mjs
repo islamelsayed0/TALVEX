@@ -24,7 +24,7 @@ try {
   assert.equal(res?.status(), 200, 'landing should return 200')
   assert.match(await page.content(), /One .*calm.* place/s, 'hero renders')
   for (const shot of [
-    'overview-shot.png',
+    'dashboard-shot.png',
     'chat-shot.png',
     'status-shot.png',
     'inventory-shot.png',

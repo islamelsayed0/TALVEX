@@ -24,7 +24,7 @@ export const PROOF = {
   statusCaption:
     'A public status page. During an outage, people check a link instead of emailing you.',
   statusAlt:
-    'A public Talvex status page showing each monitored system, ninety days of uptime and recent incidents',
+    'A public Talvex status page showing an outage banner and ninety days of uptime for each monitored system',
   inventoryCaption:
     'The supply closet, tracked. Whatever is low on stock rises to the top before it runs out.',
   inventoryAlt:
