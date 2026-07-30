@@ -6,6 +6,213 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-30 — Platform state gets one table, and the only `using (true)` in the schema
+
+**Decided.** `platform_heartbeat` (migration 018) is a single row table
+recording that the cron sweep ran. Its select policy is `using (true)` for both
+`authenticated` and `anon`, deliberately, and it is the only table in the
+schema permitted that shape.
+
+**Why that is not a shortcut.** The table holds no org data by construction:
+one row, no `org_id`, no name, no count belonging to anybody. There is nothing
+to scope by, so scoping it would be theatre. The single row is enforced by a
+check constraint on the primary key rather than by convention, and the row is
+created by the migration with null timestamps so the sweep only ever updates
+and nobody needs an insert grant.
+
+**Writes are service role only**, with no policy and no grant for any user
+role, the same posture as `incidents.last_notified_at` and
+`digest_last_sent_on`. A writable heartbeat would let an admin fake liveness by
+stamping it forward, or fake an outage by clearing it, and the entire value of
+the number is that the sweep put it there. `anon` is granted only `id`,
+`last_run_at`, and `last_success_at`, so the public endpoint cannot leak
+operational counts even if its code asked for them.
+
+**Affects.** Any future platform level table follows this file or does not get
+created. **If a column is ever proposed for this table that identifies an
+organization, this policy becomes wrong and the column belongs in an org scoped
+table instead.** The isolation suite asserts the cross org read succeeds *on
+purpose*, with a comment, so a later reviewer does not read it as a leak and
+"fix" it.
+
+---
+
+## 2026-07-30 — Suppress the verdict when the sweep is stale, never decorate it
+
+**Decided.** When the sweep is stale, the Overview verdict is replaced by an
+`unknown` tone, not annotated with a warning. Staleness is checked before the
+down branch too.
+
+**Why.** This is the lesson of a real outage. When the sweep stopped, every
+monitor kept its `last_status` of up, so the page announced "All systems are
+operational" in the largest type on the screen for hours. A claim computed from
+data that stopped updating is not a weaker claim, it is a false one, and a
+warning stacked beside it still leaves the false claim on the page. A down
+monitor observed by a dead sweep is likewise a stale observation, not a current
+outage, which is why staleness outranks it.
+
+**Affects.** Any future surface that summarizes monitor state reads freshness
+first. `tests/overview.test.ts` carries the regression guard: the page must not
+say all is well when nothing has been checked, even with every monitor up.
+
+---
+
+## 2026-07-30 — The freshness endpoint is public, to stop the secret spreading
+
+**Decided.** `/api/ops/heartbeat` is unauthenticated. It answers 200 when the
+sweep is fresh and 503 when it is stale, and the GitHub Actions watcher polls
+it with `curl --fail`.
+
+**Why not require `CRON_SECRET`.** That was the obvious alternative and it is
+rejected for the root cause of the incident this work exists for: the value
+already lives in two places that must agree, Vercel and the external scheduler,
+and they drifted, which is how monitoring stopped. A third copy in GitHub
+secrets makes the next rotation a three way problem and makes the same failure
+more likely, not less.
+
+**What is disclosed** is when this platform's own sweep last ran. No tenant is
+named, no count is exposed, nothing is writable. The anon column grant from
+migration 018 enforces the second of those, not the route handler.
+
+**Affects.** The payload may never grow a field; adding one requires revisiting
+this entry. A test asserts the three keys.
+
+---
+
+## 2026-07-30 — Self monitoring is a demo feature, not a watcher
+
+**Decided.** Talvex monitors Talvex and publishes a status page (BRD S5), and
+this is recorded as **not** satisfying the need that the external watcher
+covers.
+
+**Why it must be said explicitly.** Talvex's own monitors are checked by the
+same sweep whose health is in question. When the sweep dies they stop being
+checked and the status page freezes showing green, looking most reassuring
+exactly when it should not. It catches a dead deployment or a dead database
+while the sweep is alive, which is worth having. `.github/workflows/heartbeat.yml`
+is the only thing that catches a dead sweep, because it runs somewhere else.
+
+Also accepted: the sweep now checks Talvex from Talvex, so a total outage takes
+the checker and the checked together. Inherent to self monitoring anywhere, and
+the reason the external watcher is not optional.
+
+**Affects.** A BRD close out reports S5 and the watcher separately and never
+lets one stand in for the other. `tests/runbook.test.ts` asserts the runbook
+keeps saying so.
+
+---
+
+## 2026-07-30 — Structured logging and an operator channel, instead of Sentry
+
+**Decided.** No Sentry. All logging goes through `src/lib/log.ts`, one line of
+JSON with a closed union of event names, enforced by `no-console` in eslint
+with that file the single exception. Platform failures additionally post to an
+operator owned Discord webhook (`OPS_DISCORD_WEBHOOK`), reusing the hardened
+F10 poster.
+
+**Why.** BRD S7 names Sentry, and `@sentry/nextjs` is not one dependency but a
+tree, a build plugin, and a client side bundle, for a project that runs on
+seven runtime dependencies on purpose and has no customers. It would also place
+code in the browser bundle, the one place CLAUDE.md says nothing sensitive may
+go. What it actually buys over structured logs is durable retention, and that
+is bought instead by posting the lines that matter to a channel the operator
+already reads.
+
+Reporting is opt in per call, never automatic: a per org misconfiguration logs
+every sweep, so reporting everything would page every five minutes until the
+channel was muted, and a muted channel catches nothing.
+
+**Affects.** Any new code logs through `log.ts`. If a real error tracker is
+ever warranted, multiple customers or an error nobody can reproduce from logs,
+it attaches at that seam and this entry is superseded rather than quietly
+ignored. Report S7 as met by structured logging plus the operator sink, not by
+the named product.
+
+---
+
+## 2026-07-30 — Rate limits are per instance on purpose, and the status page is limited in the proxy
+
+**Decided.** The shared sliding window (`src/lib/rate-limit.ts`) stays in
+memory. `/status/[slug]` is limited in `src/proxy.ts` rather than in the route.
+
+**Why the proxy.** The status page is ISR with `revalidate = 60` and that CDN
+cache is the real protection, since most traffic never reaches a function.
+Reading request headers inside the route would opt the page out of static
+rendering and destroy the thing doing the work. The proxy runs ahead of the
+cache and refuses without changing how the page renders. It fails open on any
+internal error, because a bug in a limiter must never be why a customer cannot
+see whether their systems are up.
+
+**The limitation, accepted rather than papered over.** In memory means per
+server instance on Vercel, reset on cold start, and a real ceiling that is a
+multiple of the stated number across warm instances. It stops a runaway loop
+and a lazy scanner. It is not metering and it does not stop a distributed
+attack. Durable limiting needs shared state, meaning a Redis dependency and a
+round trip on requests that currently touch nothing.
+
+**Affects.** Revisit at the first paying customer or the first observed abuse,
+whichever comes first.
+
+---
+
+## 2026-07-30 — The migration drift guard is never merged over
+
+**Decided.** When the drift guard is red and correct, the fix is to reshape the
+work until it goes green. It is never overridden, and a pull request is never
+merged past it, even though `migration-drift` is not in the required checks
+list and GitHub would permit the merge.
+
+**The case that produced this rule.** Migration 018 was applied to the shared
+project ahead of its code, per apply then merge, and its file lived on the
+branch carrying that code. Main therefore recorded 17 migrations against a
+database that had run 18, and the guard reported version `20260730120000` as
+applied with nothing to explain it. That is exactly what the guard is for, and
+it stayed red on the first branch in the landing order.
+
+Two wrong answers were available and both were declined: merging with the check
+red, on the grounds that it was understood and self resolving, and reordering
+the landing so the branch carrying the file went first, which would have
+squashed two unrelated pieces of work into one commit. The third answer is the
+one taken: a branch containing only the migration file, byte identical to what
+the database ran, merged on its own. No code read the table yet, so the file
+alone was inert, and the guard went green because the drift genuinely ended.
+
+**Why the rule rather than the judgement call.** A guard overridden once
+because the override was defensible is a guard whose next override only has to
+be defensible too. The reason this one exists is that the live database was
+three migrations behind merged code for a while and nobody knew, which broke
+the incident to ticket bridge in production silently. The value is in it being
+absolute.
+
+**Affects.** Anything that makes the guard red is a real condition to be fixed,
+not a check to be worked around. If the fix is genuinely a ledger repair,
+`npx supabase migration repair` is the tool and it gets its own decision entry.
+
+---
+
+## 2026-07-30 — Backups are a drilled `pg_dump`, and S6 is partly unmet on purpose
+
+**Decided.** Point in time recovery is not enabled and cannot be: it is a paid
+add on on a paid plan and this Supabase organization is on the free plan. **BRD
+S6 is reported as partly met, never green.** RPO is "whenever the operator last
+ran `npm run db:dump`".
+
+**What is met** is S6's second clause. The restore procedure is in
+`docs/RUNBOOK.md` and has been run once, on 2026-07-30, with the result in
+`docs/DEPLOY_LOG.md`. The assertion is not that the restore exited zero but
+that the isolation suite passes against the restored data, which exercises
+every policy, grant, trigger, and constraint the schema should carry.
+
+**Rejected, and recorded so it is not proposed again as a free win:** automated
+dumps into GitHub Actions artifacts. That is a second complete copy of the
+tenant database somewhere with weaker access controls and 90 day retention, a
+downgrade dressed as progress. `/backups` is gitignored and a test asserts it.
+
+**Affects.** The first real customer triggers both the paid plan and moving
+production to its own Supabase project; those two decisions move as a pair.
+
+---
+
 ## 2026-07-30 — The daily digest ships ungated; packaging waits for F13
 
 **Decided.** The daily digest is enabled for every organization from the

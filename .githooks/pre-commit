@@ -1,0 +1,28 @@
+#!/bin/sh
+# Scan staged changes for secrets before they enter history.
+#
+# BRD S2 asks for "pre commit secret scanning enabled from the first commit".
+# The CI job (.github/workflows/ci.yml) has always been the boundary and stays
+# the boundary, because a local hook is bypassable with --no-verify and is
+# absent on any machine that has not run npm install. What this adds is
+# catching the mistake before it is committed at all, which matters because a
+# secret that reaches history is not fixed by deleting it in a later commit.
+#
+# Installed by the prepare script in package.json (git config core.hooksPath
+# .githooks), so there is no separate setup step to forget.
+#
+# FAILS CLOSED when gitleaks is missing. This repository already ruled, when
+# arming the migration drift guard, that a guard which quietly stops guarding
+# is worse than no guard: it produces confidence without cover. If you truly
+# need to commit without scanning, say so explicitly with --no-verify.
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks is not installed, so staged changes were not scanned."
+  echo "  Install it:  brew install gitleaks"
+  echo "  Or skip this commit deliberately:  git commit --no-verify"
+  exit 1
+fi
+
+# --staged scans what is about to be committed, not the whole history.
+# --redact keeps any finding out of the terminal and out of scrollback.
+gitleaks protect --staged --redact

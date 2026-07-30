@@ -202,7 +202,27 @@ production to its own Supabase project. Those two decisions move as a pair.
 
 ---
 
-## 5. Environment variables
+## 5. The pre commit secret scan
+
+`npm ci` runs `git config core.hooksPath .githooks`, so `.githooks/pre-commit`
+installs itself and scans staged changes with
+`gitleaks protect --staged --redact`.
+
+**It fails closed when gitleaks is missing**, which means a fresh machine
+cannot commit until `brew install gitleaks` has run. That is deliberate: a hook
+that passes when the scanner is absent produces confidence without cover, the
+same reasoning that removed the escape hatch from the migration drift guard.
+To commit without scanning, do it explicitly with `git commit --no-verify`.
+
+The hook is a convenience that catches the mistake before it enters history.
+**The CI gitleaks job is the boundary**, because a local hook is bypassable and
+absent on any machine that has not installed dependencies. S2 asked for pre
+commit scanning and this delivers it; it does not upgrade the hook into a
+security control.
+
+---
+
+## 6. Environment variables
 
 Every variable is documented in `.env.example`, which
 `tests/env-hygiene.test.ts` keeps honest. Two traps worth repeating because

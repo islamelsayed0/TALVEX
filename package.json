@@ -10,6 +10,7 @@
     "test": "vitest run",
     "screenshots": "node scripts/capture-screenshots.mjs",
     "screenshots:login": "node scripts/capture-screenshots.mjs login",
+    "prepare": "git config core.hooksPath .githooks",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
