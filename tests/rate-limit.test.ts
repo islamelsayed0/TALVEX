@@ -93,18 +93,77 @@ describe('createSlidingWindow', () => {
   })
 })
 
+describe('the key space cannot be grown without bound', () => {
+  /**
+   * These limiters sit on unauthenticated routes, so the set of keys is driven
+   * by callers rather than by how many customers exist. Without a ceiling the
+   * map grows for as long as the instance lives, which is memory proportional
+   * to attacker traffic.
+   */
+  it('prunes expired keys instead of accumulating them', () => {
+    const w = createSlidingWindow({ max: 5, windowMs: 1000 })
+    // Far more distinct keys than the ceiling, each long expired by the end.
+    for (let i = 0; i < 12_000; i++) w.check(`ip-${i}`, i)
+    // A caller arriving now still gets an honest decision rather than a
+    // refusal caused by a full map.
+    expect(w.check('someone-new', 100_000).allowed).toBe(true)
+  })
+
+  it('still limits correctly after a prune', () => {
+    const w = createSlidingWindow({ max: 3, windowMs: 1000 })
+    for (let i = 0; i < 12_000; i++) w.check(`ip-${i}`, i)
+    const t = 100_000
+    expect(w.check('victim', t).allowed).toBe(true)
+    expect(w.check('victim', t).allowed).toBe(true)
+    expect(w.check('victim', t).allowed).toBe(true)
+    expect(w.check('victim', t).allowed).toBe(false)
+  })
+})
+
 describe('clientIp', () => {
-  it('takes the original client from x-forwarded-for, not the proxy', () => {
+  /**
+   * The entry this reads is a security decision, not a formatting one. The
+   * leading entries of x-forwarded-for are whatever the client sent, so
+   * trusting them lets a caller land in a fresh bucket on every request and
+   * bypass every limit built on this function.
+   */
+  it('prefers the edge set header over anything the client can send', () => {
+    const h = new Headers({
+      'x-vercel-forwarded-for': '198.51.100.4',
+      'x-real-ip': '198.51.100.5',
+      'x-forwarded-for': '203.0.113.7, 70.41.3.18',
+    })
+    expect(clientIp(h)).toBe('198.51.100.4')
+  })
+
+  it('falls back to x-real-ip before the forwarded chain', () => {
+    const h = new Headers({
+      'x-real-ip': '198.51.100.5',
+      'x-forwarded-for': '203.0.113.7, 70.41.3.18',
+    })
+    expect(clientIp(h)).toBe('198.51.100.5')
+  })
+
+  it('takes the NEAREST hop from the chain, never the client supplied head', () => {
+    // 203.0.113.7 is the forgeable end. 150.172.238.178 was appended by the
+    // proxy closest to us and is the only entry worth keying on.
     const h = new Headers({ 'x-forwarded-for': '203.0.113.7, 70.41.3.18, 150.172.238.178' })
-    expect(clientIp(h)).toBe('203.0.113.7')
+    expect(clientIp(h)).toBe('150.172.238.178')
+  })
+
+  it('a forged chain cannot mint a fresh bucket per request', () => {
+    const w = createSlidingWindow({ max: 2, windowMs: 1000 })
+    // Same real caller, rotating the part of the header it controls.
+    for (let i = 0; i < 2; i++) {
+      const h = new Headers({ 'x-forwarded-for': `10.0.0.${i}, 150.172.238.178` })
+      expect(w.check(clientIp(h), 0).allowed).toBe(true)
+    }
+    const h = new Headers({ 'x-forwarded-for': '10.0.0.99, 150.172.238.178' })
+    expect(w.check(clientIp(h), 0).allowed).toBe(false)
   })
 
   it('trims whitespace', () => {
     expect(clientIp(new Headers({ 'x-forwarded-for': '  203.0.113.7  ' }))).toBe('203.0.113.7')
-  })
-
-  it('falls back to x-real-ip', () => {
-    expect(clientIp(new Headers({ 'x-real-ip': '198.51.100.4' }))).toBe('198.51.100.4')
   })
 
   it('shares one bucket when there is no address, rather than going unlimited', () => {
