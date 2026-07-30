@@ -1,6 +1,8 @@
 import { clerkMiddleware } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
 
 import { isProtectedPath } from '@/lib/auth/routes'
+import { clientIp, createSlidingWindow } from '@/lib/rate-limit'
 
 /**
  * Next 16 renamed the middleware file convention to proxy. Using middleware.ts
@@ -18,7 +20,33 @@ import { isProtectedPath } from '@/lib/auth/routes'
  * Do not chase that 404 as a routing bug; see docs/DECISIONS.md. It disappears
  * when the app moves to a production instance on an owned domain.
  */
+/**
+ * The public status page limit (BRD S4), here rather than inside the route.
+ *
+ * /status/[slug] is ISR with revalidate = 60, and that CDN cache is the actual
+ * protection: most traffic never reaches a function at all. Reading request
+ * headers inside the route to limit it would opt the page out of static
+ * rendering and destroy the very thing doing the work. The proxy runs ahead of
+ * the cache and can refuse without changing how the page renders.
+ *
+ * Sixty a minute per IP is far above a human reading a status page during an
+ * outage, and far below a scraper.
+ */
+const statusPageWindow = createSlidingWindow({ max: 60, windowMs: 60_000 })
+
 export default clerkMiddleware(async (auth, request) => {
+  if (request.nextUrl.pathname.startsWith('/status/')) {
+    try {
+      if (!statusPageWindow.check(clientIp(request.headers)).allowed) {
+        return new NextResponse('Too many requests', { status: 429 })
+      }
+    } catch {
+      // Fails open on purpose. A bug in the limiter must never be the reason a
+      // customer cannot see whether their systems are up; that page is the one
+      // thing that has to work when everything else is broken.
+    }
+  }
+
   if (isProtectedPath(request.nextUrl.pathname)) {
     await auth.protect()
   }

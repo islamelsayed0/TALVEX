@@ -192,17 +192,56 @@ function SidebarBody({
   )
 }
 
+/**
+ * The stale sweep banner. Rendered above every dashboard page rather than on
+ * one screen, because when monitoring stops, every screen is showing values
+ * that stopped updating and any one of them read alone is misleading.
+ *
+ * Plain markup with no dismiss control on purpose: a dismissable warning about
+ * a system that is not running would be dismissed once and then never seen
+ * again while the outage continued.
+ */
+function SweepStaleBanner({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div
+      role="status"
+      className="mx-auto mb-6 flex w-full max-w-[1400px] items-start gap-3 rounded-tile border border-divider bg-wash-accent px-5 py-4"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        className="mt-0.5 h-5 w-5 flex-none text-foreground"
+      >
+        <path
+          d="M12 8v5m0 3.5v.5M10.3 3.9 2.5 17.4A2 2 0 0 0 4.2 20.4h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <div className="min-w-0">
+        <div className="text-[15px] font-semibold text-foreground">{title}</div>
+        <div className="mt-0.5 text-[13.5px] text-pretty text-muted-foreground">{subtitle}</div>
+      </div>
+    </div>
+  )
+}
+
 export function DashboardShell({
   isAdmin,
   navItems,
   hasKey,
   providers,
+  sweepBanner,
   children,
 }: {
   isAdmin: boolean
   navItems: readonly NavItem[]
   hasKey: boolean
   providers: ProviderOption[]
+  sweepBanner: { title: string; subtitle: string } | null
   children: React.ReactNode
 }) {
   const [collapsed, setCollapsed] = useState(false)
@@ -277,6 +316,8 @@ export function DashboardShell({
             <Wordmark size="sm" />
           </Link>
         </div>
+
+        {sweepBanner ? <SweepStaleBanner {...sweepBanner} /> : null}
 
         {children}
       </div>

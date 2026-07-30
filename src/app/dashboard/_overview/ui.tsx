@@ -292,14 +292,18 @@ export function VerdictBanner({
   actionHref: string
 }) {
   const down = verdict.tone === 'down'
+  // Unknown is its own look on purpose. It must not borrow the calm green of
+  // "clear", because the whole point is that we cannot vouch for anything, and
+  // it must not borrow the red of "down", because no outage has been observed.
+  const unknown = verdict.tone === 'unknown'
   return (
     <Card className="flex items-center gap-5 px-6 py-5">
       <div
         className={`flex h-12 w-12 flex-none items-center justify-center rounded-tile ${
-          down ? 'bg-wash-down' : 'bg-wash-up'
+          unknown ? 'bg-wash-accent' : down ? 'bg-wash-down' : 'bg-wash-up'
         }`}
       >
-        {down ? <AlertIcon /> : <CheckIcon />}
+        {down || unknown ? <AlertIcon /> : <CheckIcon />}
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-[20px] font-semibold tracking-[-0.015em] text-foreground">

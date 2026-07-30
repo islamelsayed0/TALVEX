@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { logInfo, type LogDetail } from '@/lib/log'
+
 import type { AiProvider } from '@/lib/db/types'
 import { AI_PROVIDER_LABELS } from './providers-meta'
 
@@ -102,10 +104,18 @@ type CallOutcome = {
  * body to this line, tests/chat-provider-log-scrub.test.ts fails.
  */
 function logCall(o: CallOutcome): void {
-  console.info(
-    `[chat] provider=${o.provider} model=${o.model} status=${o.status} ok=${o.ok} ` +
-      `latency_ms=${o.latencyMs} in_tokens=${o.inputTokens ?? '-'} out_tokens=${o.outputTokens ?? '-'}`,
-  )
+  // Token counts are omitted rather than sent as a placeholder when the
+  // provider did not report them, so a consumer never has to know which
+  // sentinel value means absent.
+  const detail: LogDetail = {
+    provider: o.provider,
+    model: o.model,
+    status: o.status,
+    latency_ms: o.latencyMs,
+  }
+  if (o.inputTokens !== null) detail.in_tokens = o.inputTokens
+  if (o.outputTokens !== null) detail.out_tokens = o.outputTokens
+  logInfo('chat.provider.call', o.ok ? 'ok' : 'failed', detail)
 }
 
 // ---------------------------------------------------------------------------

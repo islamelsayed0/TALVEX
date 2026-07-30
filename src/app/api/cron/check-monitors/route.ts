@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/db/admin'
 import { isLowStock } from '@/lib/db/inventory'
 import { interleaveTrail } from '@/lib/db/tickets'
 import { DEFAULT_TIMEZONE } from '@/lib/db/usage'
+import { errorName, logError, logInfo } from '@/lib/log'
+import { clientIp, createSlidingWindow } from '@/lib/rate-limit'
 import { runMonitorCheck } from '@/lib/monitoring/check'
 import { isAuthorizedCronRequest } from '@/lib/monitoring/cron-auth'
 import {
@@ -134,7 +136,7 @@ async function notifyAndStamp(
     .update({ last_notified_at: new Date().toISOString() })
     .eq('id', incidentId)
   if (error) {
-    console.error('cron check-monitors: stamping last_notified_at failed:', error.message)
+    logError('cron.incidents.stamp_failed', 'failed', { error: error.message })
   }
 }
 
@@ -409,7 +411,7 @@ async function runDailyDigests(
     .select('org_id, notification_email, digest_send_time, digest_last_sent_on')
     .eq('digest_enabled', true)
   if (error) {
-    console.error('cron check-monitors: listing digest settings failed:', error.message)
+    logError('cron.digest.settings_failed', 'failed', { error: error.message })
     return counts
   }
   // Ruling 4: the recipient is the org's notification email. With nowhere to
@@ -428,7 +430,7 @@ async function runDailyDigests(
     .select('id, timezone')
     .in('id', enabled.map((entry) => entry.row.org_id))
   if (orgsError) {
-    console.error('cron check-monitors: reading org timezones failed:', orgsError.message)
+    logError('cron.digest.timezones_failed', 'failed', { error: orgsError.message })
     return counts
   }
   for (const org of orgs) {
@@ -476,7 +478,7 @@ async function runDailyDigests(
       })
       if (!result.ok) {
         counts.failed++
-        console.error(`cron check-monitors: digest send failed (${result.reason})`)
+        logError('cron.digest.send_failed', 'rejected', { reason: result.reason })
         continue
       }
       counts.sent++
@@ -485,10 +487,7 @@ async function runDailyDigests(
       // Swallowed on purpose: an unstamped ledger means the next sweep
       // retries this org, and no other org is affected.
       counts.failed++
-      console.error(
-        'cron check-monitors: digest failed for one org:',
-        err instanceof Error ? err.message : String(err),
-      )
+      logError('cron.digest.org_failed', 'failed', { error: errorName(err) })
     }
   }
 
@@ -502,7 +501,7 @@ async function stampDigestSent(db: Db, orgId: string, today: string): Promise<vo
     .update({ digest_last_sent_on: today })
     .eq('org_id', orgId)
   if (error) {
-    console.error('cron check-monitors: stamping digest_last_sent_on failed:', error.message)
+    logError('cron.digest.stamp_failed', 'failed', { error: error.message })
   }
 }
 
@@ -519,9 +518,68 @@ function requestBaseUrl(request: Request): string {
   return `${proto}://${host}`
 }
 
+/**
+ * Records that the sweep ran (migration 018). This is what makes a dead
+ * scheduler visible: without it, every screen keeps rendering its last values
+ * and the product reports health from data that stopped updating, which is
+ * the failure this table exists for.
+ *
+ * Wrapped so it can never fail the sweep. A heartbeat write that throws would
+ * turn an observability feature into an outage, and the checks and incident
+ * writes above have already succeeded by the time this runs. A missed stamp
+ * costs one interval of freshness and the next sweep corrects it.
+ */
+async function stampHeartbeat(db: Db, startedMs: number, stepFailures: number): Promise<void> {
+  const ranAt = new Date().toISOString()
+  try {
+    const { error } = await db
+      .from('platform_heartbeat')
+      .update({
+        last_run_at: ranAt,
+        // Only a clean sweep advances last_success_at, so a sweep that keeps
+        // running with a failing step is visibly distinct from a healthy one.
+        ...(stepFailures === 0 ? { last_success_at: ranAt } : {}),
+        // run_count is not sent: the trigger on this table increments it, so
+        // there is no read before write and no lost update.
+        step_failures: stepFailures,
+        duration_ms: Date.now() - startedMs,
+      })
+      .eq('id', 'sweep')
+    if (error) logError('cron.heartbeat.stamp_failed', 'failed', { error: error.message })
+  } catch (err) {
+    logError('cron.heartbeat.stamp_failed', 'failed', { error: errorName(err) })
+  }
+}
+
+/**
+ * Two windows on this endpoint, for two different problems.
+ *
+ * Unauthorized attempts are limited per IP so the bearer check is not an
+ * unlimited guessing oracle. The real scheduler presents a valid token twelve
+ * times an hour and never touches this counter, so ten a minute costs it
+ * nothing while making a brute force slow enough to be pointless.
+ *
+ * Authorized invocations are limited globally because a valid token is not a
+ * licence to start unbounded concurrent sweeps: each one holds a service role
+ * client and runs for up to sixty seconds, so a misconfigured scheduler firing
+ * in a loop would stack them against the database.
+ */
+const unauthorizedWindow = createSlidingWindow({ max: 10, windowMs: 60_000 })
+const authorizedWindow = createSlidingWindow({ max: 20, windowMs: 60_000 })
+
 async function runSweep(request: Request) {
   if (!isAuthorizedCronRequest(request)) {
+    // Counted only on failure, and before any database work: a refused caller
+    // must never be able to make this route open a client.
+    const attempt = unauthorizedWindow.check(clientIp(request.headers))
+    if (!attempt.allowed) {
+      return NextResponse.json({ error: 'too many requests' }, { status: 429 })
+    }
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
+  if (!authorizedWindow.check('sweep').allowed) {
+    return NextResponse.json({ error: 'too many requests' }, { status: 429 })
   }
 
   const db = createAdminClient()
@@ -531,7 +589,7 @@ async function runSweep(request: Request) {
     .select('id, org_id, name, url, interval_seconds, last_checked_at, failing_since')
     .eq('active', true)
   if (monitorsError) {
-    console.error('cron check-monitors: listing monitors failed:', monitorsError.message)
+    logError('cron.monitors.list_failed', 'failed', { error: monitorsError.message })
     return NextResponse.json({ error: 'monitor listing failed' }, { status: 500 })
   }
 
@@ -556,7 +614,7 @@ async function runSweep(request: Request) {
       .in('monitor_id', due.map((m) => m.id))
       .eq('status', 'open')
     if (openError) {
-      console.error('cron check-monitors: listing open incidents failed:', openError.message)
+      logError('cron.incidents.list_failed', 'failed', { error: openError.message })
       return NextResponse.json({ error: 'incident listing failed' }, { status: 500 })
     }
     for (const incident of openIncidents) {
@@ -577,10 +635,7 @@ async function runSweep(request: Request) {
       )
       .in('org_id', orgIds)
     if (settingsError) {
-      console.error(
-        'cron check-monitors: listing notification settings failed:',
-        settingsError.message,
-      )
+      logError('cron.settings.list_failed', 'failed', { error: settingsError.message })
     } else {
       for (const row of settingsRows) {
         settingsByOrg.set(row.org_id, {
@@ -750,16 +805,30 @@ async function runSweep(request: Request) {
   const digests = await runDailyDigests(db, now, requestBaseUrl(request))
 
   if (failures.length > 0) {
-    console.error(`cron check-monitors: ${failures.length} step(s) failed:`, failures.join('; '))
+    logError('cron.sweep.steps_failed', 'failed', {
+      steps: failures.length,
+      reasons: failures.join('; '),
+    })
   }
-  console.log(
-    `cron check-monitors: ${due.length} due of ${monitors.length} active, ` +
-      `${up} up, ${down} down; incidents ${incidentCounts.opened} opened, ` +
-      `${incidentCounts.reopened} reopened, ${incidentCounts.resolved} resolved; ` +
-      `tickets ${ticketsClosed} auto closed; ` +
-      `digests ${digests.due} due, ${digests.sent} sent, ${digests.quiet} quiet, ` +
-      `${digests.failed} failed`,
-  )
+  // The heartbeat, after everything else and before the response. A sweep
+  // that got this far ran, whether or not every step inside it succeeded, and
+  // that distinction is exactly what last_run_at and last_success_at carry.
+  await stampHeartbeat(db, now, failures.length)
+
+  logInfo('cron.sweep.complete', failures.length > 0 ? 'failed' : 'ok', {
+    active: monitors.length,
+    due: due.length,
+    up,
+    down,
+    incidents_opened: incidentCounts.opened,
+    incidents_reopened: incidentCounts.reopened,
+    incidents_resolved: incidentCounts.resolved,
+    tickets_auto_closed: ticketsClosed,
+    digests_due: digests.due,
+    digests_sent: digests.sent,
+    digests_quiet: digests.quiet,
+    digests_failed: digests.failed,
+  })
 
   return NextResponse.json({
     active: monitors.length,

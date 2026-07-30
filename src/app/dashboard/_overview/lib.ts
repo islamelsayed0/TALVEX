@@ -32,15 +32,42 @@ function plural(n: number, word: string): string {
   return n === 1 ? word : `${word}s`
 }
 
-export type Verdict = { tone: 'down' | 'clear'; title: string; subtitle: string }
+export type Verdict = {
+  tone: 'down' | 'clear' | 'unknown'
+  title: string
+  subtitle: string
+}
 
+/**
+ * The Overview headline. Note the order of the branches: staleness is checked
+ * before anything else, and it suppresses the verdict rather than stacking a
+ * warning on top of it.
+ *
+ * That is deliberate and it is the lesson of a real outage. When the sweep
+ * stopped, every monitor kept its last_status of up, so this function would
+ * have said "All systems are operational" in confident large type while
+ * nothing had been checked for hours. A claim computed from data that stopped
+ * updating is not a weaker claim, it is a false one. With no fresh sweep the
+ * only honest headline is that we do not know.
+ */
 export function deriveVerdict(input: {
   downNames: string[]
   openIncidents: number
   openTickets: number
   upCount: number
+  sweepStale?: boolean
 }): Verdict {
   const { downNames, openIncidents, openTickets, upCount } = input
+
+  if (input.sweepStale) {
+    return {
+      tone: 'unknown',
+      title: 'System health is unknown',
+      subtitle:
+        'Monitoring has not run recently, so these numbers are stale. Nothing here reflects the last few minutes.',
+    }
+  }
+
   const down = downNames.length
 
   if (down > 0) {
