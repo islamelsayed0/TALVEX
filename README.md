@@ -1,6 +1,6 @@
 # Talvex
 
-**Live: https://talvex-chi.vercel.app** · [Decisions](docs/DECISIONS.md) · [Runbook](docs/RUNBOOK.md) · [Requirements](docs/BRD.md)
+**Live: https://talvex-chi.vercel.app** · [Architecture](docs/ARCHITECTURE.md) · [Technical write up](docs/WRITEUP.md) · [Decisions](docs/DECISIONS.md) · [Runbook](docs/RUNBOOK.md) · [Requirements](docs/BRD.md)
 
 When a small office's booking system goes down, the people who notice are the
 staff, and the person who has to fix it usually finds out last. Talvex closes
@@ -21,7 +21,9 @@ mockups, and nothing on screen that the product does not do.
 
 ## Architecture
 
-Every line here describes something on `main` today.
+The diagram is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and the narrative
+behind these choices is in [docs/WRITEUP.md](docs/WRITEUP.md). Every line here
+describes something on `main` today.
 
 **Tenancy is enforced at the database.** Every table holding organization data
 has row level security on, with policies that resolve the caller's organization
@@ -242,7 +244,12 @@ variables and are documented in each file's header.
 This repository was built with Claude Code under a propose and approve
 workflow: the model proposed a plan and a diff, a human read it and either
 approved, corrected, or rejected it, and the work landed as a small pull request
-that CI had to pass. That shape is why the decision log reads the way it does.
+that CI had to pass. Talvex is the third build in a line, and its two strictest
+rules are each inherited from a predecessor's failure: NetPulse trusted
+application code to keep tenants apart, which is why isolation here lives in the
+database, and HelpMe Hub leaked a secret into git history, which is why secret
+scanning was in CI from the first week. That shape is why the decision log reads
+the way it does.
 Rulings were argued before they were coded, and the arguments were worth
 keeping, so the entry for a choice usually records the alternative that was
 declined and the reason, not just the outcome. Several of those entries exist
