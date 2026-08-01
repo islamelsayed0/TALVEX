@@ -5,31 +5,37 @@ import type { TicketStatus } from '@/lib/db/types'
  * components; every form posts to a server action.
  *
  * Status colors (Task 3 ruling): amber open, blue in progress, green
- * resolved, neutral closed. Amber and green come from the reserved
- * --status-* tokens and keep their status truth meaning (waiting, handled).
- * In progress wears the accent blue doing double duty, which the ruling
- * accepts because blue carries no up/down semantics. No new colors exist.
+ * resolved. Amber and green come from the reserved --status-* tokens and keep
+ * their status truth meaning (waiting, handled). In progress wears the accent
+ * blue doing double duty, which the ruling accepts because blue carries no
+ * up/down semantics. No new colors exist.
+ *
+ * Canceled inherits the muted neutral the retired closed state used, and that
+ * is a deliberate reading rather than a leftover: a withdrawal is not a
+ * failure. Red is reserved for something being wrong, and somebody deciding
+ * they no longer need help is not something being wrong. Neutral says
+ * finished, which is exactly what it is.
  */
 
 export const STATUS_LABEL: Record<TicketStatus, string> = {
   open: 'Open',
   in_progress: 'In progress',
   resolved: 'Resolved',
-  closed: 'Closed',
+  canceled: 'Canceled',
 }
 
 const STATUS_TEXT: Record<TicketStatus, string> = {
   open: 'text-status-pending',
   in_progress: 'text-accent-text',
   resolved: 'text-status-up',
-  closed: 'text-quiet',
+  canceled: 'text-quiet',
 }
 
 const STATUS_DOT: Record<TicketStatus, string> = {
   open: 'bg-status-pending',
   in_progress: 'bg-(--accent-text)',
   resolved: 'bg-status-up',
-  closed: 'bg-quiet',
+  canceled: 'bg-quiet',
 }
 
 export function TicketStatusBadge({ status }: { status: TicketStatus }) {
@@ -39,6 +45,20 @@ export function TicketStatusBadge({ status }: { status: TicketStatus }) {
     >
       <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} aria-hidden />
       {STATUS_LABEL[status]}
+    </span>
+  )
+}
+
+/**
+ * The chip marking a comment as an internal note in the admin trail. Muted
+ * styling plus the word, because colour alone is not a label: an admin
+ * skimming needs to know at a glance which of these the requester can read,
+ * and the answer has to survive being read quickly.
+ */
+export function InternalChip() {
+  return (
+    <span className="rounded-mini border border-divider px-1.5 py-0.5 text-[11px] font-medium tracking-wide text-quiet uppercase">
+      Internal
     </span>
   )
 }

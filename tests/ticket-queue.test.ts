@@ -23,7 +23,7 @@ function ticket(partial: Partial<Ticket> & { id: string }): Ticket {
     created_at: '2026-07-01T00:00:00Z',
     updated_at: '2026-07-01T00:00:00Z',
     resolved_at: null,
-    closed_at: null,
+    hidden_by_requester: false,
     incident_id: null,
     conversation_id: null,
     ...partial,
@@ -31,9 +31,9 @@ function ticket(partial: Partial<Ticket> & { id: string }): Ticket {
 }
 
 describe('sortTicketsForQueue', () => {
-  it('groups by status: open, in progress, resolved, closed', () => {
+  it('groups by status: open, in progress, resolved, canceled', () => {
     const sorted = sortTicketsForQueue([
-      ticket({ id: 'c', status: 'closed', closed_at: '2026-07-10T00:00:00Z' }),
+      ticket({ id: 'c', status: 'canceled' }),
       ticket({ id: 'r', status: 'resolved', resolved_at: '2026-07-10T00:00:00Z' }),
       ticket({ id: 'p', status: 'in_progress' }),
       ticket({ id: 'o', status: 'open' }),
@@ -67,6 +67,7 @@ function comment(id: string, at: string): TicketComment {
     author: 'user',
     body: id,
     created_at: at,
+    is_internal: false,
   }
 }
 

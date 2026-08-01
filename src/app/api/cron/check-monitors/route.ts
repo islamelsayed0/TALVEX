@@ -64,11 +64,11 @@ import { sendAlertEmailResult } from '@/lib/notifications/email'
  * sweep. No new scheduler and no new cron entry: the 5 minute cadence is what
  * makes a 07:30 setting land at 07:30 or a few minutes after.
  *
- * Tickets (Phase 1 Task 3): the same sweep also closes tickets that have
- * sat resolved for more than 7 days (same route, same auth, per ruling).
- * The update sends only the status; the tickets lifecycle trigger stamps
- * closed_at and writes the auto_closed trail event, attributing it to the
- * system because the service role token carries no user.
+ * Tickets: this sweep no longer touches them. It used to close anything left
+ * resolved for 7 days, and migration 019 retired both that step and the closed
+ * state it produced, because a closed ticket was final and a requester now has
+ * a Reopen button that must keep working. Getting settled tickets out of the
+ * way is now the requester's own list rule, which hides without freezing.
  *
  * Auth: CRON_SECRET bearer token, checked before anything else; requests
  * without it get 401 and touch nothing. The route is excluded from Clerk
@@ -87,8 +87,6 @@ export const maxDuration = 60
 
 const RETENTION_DAYS = 30
 const BATCH_SIZE = 10
-// A resolved ticket closes on the first sweep after 7 full days (ruling).
-const TICKET_AUTO_CLOSE_DAYS = 7
 
 function utcDay(date: Date): string {
   return date.toISOString().slice(0, 10)
@@ -308,12 +306,19 @@ async function gatherDigestData(
 
   // The trail behind every unsettled ticket, in two queries rather than two
   // per ticket. Note the columns: author and timestamps, never a body.
+  //
+  // is_internal false is filtered HERE and not left to RLS, because this runs
+  // on the service role and RLS is not in the room. An internal note is not
+  // something the requester can read, so it cannot count as somebody having
+  // answered them; letting one through would silently drop a waiting ticket
+  // out of the digest (migration 019).
   const trailByTicket = new Map<string, DigestTrailItem[]>()
   if (ticketIds.length > 0) {
     const [commentsRes, eventsRes] = await Promise.all([
       db
         .from('ticket_comments')
-        .select('ticket_id, author, created_at')
+        .select('ticket_id, author, created_at, is_internal')
+        .eq('is_internal', false)
         .in('ticket_id', ticketIds),
       db
         .from('ticket_events')
@@ -798,22 +803,9 @@ async function runSweep(request: Request) {
     }
   }
 
-  // Tickets: anything resolved more than 7 days ago closes now. Only the
-  // status is written; the lifecycle trigger owns closed_at and the
-  // auto_closed trail event.
-  const ticketCutoff = new Date(
-    now - TICKET_AUTO_CLOSE_DAYS * 24 * 60 * 60 * 1000,
-  )
-  const { data: autoClosed, error: autoCloseError } = await db
-    .from('tickets')
-    .update({ status: 'closed' })
-    .eq('status', 'resolved')
-    .lt('resolved_at', ticketCutoff.toISOString())
-    .select('id')
-  if (autoCloseError) {
-    failures.push(`auto closing tickets: ${autoCloseError.message}`)
-  }
-  const ticketsClosed = autoClosed?.length ?? 0
+  // No ticket step here any more. Migration 019 retired the 7 day auto close
+  // along with the closed state; the sweep writes nothing to tickets at all
+  // now, which is why nothing below counts them.
 
   // The daily digest, last: it reads what the work above has just settled, and
   // it can never fail the sweep. Its own errors are counted and logged inside.
@@ -843,7 +835,6 @@ async function runSweep(request: Request) {
     incidents_opened: incidentCounts.opened,
     incidents_reopened: incidentCounts.reopened,
     incidents_resolved: incidentCounts.resolved,
-    tickets_auto_closed: ticketsClosed,
     digests_due: digests.due,
     digests_sent: digests.sent,
     digests_quiet: digests.quiet,
@@ -856,7 +847,6 @@ async function runSweep(request: Request) {
     up,
     down,
     incidents: incidentCounts,
-    ticketsClosed,
     digests,
     failures: failures.length,
   })

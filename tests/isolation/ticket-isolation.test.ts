@@ -502,7 +502,6 @@ describe('the admin lifecycle, driven through RLS sessions', () => {
     expect(error).toBeNull()
     expect(data!.status).toBe('resolved')
     expect(data!.resolved_at).not.toBeNull()
-    expect(data!.closed_at).toBeNull()
 
     const trail = await trailOf(ticketOneId)
     expect(trail[2]).toEqual({
@@ -541,11 +540,30 @@ describe('the admin lifecycle, driven through RLS sessions', () => {
   })
 })
 
-describe('auto close: the sweep, the system note, and terminality', () => {
-  it('the sweep closes tickets resolved more than 7 days ago and the trail says the system did it', async () => {
-    // Backdate the resolution 8 days (service role, mirroring nothing: this
-    // is test setup for "time passed"). Then run EXACTLY the update the
-    // cron route runs.
+describe('the retired auto close, and what replaced it', () => {
+  // Migration 019 deleted the 7 day auto close sweep and the closed state it
+  // produced. These cases replace the ones that proved the old behaviour: the
+  // point now is that closed is GONE, not that it works.
+
+  it('closed is not a status any more: nothing can set it, at any privilege', async () => {
+    const asAdminTry = await asAdmin('v2')
+      .from('tickets')
+      .update({ status: 'closed' })
+      .eq('id', ticketOneId)
+    expect(asAdminTry.error).not.toBeNull()
+
+    // The service role bypasses RLS and still cannot, because this is the
+    // check constraint rather than a policy.
+    const asServiceTry = await service
+      .from('tickets')
+      .update({ status: 'closed' })
+      .eq('id', ticketOneId)
+    expect(asServiceTry.error).not.toBeNull()
+  })
+
+  it('a resolved ticket is no longer terminal: it reopens, and resolved_at clears', async () => {
+    // The old sweep would have closed this permanently. Now it stays reachable
+    // forever, which is what makes the requester's Reopen button honest.
     const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
     const backdate = await service
       .from('tickets')
@@ -553,100 +571,37 @@ describe('auto close: the sweep, the system note, and terminality', () => {
       .eq('id', ticketOneId)
     expect(backdate.error).toBeNull()
 
-    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    const { data: swept, error } = await service
-      .from('tickets')
-      .update({ status: 'closed' })
-      .eq('status', 'resolved')
-      .lt('resolved_at', cutoff.toISOString())
-      .select('id')
-    expect(error).toBeNull()
-    expect((swept ?? []).map((t) => t.id)).toContain(ticketOneId)
-
-    const { data: ticket } = await service
-      .from('tickets')
-      .select('status, resolved_at, closed_at')
-      .eq('id', ticketOneId)
-      .single()
-    expect(ticket!.status).toBe('closed')
-    expect(ticket!.closed_at).not.toBeNull()
-    // The resolution timestamp survives the close; the record keeps both.
-    expect(ticket!.resolved_at).not.toBeNull()
-
-    const trail = await trailOf(ticketOneId)
-    expect(trail[trail.length - 1]).toEqual({
-      event_type: 'auto_closed',
-      actor: null,
-      detail: 'Closed automatically 7 days after it was resolved.',
-    })
-  })
-
-  it('a fresh resolved ticket is untouched by the sweep', async () => {
-    // ticketTwo goes to resolved now; the same sweep must not close it.
-    const resolve = await asAdmin('legacy')
-      .from('tickets')
-      .update({ status: 'resolved' })
-      .eq('id', ticketTwoId)
-      .select()
-      .single()
-    expect(resolve.error).toBeNull()
-
-    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    const { error } = await service
-      .from('tickets')
-      .update({ status: 'closed' })
-      .eq('status', 'resolved')
-      .lt('resolved_at', cutoff.toISOString())
-    expect(error).toBeNull()
-
-    const { data: ticket } = await service
-      .from('tickets')
-      .select('status')
-      .eq('id', ticketTwoId)
-      .single()
-    expect(ticket).toEqual({ status: 'resolved' })
-
-    // Put it back so this test leaves no lifecycle surprises behind.
-    const reopen = await asAdmin('legacy')
+    const reopen = await asAdmin('v2')
       .from('tickets')
       .update({ status: 'open' })
-      .eq('id', ticketTwoId)
+      .eq('id', ticketOneId)
       .select()
       .single()
     expect(reopen.error).toBeNull()
-    expect(reopen.data!.resolved_at).toBeNull() // reopening clears it
+    expect(reopen.data!.status).toBe('open')
+    expect(reopen.data!.resolved_at).toBeNull()
   })
 
-  it('closed is terminal: not even an admin or the service role can move it', async () => {
-    const asAdminTry = await asAdmin('v2')
+  it('a settled ticket still takes comments: the closed gate went with the state', async () => {
+    const resolve = await asAdmin('legacy')
       .from('tickets')
-      .update({ status: 'open' })
+      .update({ status: 'resolved' })
       .eq('id', ticketOneId)
-      .select()
-    expect(asAdminTry.error).not.toBeNull() // the lifecycle trigger raises
+    expect(resolve.error).toBeNull()
 
-    const asServiceTry = await service
-      .from('tickets')
-      .update({ status: 'open' })
-      .eq('id', ticketOneId)
-    expect(asServiceTry.error).not.toBeNull()
-
-    const { data: intact } = await service
-      .from('tickets')
-      .select('status')
-      .eq('id', ticketOneId)
-      .single()
-    expect(intact).toEqual({ status: 'closed' })
-  })
-
-  it('a closed ticket takes no new comments, not even from its submitter', async () => {
     const { error } = await asMemberOne('legacy').from('ticket_comments').insert({
       org_id: orgAId,
       ticket_id: ticketOneId,
       author: seed.memberOne,
       body: 'one more thing',
     })
-    expect(error).not.toBeNull()
+    expect(error).toBeNull()
+
+    // Leave it open so later blocks start from a predictable state.
+    await asAdmin('legacy')
+      .from('tickets')
+      .update({ status: 'open' })
+      .eq('id', ticketOneId)
   })
 })
 

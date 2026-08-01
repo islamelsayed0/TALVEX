@@ -36,6 +36,9 @@ export const AUDIT_ACTIONS: readonly AuditAction[] = [
   'inventory_item_created',
   'inventory_item_updated',
   'inventory_item_deleted',
+  'ticket_status_changed',
+  'ticket_canceled',
+  'ticket_reopened',
 ]
 
 const ACTION_LABELS: Record<AuditAction, string> = {
@@ -58,6 +61,9 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   inventory_item_created: 'Inventory item added',
   inventory_item_updated: 'Inventory item updated',
   inventory_item_deleted: 'Inventory item deleted',
+  ticket_status_changed: 'Ticket status changed',
+  ticket_canceled: 'Ticket canceled',
+  ticket_reopened: 'Ticket reopened',
 }
 
 /** Human label for an action. Unknown values (a newer vocabulary than this
@@ -146,6 +152,22 @@ export function auditDetailSummary(entry: {
       if (!title) return ''
       if (!changed || changed.length === 0) return title
       return `${title} (${changed.map((f) => f.replaceAll('_', ' ')).join(', ')})`
+    }
+    // Statuses and who kind of person did it. Never the title, never a
+    // comment, never a note: the log records that a transition happened, not
+    // what anybody wrote about it (migration 019).
+    case 'ticket_status_changed':
+    case 'ticket_canceled':
+    case 'ticket_reopened': {
+      const from = detailString(entry.detail, 'from')
+      const to = detailString(entry.detail, 'to')
+      const kind = detailString(entry.detail, 'actor_kind')
+      const move =
+        from && to
+          ? `${from.replaceAll('_', ' ')} to ${to.replaceAll('_', ' ')}`
+          : ''
+      const by = kind === 'member' ? 'by the requester' : kind === 'system' ? 'by Talvex' : ''
+      return [move, by].filter(Boolean).join(', ')
     }
     case 'member_tags_changed': {
       const tags = detailStrings(entry.detail, 'tags')

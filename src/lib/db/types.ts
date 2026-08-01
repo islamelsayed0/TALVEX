@@ -725,6 +725,7 @@ export type Database = {
           body: string
           created_at: string
           id: string
+          is_internal: boolean
           org_id: string
           ticket_id: string
         }
@@ -733,6 +734,7 @@ export type Database = {
           body: string
           created_at?: string
           id?: string
+          is_internal?: boolean
           org_id: string
           ticket_id: string
         }
@@ -741,6 +743,7 @@ export type Database = {
           body?: string
           created_at?: string
           id?: string
+          is_internal?: boolean
           org_id?: string
           ticket_id?: string
         }
@@ -808,10 +811,10 @@ export type Database = {
       }
       tickets: {
         Row: {
-          closed_at: string | null
           conversation_id: string | null
           created_at: string
           description: string
+          hidden_by_requester: boolean
           id: string
           incident_id: string | null
           org_id: string
@@ -822,10 +825,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          closed_at?: string | null
           conversation_id?: string | null
           created_at?: string
           description: string
+          hidden_by_requester?: boolean
           id?: string
           incident_id?: string | null
           org_id: string
@@ -836,10 +839,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          closed_at?: string | null
           conversation_id?: string | null
           created_at?: string
           description?: string
+          hidden_by_requester?: boolean
           id?: string
           incident_id?: string | null
           org_id?: string
@@ -884,6 +887,11 @@ export type Database = {
       inventory_access_gate: { Args: never; Returns: boolean }
       is_org_admin: { Args: { p_org_id: string }; Returns: boolean }
       member_audience_tags: { Args: never; Returns: string[] }
+      member_hide_ticket: { Args: { p_ticket_id: string }; Returns: undefined }
+      member_set_ticket_status: {
+        Args: { p_explanation?: string; p_status: string; p_ticket_id: string }
+        Returns: undefined
+      }
       org_api_key_providers: { Args: never; Returns: string[] }
       org_has_api_key: { Args: never; Returns: boolean }
       status_page_is_public: { Args: { p_org_id: string }; Returns: boolean }
@@ -1025,6 +1033,7 @@ export const Constants = {
 } as const
 
 
+
 // Convenience aliases used by the data layer.
 export type Organization = Tables<"organizations">
 export type OrgMember = Tables<"org_members">
@@ -1041,10 +1050,18 @@ export type IncidentEventType = "opened" | "reopened" | "recovered" | "resolved"
 export type Ticket = Tables<"tickets">
 export type TicketComment = Tables<"ticket_comments">
 export type TicketEvent = Tables<"ticket_events">
-export type TicketStatus = "open" | "in_progress" | "resolved" | "closed"
+export type TicketStatus = "open" | "in_progress" | "resolved" | "canceled"
+/** The two states a ticket ends in. Neither is locked: an admin can move a
+ * ticket out of either, and a requester can reopen a resolved one. */
+export type TerminalTicketStatus = Extract<
+  TicketStatus,
+  "resolved" | "canceled"
+>
 export type TicketEventType =
   | "created"
   | "status_changed"
+  // Written only by the retired 7 day auto close sweep (migration 019). No
+  // code produces these any more; historical rows keep rendering.
   | "auto_closed"
   | "created_from_incident"
   | "created_from_chat"
@@ -1082,6 +1099,9 @@ export type AuditAction =
   | "inventory_item_created"
   | "inventory_item_updated"
   | "inventory_item_deleted"
+  | "ticket_status_changed"
+  | "ticket_canceled"
+  | "ticket_reopened"
 // Knowledge base (F14).
 export type Article = Tables<"articles">
 export type ArticleStatus = "draft" | "published"

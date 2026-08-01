@@ -153,16 +153,43 @@ export function digestWindowStartMs(
 //
 // A ticket with no comments at all is awaiting a reply. The requester has
 // asked and nobody has answered, which is the plainest case there is.
+//
+// INTERNAL NOTES ARE NOT REPLIES (migration 019). An admin writing a note the
+// requester cannot see has told them nothing, so counting it would drop the
+// ticket off the digest while the person who opened it is still waiting, which
+// is precisely the failure the paragraph above exists to prevent. The rule is
+// the same one, applied to a new kind of entry: only something the requester
+// can actually read counts as an answer.
+//
+// This is enforced twice on purpose. The digest runs on the service role, which
+// bypasses RLS, so internal notes WOULD come back from the query; the sweep
+// filters them out at the source, and the functions below skip any that reach
+// them anyway. Two guards because a silent miss here is invisible: the symptom
+// is an email that quietly stops mentioning a waiting ticket.
 
 /**
  * The trail as the digest reads it: the shared TrailItem, narrowed to the only
  * columns this feature selects. Comment bodies are absent by construction, so
  * there is no content in memory here for an email to leak (ruling 5).
  */
-export type DigestTrailItem = TrailItem<
-  { author: string; created_at: string },
-  { occurred_at: string }
->
+type DigestComment = {
+  author: string
+  created_at: string
+  is_internal?: boolean
+}
+
+export type DigestTrailItem = TrailItem<DigestComment, { occurred_at: string }>
+
+/**
+ * The comment on this trail entry, when it is one the requester can actually
+ * read. Null for a system event and null for an internal note, which are the
+ * two kinds of entry that tell the requester nothing.
+ */
+function readableComment(item: DigestTrailItem): DigestComment | null {
+  if (item.kind !== 'comment') return null
+  if (item.comment.is_internal === true) return null
+  return item.comment
+}
 
 /** True when the last thing said on this ticket came from the requester. */
 export function isAwaitingReply(
@@ -170,9 +197,9 @@ export function isAwaitingReply(
   trail: DigestTrailItem[],
 ): boolean {
   for (let i = trail.length - 1; i >= 0; i--) {
-    const item = trail[i]
-    if (item.kind !== 'comment') continue
-    return item.comment.author === submittedBy
+    const comment = readableComment(trail[i])
+    if (comment === null) continue
+    return comment.author === submittedBy
   }
   return true
 }
@@ -188,11 +215,12 @@ export function waitingSinceMs(
   trail: DigestTrailItem[],
 ): number {
   for (let i = trail.length - 1; i >= 0; i--) {
-    const item = trail[i]
-    if (item.kind !== 'comment') continue
-    if (item.comment.author === ticket.submittedBy) {
-      return Date.parse(item.comment.created_at)
+    const comment = readableComment(trail[i])
+    if (comment === null) continue
+    if (comment.author === ticket.submittedBy) {
+      return Date.parse(comment.created_at)
     }
+    // An admin answered after them, so they are not the one waiting.
     break
   }
   return Date.parse(ticket.createdAtIso)

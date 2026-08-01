@@ -1,7 +1,13 @@
 import Link from 'next/link'
 
 import { UNKNOWN_MEMBER, resolveUserNames } from '@/lib/auth/user-names'
-import { getTicketViewer, isTicketStatus, listTickets } from '@/lib/db/tickets'
+import {
+  getTicketViewer,
+  isTicketStatus,
+  listTickets,
+  listTicketsForRequester,
+  MEMBER_LIST_TERMINAL_DAYS,
+} from '@/lib/db/tickets'
 import type { Ticket, TicketStatus } from '@/lib/db/types'
 
 import { shortAge, summarizeTickets, ticketSource } from '../_overview/lib'
@@ -33,14 +39,30 @@ export default async function TicketsPage({
   const filter: TicketStatus | undefined =
     viewer.isAdmin && isTicketStatus(rawStatus) ? rawStatus : undefined
 
-  const tickets = await listTickets()
   const nowMs = new Date().getTime()
-  const counts = summarizeTickets(tickets, nowMs)
 
+  // The requester's list has its own rule (settled longer than a week, or
+  // removed by hand, drops off) so it takes its own query. Admin lists are
+  // untouched by both: every ticket, forever.
   if (!viewer.isAdmin) {
-    return <MyRequests tickets={tickets} nowMs={nowMs} counts={counts} />
+    const showAll = typeof sp.show === 'string' && sp.show === 'all'
+    const { tickets: mine, hiddenCount } = await listTicketsForRequester(
+      showAll,
+      nowMs,
+    )
+    return (
+      <MyRequests
+        tickets={mine}
+        nowMs={nowMs}
+        counts={summarizeTickets(mine, nowMs)}
+        showAll={showAll}
+        hiddenCount={hiddenCount}
+      />
+    )
   }
 
+  const tickets = await listTickets()
+  const counts = summarizeTickets(tickets, nowMs)
   const rows = filter ? tickets.filter((t) => t.status === filter) : tickets
   const names = await resolveUserNames(tickets.map((t) => t.submitted_by))
 
@@ -84,7 +106,11 @@ export default async function TicketsPage({
           label="Resolved today"
           valueClass="text-status-up"
         />
-        <TicketTile value={counts.closed} label="Closed" valueClass="text-quiet" />
+        <TicketTile
+          value={counts.canceled}
+          label="Canceled"
+          valueClass="text-quiet"
+        />
       </div>
 
       {/* Status filters are not in the prototype, but they are existing admin
@@ -152,7 +178,7 @@ const FILTERS: Array<{ label: string; status?: TicketStatus }> = [
   { label: STATUS_LABEL.open, status: 'open' },
   { label: STATUS_LABEL.in_progress, status: 'in_progress' },
   { label: STATUS_LABEL.resolved, status: 'resolved' },
-  { label: STATUS_LABEL.closed, status: 'closed' },
+  { label: STATUS_LABEL.canceled, status: 'canceled' },
 ]
 
 function StatusFilters({ current }: { current?: TicketStatus }) {
@@ -186,10 +212,14 @@ function MyRequests({
   tickets,
   nowMs,
   counts,
+  showAll,
+  hiddenCount,
 }: {
   tickets: Ticket[]
   nowMs: number
   counts: { open: number; inProgress: number }
+  showAll: boolean
+  hiddenCount: number
 }) {
   const openCount = counts.open + counts.inProgress
   return (
@@ -198,13 +228,42 @@ function MyRequests({
         <div>
           <h1 className="text-title text-foreground">My requests</h1>
           <p className="mt-1.5 text-[14px] text-quiet">
-            {openCount} open · {tickets.length} total
+            {openCount} open · {tickets.length} shown
           </p>
         </div>
         <Link href="/dashboard/help" className={primaryButton}>
           New request
         </Link>
       </div>
+
+      {/* Nothing is deleted and nothing moves. This toggle changes what is on
+          screen and not what exists, so the wording says shown and hidden
+          rather than anything that sounds like removal. */}
+      {showAll || hiddenCount > 0 ? (
+        <p className="mb-4 text-[13px] text-quiet">
+          {showAll ? (
+            <>
+              Showing everything you have ever asked for.{' '}
+              <Link href="/dashboard/tickets" className="text-link hover:text-foreground">
+                Show only recent
+              </Link>
+            </>
+          ) : (
+            <>
+              {hiddenCount} finished{' '}
+              {hiddenCount === 1 ? 'request is' : 'requests are'} hidden:
+              settled more than {MEMBER_LIST_TERMINAL_DAYS} days ago, or removed
+              by you.{' '}
+              <Link
+                href="/dashboard/tickets?show=all"
+                className="text-link hover:text-foreground"
+              >
+                Show all
+              </Link>
+            </>
+          )}
+        </p>
+      ) : null}
 
       {tickets.length === 0 ? (
         <Card className="p-8">
