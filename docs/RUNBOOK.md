@@ -238,3 +238,222 @@ but the four `NEXT_PUBLIC_*` values, `CLERK_SECRET_KEY`, and
 `SUPABASE_SERVICE_ROLE_KEY` do not. Those are exactly auth and database, so a
 preview build still has neither and the practical conclusion is unchanged.
 Finishing it is a dashboard task, tracked in `docs/DEPLOY_LOG.md`.
+
+---
+
+## 7. The domain, and the Clerk production instance
+
+**Status: not done.** Talvex runs on `talvex-chi.vercel.app` with Clerk
+**development** keys. This section is the sequence that changes that. Every
+step here is yours: it involves a purchase, DNS, and three dashboards, and
+none of it can or should be automated.
+
+**Why it is worth an evening.** The development instance costs more than the
+banner suggests. A signed out visitor who deep links to `/dashboard` gets a
+**404 instead of a redirect to sign in**, because a development instance
+establishes session context through a dev browser token that a cold link does
+not carry (`x-clerk-auth-reason: protect-rewrite, dev-browser-missing`). That
+is recorded in `docs/DECISIONS.md` (2026-07-22) and in the README's honest
+boundaries. It is also the difference between a demo link and the portfolio
+artifact BRD C5 asks for.
+
+**Do the steps in order.** Several of them are gated on DNS propagating, and
+step 5 has a failure mode that looks like a bug somewhere else entirely.
+
+### 1. Choose the domain, before buying anything
+
+`talvex.com` is taken. The candidates are `talvex.app` and `talvex.io`, at
+roughly 12 dollars a year, which BRD section 9.1 already budgets.
+
+Choose deliberately, because the name gets baked into `clerk.<domain>` and
+`accounts.<domain>` DNS records, into a Google OAuth client, into a Clerk
+webhook endpoint, and into the records below. Changing it later is this whole
+section again.
+
+### 2. Vercel: attach the domain
+
+Vercel, project **talvex**, Settings, Domains, Add.
+
+**What the screen asks for** depends on where the domain lives:
+
+- **Bought through Vercel:** nothing further. DNS is configured for you.
+- **Bought elsewhere:** Vercel shows one of two options. Either point the
+  registrar's nameservers at Vercel, or keep your registrar's DNS and add the
+  records it displays, normally an `A` record on the apex and a `CNAME` on
+  `www`. Vercel shows the exact values; do not type them from memory.
+
+Vercel issues the TLS certificate itself once DNS resolves. Expect minutes,
+occasionally hours.
+
+Decide now whether the canonical host is the apex (`talvex.app`) or `www`, and
+set the other to redirect. Whichever you choose is the one that goes in every
+record in the table at the end of this section.
+
+### 3. Clerk: create the production instance
+
+Clerk dashboard, the **Talvex** application, then the environment switcher at
+the top: **create a production instance**. This is not a new application.
+
+Clerk offers to clone your development settings. Take it, then **check each
+setting afterwards anyway**, because not everything clones and the two that
+matter most are in steps 4 and 5.
+
+**What it asks for:** the production domain. It then returns a set of DNS
+records to add at your registrar:
+
+- `clerk.<domain>` — a CNAME, the Frontend API.
+- `accounts.<domain>` — a CNAME, the hosted account pages.
+- Email records: a `clkmail` CNAME and two DKIM CNAMEs
+  (`clk._domainkey` and `clk2._domainkey`).
+
+**These records are the whole reason this was deferred.** They cannot be added
+to a `*.vercel.app` subdomain because Vercel owns that zone, which is why
+"free subdomain" and "Clerk production instance" were mutually exclusive
+(`docs/DECISIONS.md`, 2026-07-22).
+
+Clerk verifies them on its own screen. Give it time before assuming failure.
+
+### 4. Google: your own OAuth application, now mandatory
+
+The development instance used Clerk's **shared** Google credentials, which is
+why the consent screen currently says `accounts.dev`. A production instance
+may not use them. This is queued item 3 in `docs/DEPLOY_LOG.md`, which was
+optional when it was written and is not any more.
+
+1. Google Cloud Console, create or select a project for Talvex.
+2. APIs and Services, OAuth consent screen. External user type. App name,
+   support email, developer contact.
+3. Credentials, Create Credentials, OAuth client ID, Web application.
+4. **The redirect URI is not a guess.** In Clerk, go to User and
+   Authentication, Social Connections, Google, and toggle off "Use shared
+   credentials". Clerk then displays the exact redirect URI. Paste that.
+5. Paste the Google client ID and secret back into that same Clerk screen.
+
+### 5. Supabase: third party auth, and the trap that costs a night
+
+Clerk's setup page at `dashboard.clerk.com/setup/supabase` configures a Clerk
+instance for Supabase. **Run it against the production instance**, not the
+development one you already did this for. Then, in the Supabase dashboard for
+project `rdfuzadtraxzrrthhnnp`: Authentication, Third Party Auth, add a Clerk
+integration for the **new** domain.
+
+**Read this part twice.** That setup adds a `role: authenticated` claim to
+Clerk session tokens, and **it is configured per instance. It does not carry
+over from development.**
+
+If you miss it, nothing looks broken. The app deploys, the domain resolves,
+Google sign in works, and the dashboard comes up **completely empty**, because
+the token reaches Postgres without the role, so every RLS predicate matches
+nothing and every query returns zero rows. That is the failure shape the
+2026-07-21 `hidePersonal` entry calls the worst kind in this system: it is
+indistinguishable from an account that genuinely has no data, so it gets
+diagnosed as a bug in whatever screen happened to be open.
+
+**Nothing else about the database changes.** The RLS claim pattern is the
+same, so there is no migration, and the isolation suite is unaffected because
+it mints its own tokens against a local stack and never talks to Clerk at all.
+
+### 6. Vercel: swap exactly two environment variables
+
+In the **Production** environment:
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` — `pk_test_...` becomes `pk_live_...`
+- `CLERK_SECRET_KEY` — `sk_test_...` becomes `sk_live_...`
+
+`CLERK_WEBHOOK_SIGNING_SECRET` waits for step 7, because it does not exist
+yet.
+
+**Change nothing else, and one of those matters more than the rest:** rotating
+`API_KEY_ENCRYPTION_SECRET` would invalidate every stored BYOK provider key
+and every org would have to re add theirs. `CRON_SECRET`, the Supabase keys,
+`RESEND_*` and `OPS_DISCORD_WEBHOOK` are all unrelated to this change and
+should be left alone.
+
+### 7. Clerk: recreate the webhook endpoint
+
+Webhook endpoints belong to an instance, so the development one does not
+follow you.
+
+Clerk (production instance), Configure, Webhooks, Add Endpoint.
+
+- URL: `https://<domain>/api/webhooks/clerk`
+- Subscribe to exactly these six, the ones `src/lib/db/clerk-sync.ts` handles:
+  `organization.created`, `organization.updated`, `organization.deleted`,
+  `organizationMembership.created`, `organizationMembership.updated`,
+  `organizationMembership.deleted`.
+- Copy the new signing secret (`whsec_...`) into
+  `CLERK_WEBHOOK_SIGNING_SECRET` in Vercel Production.
+
+**Signing secrets are per endpoint.** Reusing the development value produces a
+400 on every delivery, which reads as a broken app rather than a wrong secret.
+
+### 8. Redeploy from a new commit
+
+Not a plain redeploy. Both reasons are in section 6 above: `NEXT_PUBLIC_*`
+values are inlined at build time, and a plain redeploy can reuse the previous
+deployment's environment snapshot. The reference update pull request in the
+table below is a convenient real commit to be that build.
+
+### 9. Verify, in this order
+
+The order matters: each check rules out a cause for the next one.
+
+1. `https://<domain>/` returns 200 and there is **no Clerk development
+   banner**.
+2. `https://<domain>/dashboard`, signed out, in a private window,
+   **redirects to sign in rather than returning 404**. This is the defect the
+   whole section exists to remove. If it still 404s, the deployment is still
+   running development keys, so step 6 or step 8 did not take.
+3. Google sign in shows **your** consent screen, not `accounts.dev`.
+4. **The real test of steps 5 and 7.** Create a throwaway organization. In
+   Clerk, Webhooks, Message Attempts, confirm a 200 for **both**
+   `organization.created` and `organizationMembership.created`. Then confirm
+   matching rows landed in `public.organizations` and `public.org_members`.
+   A missing membership row is the exact fault recorded in
+   `docs/DEPLOY_LOG.md` under Fault 2, and it silently disables every admin
+   gated feature.
+5. **The zero rows check.** Sign in as an existing user with real data and
+   confirm the dashboard shows it. An empty dashboard here means the step 5
+   role claim is missing, not that anything else is wrong.
+6. `BASE_URL=https://<domain> node tests/e2e/health.spec.mjs`
+
+### 10. Afterwards: the monitors are database rows, not code
+
+The three self monitoring monitors from section 2 point at
+`talvex-chi.vercel.app`. They live in the `monitors` table, so they are
+changed in the app (Monitors, each one, Edit), not in a pull request. Until
+they are, the platform is watching a hostname that still answers as a Vercel
+alias but is no longer the truth.
+
+The old `talvex-chi.vercel.app` alias keeps working. Nothing breaks the moment
+you attach a domain; things merely become stale, which is the harder problem
+to notice.
+
+### The `vercel.app` references, and which of them may change
+
+One small pull request after the domain is live. **The split matters:** a
+find and replace across the repository would rewrite the historical record,
+which is the opposite of what these documents are for.
+
+**Update these. They point at the running deployment:**
+
+| Where | What it is |
+|---|---|
+| `.github/workflows/heartbeat.yml` | the external watcher's actual target |
+| `tests/ops-heartbeat.test.ts` | asserts the workflow contains that URL, so **it changes in the same commit or CI goes red** |
+| `README.md` | the Live link, and the `/status/talvex` link |
+| `docs/RUNBOOK.md` | section 1's two checks, and section 2's three monitor URLs |
+| `docs/DEMO.md` | the demo target and its preflight check |
+| `tests/e2e/health.spec.mjs` | the usage example in the header comment |
+
+That test and workflow pairing is deliberate rather than an annoyance: it is
+what stops the watcher quietly pointing at a hostname nobody serves any more.
+
+**Leave these alone. They are dated records of what was true at the time:**
+`docs/DEPLOY_LOG.md` (every occurrence), the 2026-07-22 entry in
+`docs/DECISIONS.md`, `docs/PHASE_0_PLAN.md`, and `docs/BRD.md`.
+
+**That pull request also carries the decision log entry**, superseding the
+2026-07-22 ruling that Talvex ships on a development instance, plus a deploy
+log entry recording what actually happened and anything that surprised you.
+Neither is written in advance: this log records decisions taken, not planned.

@@ -162,7 +162,9 @@ reasoning rather than summarizing it.
   development banner, and a cold deep link to `/dashboard` returns 404 instead
   of redirecting to sign in. Start at the home page and sign in from there.
   This resolves when the project moves to a domain and a Clerk production
-  instance. ([2026-07-22 ruling](docs/DECISIONS.md))
+  instance, and the sequence for doing that is written out step by step in
+  [docs/RUNBOOK.md](docs/RUNBOOK.md) section 7.
+  ([2026-07-22 ruling](docs/DECISIONS.md))
 - **The build differs from its own requirements document in four places**, on
   purpose, and each difference is written down: inventory shipped as
   consumables stock rather than an asset register, the role ladder is two of
