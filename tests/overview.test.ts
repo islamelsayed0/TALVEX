@@ -160,11 +160,13 @@ describe('summarizeTickets', () => {
         { status: 'in_progress', resolved_at: null },
         { status: 'resolved', resolved_at: '2026-07-24T07:00:00Z' }, // today
         { status: 'resolved', resolved_at: '2026-07-23T23:00:00Z' }, // yesterday
-        { status: 'closed', resolved_at: '2026-07-20T10:00:00Z' },
+        // Canceled replaces the retired closed state (migration 019). It
+        // carries no resolved_at, because a withdrawal is not a resolution.
+        { status: 'canceled', resolved_at: null },
       ],
       now,
     )
-    expect(c).toEqual({ open: 2, inProgress: 1, resolvedToday: 1, closed: 1 })
+    expect(c).toEqual({ open: 2, inProgress: 1, resolvedToday: 1, canceled: 1 })
   })
 })
 

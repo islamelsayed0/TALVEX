@@ -114,7 +114,9 @@ export type TicketCounts = {
   open: number
   inProgress: number
   resolvedToday: number
-  closed: number
+  /** Withdrawn by the person who asked. Replaces the retired closed count
+   * (migration 019); a canceled ticket is finished, not failed. */
+  canceled: number
 }
 
 function startOfUtcDay(nowMs: number): number {
@@ -131,12 +133,12 @@ export function summarizeTickets(
     open: 0,
     inProgress: 0,
     resolvedToday: 0,
-    closed: 0,
+    canceled: 0,
   }
   for (const t of tickets) {
     if (t.status === 'open') counts.open++
     else if (t.status === 'in_progress') counts.inProgress++
-    else if (t.status === 'closed') counts.closed++
+    else if (t.status === 'canceled') counts.canceled++
     if (
       t.status === 'resolved' &&
       t.resolved_at &&

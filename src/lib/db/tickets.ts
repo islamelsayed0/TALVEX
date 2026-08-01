@@ -31,12 +31,48 @@ export const TICKET_STATUSES: readonly TicketStatus[] = [
   'open',
   'in_progress',
   'resolved',
-  'closed',
+  'canceled',
+]
+
+/** The end states. A ticket in one of these has stopped needing attention;
+ * neither is locked, and both are reachable back out of by an admin. */
+export const TERMINAL_TICKET_STATUSES: readonly TicketStatus[] = [
+  'resolved',
+  'canceled',
 ]
 
 export function isTicketStatus(value: string): value is TicketStatus {
   return (TICKET_STATUSES as readonly string[]).includes(value)
 }
+
+export function isTerminalTicketStatus(status: string): boolean {
+  return (TERMINAL_TICKET_STATUSES as readonly string[]).includes(status)
+}
+
+/**
+ * The transitions a requester may drive on their OWN ticket, as the database
+ * enforces them (migration 019, member_set_ticket_status). Restated here only
+ * so the UI can decide which buttons to render; it is not the authority and
+ * disagreeing with it changes nothing, because the function refuses anyway.
+ */
+export const MEMBER_TRANSITIONS: Readonly<
+  Record<TicketStatus, readonly TicketStatus[]>
+> = {
+  open: ['resolved', 'canceled'],
+  in_progress: ['resolved', 'canceled'],
+  resolved: ['open'],
+  // Terminal for the requester. A problem coming back is a new ticket, not a
+  // resurrection of a withdrawal.
+  canceled: [],
+}
+
+export function memberCanMove(from: string, to: TicketStatus): boolean {
+  const allowed = MEMBER_TRANSITIONS[from as TicketStatus]
+  return allowed !== undefined && allowed.includes(to)
+}
+
+/** How long a settled ticket stays on the requester's default list. */
+export const MEMBER_LIST_TERMINAL_DAYS = 7
 
 export type TicketInput = {
   title: string
@@ -100,25 +136,80 @@ function validated(input: TicketInput): { title: string; description: string } {
 /**
  * Queue order (Task 3 ruling): open first with the oldest at the top, so the
  * longest waiting request is the first thing seen. In progress follows the
- * same oldest first rule, then resolved and closed, newest first, since
- * recent history matters more than old.
+ * same oldest first rule, then the settled ones newest first, since recent
+ * history matters more than old.
+ *
+ * Canceled ranks below resolved. A withdrawal is the least likely thing an
+ * admin needs to look at, and putting it last keeps it out of the way without
+ * hiding it, which is the whole posture toward canceled in this feature: it is
+ * not a failure and it is not a secret, it is just finished.
  */
 const STATUS_RANK: Record<TicketStatus, number> = {
   open: 0,
   in_progress: 1,
   resolved: 2,
-  closed: 3,
+  canceled: 3,
 }
 
 export function sortTicketsForQueue(tickets: Ticket[]): Ticket[] {
   const rank = (t: Ticket) => STATUS_RANK[t.status as TicketStatus] ?? 9
-  const settledAt = (t: Ticket) =>
-    Date.parse(t.closed_at ?? t.resolved_at ?? t.created_at)
+  // closed_at is gone with the state (migration 019). A canceled ticket has no
+  // timestamp of its own by design, so it sorts on when it was raised.
+  const settledAt = (t: Ticket) => Date.parse(t.resolved_at ?? t.created_at)
   return [...tickets].sort((a, b) => {
     if (rank(a) !== rank(b)) return rank(a) - rank(b)
     if (rank(a) <= 1) return Date.parse(a.created_at) - Date.parse(b.created_at)
     return settledAt(b) - settledAt(a)
   })
+}
+
+/**
+ * When a ticket last entered a terminal state, read from its own trail.
+ *
+ * The trail is the authority rather than a column, deliberately (migration
+ * 019). Every transition is already recorded there with its time, so a
+ * settled_at column would be a second copy of a fact that can drift from the
+ * first. Returns null when the trail carries no terminal transition, which is
+ * the honest answer for a ticket that has never settled.
+ *
+ * Reads backwards and stops at the first terminal arrival, so a ticket that
+ * was resolved, reopened, and resolved again reports the LATEST settling.
+ */
+export function terminalTransitionAtMs(
+  events: { event_type: string; detail: string | null; occurred_at: string }[],
+): number | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i]
+    if (event.event_type !== 'status_changed') continue
+    const detail = event.detail ?? ''
+    // The trail writer renders underscores as spaces, so in_progress reads
+    // "in progress". Matching on the rendered form is matching what is stored.
+    const to = / to ([a-z ]+)\.$/.exec(detail)?.[1]
+    if (to === undefined) continue
+    if (to === 'resolved' || to === 'canceled') {
+      return Date.parse(event.occurred_at)
+    }
+    // The most recent status change moved it OUT of a terminal state, so it is
+    // not settled now whatever happened before.
+    return null
+  }
+  return null
+}
+
+/**
+ * The requester's default list rule: a settled ticket drops off once it has
+ * been settled longer than the window, and a ticket the requester removed
+ * drops off immediately. Anything unsettled always stays, however old.
+ */
+export function isHiddenFromMemberList(
+  ticket: { status: string; hidden_by_requester: boolean },
+  terminalAtMs: number | null,
+  nowMs: number,
+): boolean {
+  if (ticket.hidden_by_requester) return true
+  if (!isTerminalTicketStatus(ticket.status)) return false
+  if (terminalAtMs === null) return false
+  return nowMs - terminalAtMs > MEMBER_LIST_TERMINAL_DAYS * 24 * 60 * 60 * 1000
 }
 
 /**
@@ -163,6 +254,55 @@ export async function listTickets(status?: TicketStatus): Promise<Ticket[]> {
   const { data, error } = await query
   if (error) throw error
   return sortTicketsForQueue(data)
+}
+
+/**
+ * The requester's own list, with the hygiene rule applied.
+ *
+ * RLS has already narrowed this to tickets this session may see, so for a
+ * member that is their own submissions and nothing else. What this adds is the
+ * default view: settled longer than the window, or removed by hand, drops off.
+ * `showAll` returns everything of theirs, which is what the Show all toggle
+ * asks for; nothing is ever deleted or moved either way.
+ *
+ * The terminal time comes from the trail (terminalTransitionAtMs), fetched for
+ * every candidate ticket in ONE query rather than one per ticket.
+ */
+export async function listTicketsForRequester(
+  showAll = false,
+  nowMs = Date.now(),
+): Promise<{ tickets: Ticket[]; hiddenCount: number }> {
+  const { client } = await createOrgScopedClient()
+  const { data, error } = await client.from('tickets').select()
+  if (error) throw error
+
+  const settled = data.filter((t) => isTerminalTicketStatus(t.status))
+  const terminalAt = new Map<string, number | null>()
+  if (settled.length > 0) {
+    const { data: events, error: eventsError } = await client
+      .from('ticket_events')
+      .select('ticket_id, event_type, detail, occurred_at')
+      .in(
+        'ticket_id',
+        settled.map((t) => t.id),
+      )
+      .order('occurred_at', { ascending: true })
+    if (eventsError) throw eventsError
+    for (const ticket of settled) {
+      terminalAt.set(
+        ticket.id,
+        terminalTransitionAtMs(events.filter((e) => e.ticket_id === ticket.id)),
+      )
+    }
+  }
+
+  const visible = data.filter(
+    (t) => !isHiddenFromMemberList(t, terminalAt.get(t.id) ?? null, nowMs),
+  )
+  return {
+    tickets: sortTicketsForQueue(showAll ? data : visible),
+    hiddenCount: data.length - visible.length,
+  }
 }
 
 /** One ticket by id, or null when this session cannot see it. */
@@ -308,6 +448,7 @@ export async function listTicketsForIncident(
 export async function addTicketComment(
   ticketId: string,
   body: string,
+  isInternal = false,
 ): Promise<TicketComment | null> {
   const trimmed = body.trim()
   if (trimmed === '') {
@@ -321,16 +462,14 @@ export async function addTicketComment(
 
   const ticket = await getTicket(ticketId)
   if (!ticket) return null
-  if (ticket.status === 'closed') {
-    throw new TicketValidationError(
-      'This ticket is closed and does not take new comments.',
-    )
-  }
 
   const { client } = await createOrgScopedClient()
   const { userId } = await auth()
   if (!userId) throw new Error('No signed in user on this session.')
 
+  // is_internal true is admin only at the database (migration 019). Nothing
+  // here checks the role: a member posting is_internal by hand is refused by
+  // the insert policy, which is the only place that rule lives.
   const { data, error } = await client
     .from('ticket_comments')
     .insert({
@@ -338,10 +477,18 @@ export async function addTicketComment(
       ticket_id: ticket.id,
       author: userId,
       body: trimmed,
+      is_internal: isInternal,
     })
     .select()
     .single()
-  if (error) throw error
+  if (error) {
+    if (error.code === '42501') {
+      throw new TicketValidationError(
+        'Internal notes can only be added by an admin.',
+      )
+    }
+    throw error
+  }
   return data
 }
 
@@ -362,15 +509,71 @@ export async function updateTicketStatus(
     .eq('id', id)
     .select()
     .maybeSingle()
-  if (error) {
-    // The lifecycle trigger refuses any transition out of closed. Reaching
-    // this normally means a stale form raced the auto close sweep.
-    if (error.message.includes('closed tickets are final')) {
-      throw new TicketValidationError(
-        'This ticket is closed. Closed tickets keep their status.',
-      )
-    }
-    throw error
-  }
+  if (error) throw error
   return data
+}
+
+/**
+ * A requester's own lifecycle action: resolve, cancel, or reopen.
+ *
+ * Goes through member_set_ticket_status (migration 019) rather than an update,
+ * because members hold no update verb on tickets at all. The function is the
+ * authority on which transitions exist and on the reopen explanation; this
+ * wrapper only translates its refusals into something a form can show.
+ *
+ * Reopening writes the explanation as the member's own comment inside the same
+ * transaction, so a status change without its explanation cannot be produced
+ * by any sequence of calls from here.
+ */
+export async function memberSetTicketStatus(
+  ticketId: string,
+  status: TicketStatus,
+  explanation?: string,
+): Promise<void> {
+  const { client } = await createOrgScopedClient()
+  const { error } = await client.rpc('member_set_ticket_status', {
+    p_ticket_id: ticketId,
+    p_status: status,
+    // The generated argument type is optional rather than nullable, so an
+    // absent explanation is omitted rather than sent as null. The function
+    // defaults it either way.
+    ...(explanation ? { p_explanation: explanation } : {}),
+  })
+  if (!error) return
+
+  if (error.message.includes('needs an explanation')) {
+    throw new TicketValidationError(
+      'Tell your IT team what is still wrong, so they know where to pick it up.',
+    )
+  }
+  if (error.message.includes('too long')) {
+    throw new TicketValidationError('Keep that under 10,000 characters.')
+  }
+  if (error.message.includes('cannot move a ticket')) {
+    throw new TicketValidationError(
+      'That is no longer possible for this request. Refresh the page to see where it stands.',
+    )
+  }
+  if (error.message.includes('ticket not found')) {
+    throw new TicketValidationError('That request is no longer available.')
+  }
+  throw error
+}
+
+/** The requester removes their own settled ticket from their own list. */
+export async function memberHideTicket(ticketId: string): Promise<void> {
+  const { client } = await createOrgScopedClient()
+  const { error } = await client.rpc('member_hide_ticket', {
+    p_ticket_id: ticketId,
+  })
+  if (!error) return
+  if (
+    error.message.includes('can be removed from your list') ||
+    error.message.includes('ticket not found')
+  ) {
+    throw new TicketValidationError(
+      'Only a finished request can be removed from your list.',
+    )
+  }
+  throw error
 }

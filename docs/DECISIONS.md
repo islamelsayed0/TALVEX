@@ -6,6 +6,118 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-07-31 — The ticket lifecycle: closed is retired, and members get a write path that is not an update
+
+**Decided.** Migration 019 gives a requester real control over their own
+ticket. Statuses become `open`, `in_progress`, `resolved`, `canceled`.
+**`closed` is gone, and the 7 day auto close sweep that produced it is deleted.**
+This supersedes the Task 3 lifecycle ruling recorded in migration 005 and
+referenced by the 2026-07-27 external scheduler entry, which counted ticket
+auto closes among the things that tightened to a 5 minute cadence. There is
+nothing left to tighten; that step no longer exists.
+
+**Why closed could not stay.** Migration 005 made closed final: the lifecycle
+trigger raised on any transition out of it. The sweep closed every resolved
+ticket after 7 days. Put a Reopen button in front of a requester and those two
+facts collide: the button works for at most a week and then starts refusing,
+and the person is told their own request is final by a sweep they never saw and
+cannot appeal. Closed's real job, getting settled tickets out of the way, is
+done better by `hidden_by_requester` plus a 7 day window, because those hide
+without freezing. **`in_progress` stays**, against the first draft of this
+work, because it is genuine admin signal and live tickets use it; the terminal
+pair is `resolved` and `canceled`, and neither is locked for an admin.
+
+**Canceled is a withdrawal, not a failure**, and that reading shows up in three
+places: it wears the muted neutral rather than red, it sorts last rather than
+being hidden, and it is terminal for the requester. A problem coming back is a
+new ticket. The alternative, letting a member un cancel, was rejected because
+it makes withdrawal meaningless and gives the trail a second story about the
+same request.
+
+**The member write path is two SECURITY DEFINER functions, and this is the
+part worth reading.** The requirement was a state machine: open or in_progress
+to resolved, open or in_progress to canceled, resolved to open, nothing else.
+**RLS cannot express that.** An UPDATE policy evaluates `using` against the old
+row and `with check` against the new one, and neither clause can see the other,
+so the tightest expressible pair is the cross product of "old status is one of
+these" and "new status is one of those". That cross product permits resolved to
+canceled, which the ruling forbids, and it cannot tell a real transition from a
+no op.
+
+Reopening settles it beyond argument. The explanation must land as the member's
+comment **in the same action**, and two statements from a client are two
+statements: a caller can send the status change and never send the comment. No
+policy can require the second. One function in one transaction can.
+
+**What that buys, and it is more than convenience.** Members were granted
+nothing new on `public.tickets`: no update verb, no column. The migration 005
+admin only update policy is untouched and still refuses them. So "every other
+column is unreachable through the member path" is not an argument about
+predicates being tight enough, it is **the absence of a path**, and the
+isolation suite probes it directly by attempting title, status, and the hidden
+flag together and finding the row unchanged.
+
+**Internal notes are withheld at the database, never by a screen.**
+`ticket_comments.is_internal` is admin only to write (`with check` ties it to
+`is_org_admin`) and admin only to read (the member select policy excludes the
+rows outright). A member filtering for exactly the withheld rows still gets
+nothing, because this is a row filter and not a column mask. The requirement
+that there be **no member visible artifact** is asserted the awkward way, on
+the count and on the trail, so a placeholder or a gap would fail the test.
+
+**An internal note is not a reply.** `isAwaitingReply` skips it, and the digest
+query filters `is_internal = false` at the source because the sweep runs on the
+service role where RLS is not in the room. Both guards exist deliberately: an
+admin writing a note the requester cannot see has told them nothing, and
+counting it would drop the ticket out of the digest while the person who asked
+is still waiting. That is the same failure the 2026-07-30 digest ruling exists
+to prevent, applied to a new kind of entry.
+
+**The 7 day member window reads the trail, and gets no column.** Every
+transition is already recorded in `ticket_events` with its time, so a
+`settled_at` column would be a second copy of a fact that can drift from the
+first. `terminalTransitionAtMs` reads backwards and stops at the first terminal
+arrival, so a ticket resolved, reopened, and resolved again reports the latest
+settling, and a ticket whose last transition left a terminal state reports
+nothing because it is not settled now. **Admin lists are untouched by all of
+it**: every ticket, forever, plus the trail and the audit log. That is the
+permanent record and there is no second one.
+
+**Ticket transitions join the audit log**, narrowing the 2026-07-29 ruling that
+kept ticket activity in `ticket_events` and out of the org wide log. The reason
+that ruling gave no longer holds: a lifecycle transition is now something a
+member can do to a shared record, which is the shape of every other action
+already in the log. `ticket_canceled` and `ticket_reopened` get their own verbs
+because they are the two somebody will one day ask "who did that" about;
+everything else is `ticket_status_changed`. Detail carries the ticket id, the
+transition, and an actor kind, and **never a title, a comment, or a note**,
+asserted by a test that greps the serialized rows.
+
+**Two new SECURITY DEFINER advisories, answered rather than ignored.** The
+2026-07-30 entry below said that a fourth advisory would not be covered by it
+and would be investigated on its own terms. This is that investigation.
+`get_advisors` now reports five, and the two new ones are
+`member_set_ticket_status` and `member_hide_ticket`, which are the subject of
+this entry. Both are deliberate, both are the reason the feature is safe rather
+than a hole in it, and both were verified on the shared project rather than
+read off the file: `prosecdef = true`, `proconfig = search_path=""`, execute
+revoked from `public` and `anon` and granted to `authenticated`. Definer is not
+incidental here. It is what lets a member change a status while holding no
+update verb on the table, which is the whole posture. Revoking execute would
+remove the only write path a requester has; switching to invoker would make
+both functions no ops. The rule from that entry stands unchanged for a sixth.
+
+**Affects.** Anything that adds a status touches the member matrix in
+`member_set_ticket_status` and `MEMBER_TRANSITIONS`, and the two must agree or
+a screen offers a button the database refuses. Anything that replaces
+`tickets_write_event` copies the CURRENT body: this migration nearly dropped
+the `created_from_incident` and `created_from_chat` branches by rebuilding the
+function from migration 005's text, and the only thing that caught it was an
+existing isolation case. The `auto_closed` event type stays in the constraint
+because rows written by the old sweep are real history.
+
+---
+
 ## 2026-07-30 — Where the build differs from the BRD, written down before the close out
 
 **Decided.** Four places where what shipped is not what `docs/BRD.md` describes

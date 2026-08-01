@@ -604,3 +604,66 @@ deliberately. `tests/env-hygiene.test.ts` asserts that every variable the app
 needs is documented, which is the direction that matters for safety; it does
 not and cannot see a variable that exists only in Vercel, which is how this
 survived. Nothing reads it, so nothing breaks either way.
+
+---
+
+## 2026-07-31 — Migration 019 applied, retiring the closed ticket state
+
+Operator: Claude Code, under the ticket lifecycle task's explicit apply then
+merge instruction. Applied while the pull request was open and unmerged, on
+purpose, so main is never ahead of the database.
+
+**A dump was taken first**, per `docs/RUNBOOK.md` section 4: this migration
+drops a column (`tickets.closed_at`), which is the case the runbook names. The
+dump was written outside the repository and deleted after the apply, because it
+holds every tenant row.
+
+**Checked before applying.** Which statuses production actually held: 5 `open`
+and 2 `in_progress`, and **zero `closed`**. The closed to resolved data
+migration therefore moved no rows in this environment, though it is still the
+correct thing for any database that has them, and the local stack replays it
+from zero on every reset.
+
+**What ran.** `npx supabase db push --linked`, preceded by a `--dry-run` that
+listed exactly one pending migration.
+
+**State after, read back from the remote:**
+- 19 migration files, 19 ledger rows, versions matching. The drift guard stays
+  aligned.
+- `tickets_status_check` is now
+  `status in ('open', 'in_progress', 'resolved', 'canceled')`.
+- `tickets.closed_at` is gone; `tickets.hidden_by_requester` and
+  `ticket_comments.is_internal` are present.
+- Both member functions exist, `security definer`, `search_path` pinned empty,
+  execute revoked from `public` and `anon`.
+- All 7 tickets intact and unchanged: 5 open, 2 in_progress. Nothing was
+  deleted and no status was rewritten.
+
+**`get_advisors` now reports five SECURITY DEFINER warnings, up from three.**
+The two new ones are the member functions this migration adds. They are
+deliberate and are recorded in `docs/DECISIONS.md` under the 2026-07-31 entry,
+which is what the 2026-07-30 advisory entry required for anything beyond the
+original three. No other lint changed.
+
+**Not yet deployed, and the window was checked rather than assumed.** The
+application code that uses any of this ships with the pull request, so between
+this apply and that merge the OLD code is running against the NEW schema. Two
+things in it touch what changed:
+
+1. **The queue sort** reads `closed_at`, which no longer exists. PostgREST
+   simply stops returning the column, so the expression `t.closed_at ??
+   t.resolved_at ?? t.created_at` falls through to the next term. Visible only
+   as ordering among settled tickets on the admin queue.
+2. **The sweep still tries to write `status = 'closed'` every five minutes**,
+   which the new check constraint would refuse. It does not fire, because the
+   update is narrowed to tickets resolved more than 7 days ago and production
+   holds **zero resolved tickets**, so it matches no rows and no constraint is
+   evaluated. A ticket resolved during this window carries `resolved_at = now`
+   and cannot be 7 days old, so the window cannot open on its own. Confirmed
+   live after the apply: `step_failures` is 0, the heartbeat is fresh at 5
+   seconds, and `/api/health` returns 200.
+
+Had production held an old resolved ticket, that step would have failed every
+five minutes and posted to the operator channel until the merge. It did not,
+but the ordering to prefer in future is to land the code that stops writing a
+value before the migration that forbids it.
