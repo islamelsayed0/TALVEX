@@ -226,7 +226,12 @@ let notesUrl = ''
   check('the requester never sees the note text', !body.includes(NOTE_TEXT))
   check(
     'the requester never sees the note marker either',
-    !/\bInternal\b/.test(body),
+    // Case insensitive on purpose, and it was not always. The chip carries a
+    // `uppercase` class, and innerText returns text as rendered, so a case
+    // sensitive /\bInternal\b/ read "INTERNAL" and never matched. That made
+    // this assertion unfailable: it stayed green through a deliberately
+    // weakened select policy while the note itself was leaking one line above.
+    !/\binternal\b/i.test(body),
   )
   check(
     'no placeholder or gap betrays that something was withheld',
