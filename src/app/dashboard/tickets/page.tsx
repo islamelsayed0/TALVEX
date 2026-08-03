@@ -67,7 +67,7 @@ export default async function TicketsPage({
   const names = await resolveUserNames(tickets.map((t) => t.submitted_by))
 
   return (
-    <main className="mx-auto w-full max-w-[1360px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
+    <main id="main-content" className="mx-auto w-full max-w-[1360px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
       <div className="mb-[22px] flex flex-wrap items-end justify-between gap-5">
         <div>
           <h1 className="text-title text-foreground">Tickets</h1>
@@ -223,7 +223,7 @@ function MyRequests({
 }) {
   const openCount = counts.open + counts.inProgress
   return (
-    <main className="mx-auto w-full max-w-[720px] flex-1 animate-fade-up px-6 pt-[30px] pb-[72px]">
+    <main id="main-content" className="mx-auto w-full max-w-[720px] flex-1 animate-fade-up px-6 pt-[30px] pb-[72px]">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-title text-foreground">My requests</h1>

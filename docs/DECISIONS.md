@@ -6,6 +6,38 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-03 — The focus ring is a global rule that CSS cannot defend, so a test does
+
+**Decided.** One focus ring: `--focus-ring`, `--focus-ring-width` (2px),
+`--focus-ring-offset` (2px), applied through a single `:focus-visible` rule in
+the base layer. `outline-none` is banned from the codebase, and
+`tests/a11y-foundation.test.ts` fails if it reappears.
+
+**Why the ban rather than a stronger selector.** The layer order declared at the
+top of `globals.css` is `theme, base, clerk, components, utilities`. Tailwind's
+`outline-none` lands in `utilities`, which comes last, so it beats the base rule
+no matter how that rule is written. There is no selector that wins this. The
+rule genuinely cannot defend itself, so the only enforcement that holds is a
+test that reads the source. Six field classes carried `outline-none` before
+this, which is why most of the app had no visible focus at all.
+
+The same layer order bites twice: Clerk's injected styles sit in `clerk`, also
+after `base`, so the org switcher and user button had no ring either. That
+needed the rule restated in `components`, which does come after `clerk`. The
+keyboard pass is what found it, reporting two buttons at `outline: 0px none`;
+the axe scan had passed those same pages, because axe does not check that a
+focus indicator exists.
+
+**Decided alongside.** `:focus-visible` rather than `:focus`, so a mouse click
+does not leave a ring but a Tab does. A 2px offset, because putting page color
+between the element and the ring is what makes it legible on a dark UI.
+
+**Affects.** A component may restyle the ring. It may not remove it. Anything
+reaching for `outline-none` needs a different answer, and any styling layer
+added after `components` inherits the same trap.
+
+---
+
 ## 2026-08-03 — Status has a shape vocabulary, because color is not a channel we own
 
 **Decided.** Every status indicator is a shape as well as a color, and the five

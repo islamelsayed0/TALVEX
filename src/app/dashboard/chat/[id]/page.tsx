@@ -68,7 +68,7 @@ export default async function ConversationPage({
   }))
 
   return (
-    <main className="flex flex-1 flex-col gap-5 p-8">
+    <main id="main-content" className="flex flex-1 flex-col gap-5 p-8">
       <div>
         <Link href="/dashboard/chat" className="text-xs text-link hover:text-foreground">
           ← All conversations

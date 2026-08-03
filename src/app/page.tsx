@@ -106,6 +106,9 @@ export default function Home() {
           </div>
         </header>
 
+        {/* The landing page had no main landmark at all, so a screen reader
+            user had no way to jump past the nav to the content. */}
+        <main id="main-content">
         {/* 1. Hero */}
         <section
           id="top"
@@ -404,6 +407,8 @@ export default function Home() {
             </Show>
           </div>
         </section>
+        </div>
+        </main>
 
         {/* Footer. The wordmark, year, and legal links are shared with the
             legal and status pages; the repository link is the landing page's
@@ -422,7 +427,6 @@ export default function Home() {
               </a>
             }
           />
-        </div>
         </div>
       </div>
     </>

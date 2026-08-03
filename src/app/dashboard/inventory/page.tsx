@@ -49,7 +49,7 @@ export default async function InventoryPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-[1360px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
+    <main id="main-content" className="mx-auto w-full max-w-[1360px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
       <div className="mb-[22px] flex flex-wrap items-end justify-between gap-5">
         <div>
           <h1 className="text-title text-foreground">Inventory</h1>

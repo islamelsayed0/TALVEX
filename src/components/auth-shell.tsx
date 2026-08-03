@@ -9,7 +9,7 @@ export function AuthShell({
   width = 340,
 }: Readonly<{ children: React.ReactNode; width?: number }>) {
   return (
-    <main className="page-auth flex flex-1 items-center justify-center overflow-y-auto px-6 py-12">
+    <main id="main-content" className="page-auth flex flex-1 items-center justify-center overflow-y-auto px-6 py-12">
       <div
         className="relative z-10 flex max-w-full flex-col items-center text-center"
         style={{ width }}

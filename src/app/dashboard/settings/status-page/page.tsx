@@ -45,7 +45,7 @@ export default async function StatusPageSettings({
   const error = asString(sp.error)
 
   return (
-    <main className="mx-auto w-full max-w-[780px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
+    <main id="main-content" className="mx-auto w-full max-w-[780px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
       <div className="mb-[22px]">
         <h1 className="text-title text-foreground">Settings</h1>
         <p className="mt-1.5 text-[14px] text-quiet">

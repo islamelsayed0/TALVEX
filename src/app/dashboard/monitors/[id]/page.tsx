@@ -49,7 +49,7 @@ export default async function MonitorDetailPage({
   const intervalMinutes = Math.round(monitor.interval_seconds / 60)
 
   return (
-    <main className="flex flex-1 flex-col gap-6 p-8">
+    <main id="main-content" className="flex flex-1 flex-col gap-6 p-8">
       <div className="flex items-start justify-between gap-4">
         <div>
           <Link

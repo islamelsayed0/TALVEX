@@ -150,7 +150,7 @@ export default async function StatusPage({
 
   return (
     <>
-    <main className="mx-auto w-full max-w-[860px] flex-1 px-6 pt-16 pb-24">
+    <main id="main-content" className="mx-auto w-full max-w-[860px] flex-1 px-6 pt-16 pb-24">
       {/* Header */}
       <header className="flex flex-col gap-4 border-b border-border pb-8">
         <div className="flex flex-wrap items-center justify-between gap-3">

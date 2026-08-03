@@ -38,7 +38,7 @@ export default async function CreateTicketPage({
       : 'Tell us what is going on and the team takes it from there. Plain words are perfect.'
 
   return (
-    <main className="flex flex-1 flex-col items-center p-8">
+    <main id="main-content" className="flex flex-1 flex-col items-center p-8">
       <div className="flex w-full max-w-md flex-col gap-6 pt-6">
         <div>
           <Link

@@ -148,6 +148,17 @@ describe.each([['dark', darkTokens]] as const)('%s theme', (_theme, tokens) => {
     expect(contrast('ring', 'field-bg', tokens)).toBeGreaterThanOrEqual(3)
   })
 
+  // The global :focus-visible ring (accessibility pass) lands on every surface,
+  // not just fields, because one rule now covers the whole app. WCAG 1.4.11
+  // wants 3:1 for a non text indicator, and it has to hold wherever the ring is
+  // drawn, so all three backgrounds are checked rather than the field alone.
+  it.each(['background', 'card', 'field-bg'])(
+    'global focus ring is visible on --%s (3:1)',
+    (bg) => {
+      expect(contrast('focus-ring', bg, tokens)).toBeGreaterThanOrEqual(3)
+    },
+  )
+
   it('accent text stays AA on the accent tinted hover background', () => {
     // The create organization button tints its background on hover; the
     // label must stay readable in that state too.
