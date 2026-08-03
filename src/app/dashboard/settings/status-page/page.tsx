@@ -10,7 +10,7 @@ import { SettingsNav } from '../nav'
 import { saveStatusPageSettingsAction } from './actions'
 import { CopyLink } from './copy-link'
 
-export const metadata = { title: 'Settings — Talvex' }
+export const metadata = { title: 'Settings — Talvext' }
 
 /**
  * Status page settings (F9), admin only like the other settings surfaces. One

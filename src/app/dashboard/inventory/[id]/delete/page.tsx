@@ -7,7 +7,7 @@ import { getInventoryItem } from '@/lib/db/inventory'
 import { ghostButton, primaryButton } from '../../../monitors/ui'
 import { deleteInventoryItemAction } from '../../actions'
 
-export const metadata = { title: 'Delete inventory item — Talvex' }
+export const metadata = { title: 'Delete inventory item — Talvext' }
 
 /**
  * The plain confirmation for deletion, the monitors idiom: its own page,

@@ -13,7 +13,7 @@ import { ghostButton, primaryButton } from '../monitors/ui'
 import { ticketFieldClass } from '../tickets/ui'
 import { ArticleStatusBadge, AudienceChips } from './ui'
 
-export const metadata = { title: 'Documents — Talvex' }
+export const metadata = { title: 'Documents — Talvext' }
 
 const ROW = 'grid grid-cols-[minmax(0,1fr)_170px_minmax(0,220px)_110px] gap-3.5'
 

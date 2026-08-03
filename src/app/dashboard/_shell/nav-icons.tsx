@@ -4,7 +4,7 @@ import type { ComponentType, SVGProps } from 'react'
  * Nav icons, hand rolled inline SVGs in the repo's existing icon idiom (stroke,
  * 1.8 width, round caps, currentColor), keyed by route so the pure nav-items
  * data stays free of JSX. No icon dependency added; these match the settings
- * gear and the Ask Talvex mark already in the shell.
+ * gear and the Ask Talvext mark already in the shell.
  */
 type Icon = ComponentType<SVGProps<SVGSVGElement>>
 

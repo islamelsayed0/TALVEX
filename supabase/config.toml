@@ -1,4 +1,4 @@
-# Local Supabase stack for Talvex. It exists to run tests/isolation/ against
+# Local Supabase stack for Talvext. It exists to run tests/isolation/ against
 # real Postgres RLS (docs/DECISIONS.md, ephemeral stack entry), locally and in
 # CI. Only four services start: Postgres, Kong (API gateway), PostgREST, and
 # GoTrue (auth). Everything else is disabled on purpose. The tests mint their

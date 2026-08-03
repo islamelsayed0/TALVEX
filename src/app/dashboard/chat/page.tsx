@@ -7,7 +7,7 @@ import type { ChatConversationStatus } from '@/lib/db/types'
 import { formatUtc, primaryButton } from '../monitors/ui'
 import { DisclosureLine } from './ui'
 
-export const metadata = { title: 'Chat — Talvex' }
+export const metadata = { title: 'Chat — Talvext' }
 
 const STATUS_LABEL: Record<ChatConversationStatus, string> = {
   open: 'Open',

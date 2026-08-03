@@ -4,7 +4,7 @@ import type { ClerkProvider } from "@clerk/nextjs";
 type Appearance = ComponentProps<typeof ClerkProvider>["appearance"];
 
 /**
- * The Talvex visual language applied to every Clerk component through the
+ * The Talvext visual language applied to every Clerk component through the
  * appearance prop (docs/design/README.md). All color values are CSS custom
  * properties from globals.css, so Clerk follows the theme toggle for free.
  *

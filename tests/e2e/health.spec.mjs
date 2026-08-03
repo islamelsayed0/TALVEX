@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 
 /**
- * End to end checks for the two operations endpoints and the Talvex status
+ * End to end checks for the two operations endpoints and the Talvext status
  * page, written against the same hand run convention as the other specs in
  * this directory (there is no @playwright/test runner yet; CI's end to end job
  * is planned, see .github/workflows).
@@ -59,10 +59,10 @@ if (beat.stale) {
   )
 }
 
-// 3. The Talvex status page, once the self monitoring org exists.
+// 3. The Talvext status page, once the self monitoring org exists.
 if (process.env.SKIP_STATUS !== '1') {
   const status = await fetch(`${BASE_URL}/status/${TALVEX_SLUG}`)
-  assert.equal(status.status, 200, `the Talvex status page at /status/${TALVEX_SLUG} should render`)
+  assert.equal(status.status, 200, `the Talvext status page at /status/${TALVEX_SLUG} should render`)
   const html = await status.text()
   for (const path of ['/api/health', '/api/ops/heartbeat']) {
     assert.ok(

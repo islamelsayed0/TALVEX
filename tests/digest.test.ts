@@ -31,7 +31,7 @@ import {
  * nothing here touches a network or a database.
  */
 
-const BASE = 'https://talvex.example.com'
+const BASE = 'https://talvext.example.com'
 
 // ---------------------------------------------------------------------------
 // Helpers.
@@ -431,15 +431,15 @@ describe('digestSubject', () => {
         openIncidents: section([incident, incident]),
         awaitingReply: section([ticket, ticket, ticket]),
       }),
-    ).toBe('[Talvex] Your day: 2 incidents, 3 tickets waiting')
+    ).toBe('[Talvext] Your day: 2 incidents, 3 tickets waiting')
   })
 
   it('drops an absent section from the phrasing instead of saying zero', () => {
     expect(digestSubject({ ...EMPTY, openIncidents: section([incident]) })).toBe(
-      '[Talvex] Your day: 1 incident',
+      '[Talvext] Your day: 1 incident',
     )
     expect(digestSubject({ ...EMPTY, awaitingReply: section([ticket]) })).toBe(
-      '[Talvex] Your day: 1 ticket waiting',
+      '[Talvext] Your day: 1 ticket waiting',
     )
   })
 
@@ -450,13 +450,13 @@ describe('digestSubject', () => {
         newTickets: section([ticket, ticket]),
         lowStock: section([item]),
       }),
-    ).toBe('[Talvex] Your day: 2 new tickets, 1 item low on stock')
+    ).toBe('[Talvext] Your day: 2 new tickets, 1 item low on stock')
   })
 
   it('reports the true total of a capped section', () => {
     const many = Array.from({ length: 30 }, () => ticket)
     expect(digestSubject({ ...EMPTY, awaitingReply: digestSection(many) })).toBe(
-      '[Talvex] Your day: 30 tickets waiting',
+      '[Talvext] Your day: 30 tickets waiting',
     )
   })
 
@@ -467,6 +467,6 @@ describe('digestSubject', () => {
       newTickets: section([ticket]),
       lowStock: section([item]),
     })
-    expect(subject).toBe('[Talvex] Your day: 1 incident, 1 ticket waiting')
+    expect(subject).toBe('[Talvext] Your day: 1 incident, 1 ticket waiting')
   })
 })

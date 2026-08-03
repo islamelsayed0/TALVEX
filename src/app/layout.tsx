@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Talvex",
+  title: "Talvext",
   description:
     "All in one IT operations platform: monitoring, incidents, ticketing, and AI support.",
 };

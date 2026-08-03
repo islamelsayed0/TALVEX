@@ -1,5 +1,5 @@
 /**
- * The Talvex logo mark. PLACEHOLDER by design: an accent gradient tile with
+ * The Talvext logo mark. PLACEHOLDER by design: an accent gradient tile with
  * a three quarter ring, a quiet monitoring motif from the design handoff
  * (docs/design/README.md). When the real logo exists, swap the internals of
  * this component; every screen renders the mark through here.
