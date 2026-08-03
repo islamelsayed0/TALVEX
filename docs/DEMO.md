@@ -211,10 +211,13 @@ sixty seconds ago."
 **Notice.** The status page entry you produced in beat 6 is at the top with a
 timestamp from the last minute, and the AI key entry from prep is below it. Be
 precise about what is here and what is not: this log covers role changes, key
-changes, status page and notification settings, documents, and inventory.
-Incidents and tickets are not in it because they carry their own timelines. And
-it is append only in the database, enforced by a trigger, so no admin and not
-even the service role can rewrite it.
+changes, status page and notification settings, documents, inventory, and
+ticket lifecycle transitions. **Incidents** are not in it, because they carry
+their own timeline. Neither is anything anybody wrote: the log records that a
+ticket was canceled or reopened and who did it, never the comment or the
+internal note that went with it. And it is append only in the database,
+enforced by a trigger, so no admin and not even the service role can rewrite
+it.
 
 ### Beat 8 — What it costs (9:00 to 10:00)
 

@@ -6,6 +6,49 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-03 — A branch is cut from main and proved so, and a stray file in a diff stops the PR
+
+**Decided.** Two mechanical checks join the working conventions, both cheap,
+both aimed at the same failure:
+
+1. **A feature branch is cut from `main`, and `git log` immediately after
+   creation proves it.** Not assumed from where the working copy happened to
+   be standing.
+2. **A pull request whose file list contains anything outside its task stops
+   for a base check before it is opened.** An unexplained file in a diff is
+   treated as evidence the branch point is wrong, not as a stray to tidy later.
+
+**The case that produced them.** `docs/DEMO.md` reached main inside pull
+request #53, the ticket lifecycle. The lifecycle branch was created with
+`git switch -c` while the working copy was still on `docs/demo-script`, so it
+was cut from that branch rather than from main and carried the demo script
+along. The squash merge put both on main. The demo script was one of 21 files
+in that pull request and went unnoticed in the list.
+
+**Why that is worse than an untidy diff.** The demo script had an open pull
+request of its own, #52, awaiting review. Merging #53 landed it **without the
+review it was queued for**, which is the one process rule this repository has
+no exceptions to. #52 became an empty pull request whose content was already
+upstream, and nobody looking at either pull request would have seen why.
+
+It also shipped a false claim. `docs/DEMO.md` beat 7 instructed a presenter to
+say aloud that tickets are not in the audit log, which migration 019 had made
+untrue in the same merge. That was caught only because the next task began by
+checking whether #53 had invalidated anything in #52. Nothing mechanical would
+have caught it.
+
+**Why mechanical checks rather than more care.** The mistake is invisible at
+the moment it is made: `git switch -c` succeeds, the diff against the wrong
+base looks plausible, and every subsequent command behaves normally. Care does
+not catch a thing that produces no symptom. Two seconds of `git log` does.
+
+**Affects.** Every branch from here. The second check is the one that would
+have caught this one, because the file list was on screen and the demo script
+was in it. If a stray file ever turns out to be legitimate, that is an argument
+for splitting the pull request, not for waiving the check.
+
+---
+
 ## 2026-07-31 — The ticket lifecycle: closed is retired, and members get a write path that is not an update
 
 **Decided.** Migration 019 gives a requester real control over their own
