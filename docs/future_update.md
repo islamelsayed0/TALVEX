@@ -1,4 +1,4 @@
-# Talvex — Future Updates
+# Talvext — Future Updates
 
 A running list of enhancements we want but are deliberately not building yet,
 so the idea is captured without pulling scope into the current task. Newest on
@@ -126,8 +126,8 @@ the notifications feature it protects has settled.
 
 ## Assistant: gate the floating popup on entitlement once billing lands
 
-**Raised 2026-07-27** when the floating Talvex AI popup shipped for everyone. The
-popup (`src/app/dashboard/_shell/ask-talvex-widget.tsx`) reuses the BYOK chat, so
+**Raised 2026-07-27** when the floating Talvext AI popup shipped for everyone. The
+popup (`src/app/dashboard/_shell/ask-talvext-widget.tsx`) reuses the BYOK chat, so
 today it is effectively gated by the org having a provider key connected: no key,
 and it shows a "needs a key" state instead of taking input.
 
@@ -173,10 +173,10 @@ owner/technician ladder, docs below) is built.
 
 ---
 
-## Chat: let the assistant see the org's live Talvex data (tool use)
+## Chat: let the assistant see the org's live Talvext data (tool use)
 
 **What.** Today the support assistant is stateless about the tenant: it cannot
-see this org's monitors, incidents, tickets, devices, or any live Talvex data,
+see this org's monitors, incidents, tickets, devices, or any live Talvext data,
 and its system prompt makes it say so plainly and point the user to the right
 dashboard page or offer to escalate. The enhancement is to give the assistant
 read only tool access over the org's own data, scoped by the same RLS the app

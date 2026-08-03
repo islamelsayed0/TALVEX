@@ -1,4 +1,4 @@
-# How Talvex is built, and why
+# How Talvext is built, and why
 
 A technical read of the decisions that shaped this codebase. The diagram is in
 [ARCHITECTURE.md](ARCHITECTURE.md). Every ruling referenced here has a dated
@@ -9,7 +9,7 @@ declined.
 
 ## This is the third build, and it inherited its rules from the first two
 
-Talvex merges two projects I built before it: NetPulse, uptime monitoring in
+Talvext merges two projects I built before it: NetPulse, uptime monitoring in
 Next.js, and HelpMe Hub, a Django helpdesk. Both worked. The two strictest rules
 in this repository are each a scar from one of them.
 

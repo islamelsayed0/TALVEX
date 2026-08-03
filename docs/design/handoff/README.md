@@ -1,7 +1,7 @@
-# Handoff: Talvex IT Operations App (Dashboard + End-user Help)
+# Handoff: Talvext IT Operations App (Dashboard + End-user Help)
 
 ## Overview
-Talvex is an all-in-one IT operations platform (uptime monitoring, incidents, tickets, AI support chat) used by small offices, solo IT people, MSPs and consultants.
+Talvext is an all-in-one IT operations platform (uptime monitoring, incidents, tickets, AI support chat) used by small offices, solo IT people, MSPs and consultants.
 
 This handoff covers **two personas in one product**:
 
@@ -13,7 +13,7 @@ The core design goal of the admin Overview: **in five seconds the IT person shou
 ## About the Design Files
 The files in this bundle are **design references created in HTML** — prototypes showing intended look and behavior. **They are not production code to copy directly.**
 
-The task is to **recreate these designs in the Talvex codebase's existing environment** (Next.js App Router + TypeScript + Tailwind + shadcn/ui + Clerk + Supabase), using its established patterns. Do not port the inline styles or the prototype's component runtime.
+The task is to **recreate these designs in the Talvext codebase's existing environment** (Next.js App Router + TypeScript + Tailwind + shadcn/ui + Clerk + Supabase), using its established patterns. Do not port the inline styles or the prototype's component runtime.
 
 The prototypes are single-file HTML components with inline styles and a small logic class. They exist to communicate layout, hierarchy, copy, states and behavior — nothing more.
 
@@ -135,7 +135,7 @@ padding: 1.2–1.3px;
 ### Header (admin only)
 Full-width bar, `padding: 14px 22px`, `border-bottom: 1px solid rgba(255,255,255,.09)`. Three groups, `justify-content: space-between`:
 
-**Left** — `Talvex` wordmark (600 20px). *No logo mark* — it was deliberately removed.
+**Left** — `Talvext` wordmark (600 20px). *No logo mark* — it was deliberately removed.
 
 **Center** — glass nav pill: `display: flex`, `gap: 2px`, `padding: 4px`, `border-radius: 999px`, glass recipe + gradient edge. Items: **Overview · Monitors · Incidents · Tickets · Help**. Each `padding: 7px 15px`, `border-radius: 999px`, 500 13.5px. Active item: `background: rgba(255,255,255,.08)`, `box-shadow: inset 0 1px 1px rgba(255,255,255,.12)`, `color: #f6f4f0`. Inactive: `#a7a39c`, hover → `rgba(255,255,255,.05)` + `#f6f4f0`.
 
@@ -149,7 +149,7 @@ Full-width bar, `padding: 14px 22px`, `border-bottom: 1px solid rgba(255,255,255
 Header must not wrap or overlap down to ~924px: left/right groups `flex: none`, nav `white-space: nowrap`, org name `text-overflow: ellipsis`.
 
 ### Floating AI pill (admin, all screens except Help)
-`position: fixed; right: 26px; bottom: 26px; z-index: 60`. Accent-glass pill reading **Ask Talvex**. Opens the Help/chat experience.
+`position: fixed; right: 26px; bottom: 26px; z-index: 60`. Accent-glass pill reading **Ask Talvext**. Opens the Help/chat experience.
 
 ### Back-to-dashboard (admin viewing Help)
 `position: fixed; left: 22px; bottom: 22px; z-index: 70`. Pill, chevron-left + **Back to dashboard**, `background: rgba(20,18,16,.82)` + blur, `border: 1px solid rgba(255,255,255,.16)`.
@@ -260,7 +260,7 @@ Tone throughout: calm, plain English, reassuring. This persona does not know wha
 
 - **Nav** switches screens and scrolls to top. Active state is driven by current route.
 - **Gear** → Settings; active state reflected in its background.
-- **AI button / floating "Ask Talvex" pill** → AI chat.
+- **AI button / floating "Ask Talvext" pill** → AI chat.
 - **Admin → Help**: the `Help` nav item renders the end-user experience inside the admin shell, with a fixed **Back to dashboard** button. Implement as a route (`/dashboard/help`), not a modal.
 - **Incident actions**: `Assign to me` (assign to current user, becomes owner display), `Acknowledge` (records ack), `Notify` (sends to team, becomes static `Team notified`).
 - **Hover**: `.16s ease` on background/color for all interactive elements. Icon buttons `rgba(255,255,255,.05) → .09`. Accent glass `rgba(61,139,255,.09) → .16`.

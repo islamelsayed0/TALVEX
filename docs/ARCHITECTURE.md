@@ -1,4 +1,4 @@
-# Talvex architecture
+# Talvext architecture
 
 One page. The narrative that explains why it is shaped this way is in
 [WRITEUP.md](WRITEUP.md); the rulings behind each choice are in
@@ -10,7 +10,7 @@ flowchart LR
     Visitor["Anonymous visitor"]
     Clerk["Clerk<br/>sessions, organizations, roles"]
 
-    subgraph App["Talvex, one Next.js app on Vercel"]
+    subgraph App["Talvext, one Next.js app on Vercel"]
         Screens["Server components<br/>and server actions"]
         Hook["/api/webhooks/clerk<br/>signature verified"]
         Status["/status/:slug<br/>public, cached, limited in the proxy"]
@@ -74,7 +74,7 @@ scheduler presents a bearer token every five minutes and the route fails closed
 without it. The sweep checks whichever monitors are due, decides incidents,
 sends alerts, and stamps the heartbeat row.
 
-**The watcher is deliberately outside the box.** Talvex also monitors Talvex,
+**The watcher is deliberately outside the box.** Talvext also monitors Talvext,
 but those monitors are checked by the same sweep whose health is in question, so
 they freeze on green when it dies. The GitHub workflow is the only thing in this
 diagram that can observe the sweep's death, because it is the only thing that

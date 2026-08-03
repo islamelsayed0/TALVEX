@@ -4,7 +4,7 @@ import { PRIVACY } from '../_content/privacy'
 import { DocumentPage } from '../ui'
 
 export const metadata = {
-  title: `${PRIVACY.title} — Talvex`,
+  title: `${PRIVACY.title} — Talvext`,
   description: PRIVACY.description,
 }
 

@@ -1,9 +1,9 @@
-# Talvex
+# Talvext
 
 **Live: https://talvex-chi.vercel.app** · [Architecture](docs/ARCHITECTURE.md) · [Technical write up](docs/WRITEUP.md) · [Decisions](docs/DECISIONS.md) · [Runbook](docs/RUNBOOK.md) · [Requirements](docs/BRD.md)
 
 When a small office's booking system goes down, the people who notice are the
-staff, and the person who has to fix it usually finds out last. Talvex closes
+staff, and the person who has to fix it usually finds out last. Talvext closes
 that gap: it watches the systems, opens the incident itself, tells the right
 human by email and Discord, answers the staff questions it can answer from the
 office's own written documents, and turns the rest into tickets. One
@@ -72,7 +72,7 @@ whether that stamp is fresh, and a scheduled GitHub workflow polls that
 endpoint every thirty minutes from outside the deployment, because the sweep
 cannot report its own death.
 
-Talvex also monitors Talvex and publishes a status page at
+Talvext also monitors Talvext and publishes a status page at
 [`/status/talvex`](https://talvex-chi.vercel.app/status/talvex). That catches a
 dead deployment or a dead database. It **cannot** catch a dead sweep, because
 its own monitors are checked by that sweep; the GitHub workflow is what catches
@@ -259,7 +259,7 @@ variables and are documented in each file's header.
 This repository was built with Claude Code under a propose and approve
 workflow: the model proposed a plan and a diff, a human read it and either
 approved, corrected, or rejected it, and the work landed as a small pull request
-that CI had to pass. Talvex is the third build in a line, and its two strictest
+that CI had to pass. Talvext is the third build in a line, and its two strictest
 rules are each inherited from a predecessor's failure: NetPulse trusted
 application code to keep tenants apart, which is why isolation here lives in the
 database, and HelpMe Hub leaked a secret into git history, which is why secret

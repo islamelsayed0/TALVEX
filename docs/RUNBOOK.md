@@ -1,4 +1,4 @@
-# Talvex operations runbook
+# Talvext operations runbook
 
 The things a human owns. Everything else in this repository runs itself; what
 is written here either cannot be automated or should not be.
@@ -29,7 +29,7 @@ Nothing noticed, because at the time nothing watched it.
 |---|---|---|
 | Dashboard banner (admin, every page) | A stale sweep, whenever an admin looks | Anything while nobody is looking |
 | `.github/workflows/heartbeat.yml`, every 30 min | A stale sweep, a dead deployment, a dead database | Nothing, within its ~45 minute resolution |
-| Talvex monitoring itself (below) | A dead deployment or database, while the sweep is alive | **A dead sweep.** Its own monitors are checked by that same sweep |
+| Talvext monitoring itself (below) | A dead deployment or database, while the sweep is alive | **A dead sweep.** Its own monitors are checked by that same sweep |
 
 Read that last row twice before trusting self monitoring as a safety net. It is
 a credibility and demo feature. The GitHub workflow is the actual watcher.
@@ -56,7 +56,7 @@ records as permanently down, and with it, every check would trigger a sweep.
 
 ---
 
-## 2. Talvex monitors Talvex (BRD S5)
+## 2. Talvext monitors Talvext (BRD S5)
 
 The platform monitors itself and publishes its own status page. This is both a
 credibility feature and the permanent demo the BRD asks for.
@@ -72,18 +72,23 @@ tenant rows is a capability worth not having.
 
 **Setup, about two minutes, once:**
 
-1. Create an organization named `Talvex` in Clerk, signed in as the operator.
+1. Create an organization named `Talvext` in Clerk, signed in as the operator.
 2. Confirm the sync landed: Clerk, Webhooks, Message Attempts should show a
    200 for `organization.created`. If `org_members` stays empty, the
    membership event is not subscribed; see `docs/DEPLOY_LOG.md`, which records
    this exact failure happening once already.
-3. In Talvex, switch to that org and add three monitors at a 300 second
+3. In Talvext, switch to that org and add three monitors at a 300 second
    interval:
    - `https://talvex-chi.vercel.app/` — the deployment serves.
    - `https://talvex-chi.vercel.app/api/health` — the runtime reaches Postgres.
    - `https://talvex-chi.vercel.app/api/ops/heartbeat` — the endpoint the
      external watcher depends on is itself serving.
-4. Settings, Status page: enable it with the slug `talvex`.
+4. Settings, Status page: enable it with the slug `talvext`. The org created
+   before the 2026-08-03 rename still carries the slug `talvex`; changing it
+   to `talvext` is a manual step (Settings, Status page), and the same pull
+   request that follows it should update the `TALVEX_SLUG` default in
+   `tests/e2e/health.spec.mjs`, or the verify command below starts checking a
+   slug nobody serves.
 5. Settings, Notifications: set the notification email, so the platform's own
    incidents go somewhere. Enabling the daily digest here is reasonable too.
 
@@ -93,7 +98,7 @@ tenant rows is a capability worth not having.
 
 **Self monitoring cannot detect a dead sweep.** The three monitors above are
 checked by the same sweep whose health is in question, so when it stops, they
-stop being checked and the Talvex status page freezes showing whatever it last
+stop being checked and the Talvext status page freezes showing whatever it last
 saw, which is usually all green. It will look reassuring at precisely the
 moment it should not.
 
@@ -103,7 +108,7 @@ database. That is worth having. It is not a watcher, and it does not replace
 covering what section 1 covers.
 
 **Note the circularity, and accept it deliberately:** the sweep is now checking
-Talvex from Talvex, so a total outage takes both the checker and the checked
+Talvext from Talvext, so a total outage takes both the checker and the checked
 with it. That is inherent to self monitoring anywhere, and it is the reason the
 external watcher in section 1 is not optional.
 
@@ -111,7 +116,7 @@ external watcher in section 1 is not optional.
 
 ## 3. The operator error channel
 
-`OPS_DISCORD_WEBHOOK` receives Talvex's own platform failures. It is not, and
+`OPS_DISCORD_WEBHOOK` receives Talvext's own platform failures. It is not, and
 must never be, any customer's webhook from notification settings.
 
 **Setup:** create a channel in your own Discord server, create a channel
@@ -180,7 +185,7 @@ npm run db:reset                    # put the local stack back to migration stat
 
 **Expect seven errors on the data step**, all of the form
 `relation "storage.<table>" does not exist`. The local stack does not run the
-Storage service and Talvex stores no files, so those tables are empty and their
+Storage service and Talvext stores no files, so those tables are empty and their
 absence is harmless. Any error naming a `public.` table is real and must be
 investigated.
 
@@ -243,7 +248,7 @@ Finishing it is a dashboard task, tracked in `docs/DEPLOY_LOG.md`.
 
 ## 7. The domain, and the Clerk production instance
 
-**Status: not done.** Talvex runs on `talvex-chi.vercel.app` with Clerk
+**Status: not done.** Talvext runs on `talvex-chi.vercel.app` with Clerk
 **development** keys. This section is the sequence that changes that. Every
 step here is yours: it involves a purchase, DNS, and three dashboards, and
 none of it can or should be automated.
@@ -260,15 +265,18 @@ artifact BRD C5 asks for.
 **Do the steps in order.** Several of them are gated on DNS propagating, and
 step 5 has a failure mode that looks like a bug somewhere else entirely.
 
-### 1. Choose the domain, before buying anything
+### 1. The domain is chosen: talvext.com
 
-`talvex.com` is taken. The candidates are `talvex.app` and `talvex.io`, at
-roughly 12 dollars a year, which BRD section 9.1 already budgets.
+`talvext.com` was purchased on 2026-08-03 at standard price, within the budget
+BRD section 9.1 set. The purchase followed the product rename recorded in
+`docs/DECISIONS.md` (2026-08-03): the Talvex domain space was economically
+closed, so the name moved and the domain came with it.
 
-Choose deliberately, because the name gets baked into `clerk.<domain>` and
-`accounts.<domain>` DNS records, into a Google OAuth client, into a Clerk
+The choice matters this much because the name gets baked into `clerk.<domain>`
+and `accounts.<domain>` DNS records, into a Google OAuth client, into a Clerk
 webhook endpoint, and into the records below. Changing it later is this whole
-section again.
+section again, which is exactly what the naming rule in the decision log
+exists to prevent happening a fourth time.
 
 ### 2. Vercel: attach the domain
 
@@ -285,7 +293,7 @@ Vercel, project **talvex**, Settings, Domains, Add.
 Vercel issues the TLS certificate itself once DNS resolves. Expect minutes,
 occasionally hours.
 
-Decide now whether the canonical host is the apex (`talvex.app`) or `www`, and
+Decide now whether the canonical host is the apex (`talvext.com`) or `www`, and
 set the other to redirect. Whichever you choose is the one that goes in every
 record in the table at the end of this section.
 
@@ -320,7 +328,7 @@ why the consent screen currently says `accounts.dev`. A production instance
 may not use them. This is queued item 3 in `docs/DEPLOY_LOG.md`, which was
 optional when it was written and is not any more.
 
-1. Google Cloud Console, create or select a project for Talvex.
+1. Google Cloud Console, create or select a project for Talvext.
 2. APIs and Services, OAuth consent screen. External user type. App name,
    support email, developer contact.
 3. Credentials, Create Credentials, OAuth client ID, Web application.
@@ -454,6 +462,6 @@ what stops the watcher quietly pointing at a hostname nobody serves any more.
 `docs/DECISIONS.md`, `docs/PHASE_0_PLAN.md`, and `docs/BRD.md`.
 
 **That pull request also carries the decision log entry**, superseding the
-2026-07-22 ruling that Talvex ships on a development instance, plus a deploy
+2026-07-22 ruling that Talvext ships on a development instance, plus a deploy
 log entry recording what actually happened and anything that surprised you.
 Neither is written in advance: this log records decisions taken, not planned.

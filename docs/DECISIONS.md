@@ -1,8 +1,37 @@
-# Talvex — Decision Log
+# Talvext — Decision Log
 
 Architectural and process decisions, newest on top. Each entry records what
 was decided, why, and what it affects. Add an entry when a choice constrains
 future work; do not log routine implementation details.
+
+---
+
+## 2026-08-03 — Renamed to Talvext, and the naming rule that makes it the last rename
+
+**Decided.** The product is named Talvext, the third and final name after
+Telvix and Talvex. Every user facing surface renames in one coordinated pass:
+code and copy first, then docs and legal pages with a word level diff proof,
+then screenshots retaken from the live app. Records stay as written: git
+history, closed PR titles, dated entries in this log and in
+`docs/DEPLOY_LOG.md`, database identifiers, migration filenames, and env var
+names.
+
+**Why.** The Talvex domain space was economically closed and increasingly
+crowded: `talvex.com` is held by an unrelated Swiss firm, a UK company named
+Talvex Limited was newly registered, and Talvix, an active AI software
+company, sits one letter away. Talvext verified collision clean in software,
+and `talvext.com` was purchased at standard price on 2026-08-03.
+
+**The naming rule, so there is no fourth rename.** Availability and collision
+checks precede attachment to any name. A name is not adopted until its domain
+is confirmed purchasable at standard price and a search shows no active
+software company within trivial edit distance.
+
+**Affects.** The BRD keeps the name Talvex and carries one preface line noting
+the rename; it is the founding record. The Resend sending domain stays on
+`islamelsayed.net` until email on the new domain is its own decision; only the
+display name and subject prefix changed. The self monitoring org's status page
+slug moves to `talvext` as a manual step recorded in `docs/RUNBOOK.md`.
 
 ---
 
