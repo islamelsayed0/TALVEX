@@ -27,6 +27,16 @@ describe('protected routes', () => {
     expect(isProtectedPath('/sign-up/verify-email-address')).toBe(false)
   })
 
+  it('leaves the legal pages open to signed out visitors', () => {
+    // The sign in screen links to the terms and the privacy policy, so a
+    // visitor has to be able to read what they are agreeing to before they
+    // have an account. Protecting either one would be circular. See the
+    // browsewrap entry in docs/DECISIONS.md.
+    expect(isProtectedPath('/terms')).toBe(false)
+    expect(isProtectedPath('/privacy')).toBe(false)
+    expect(isProtectedPath('/accessibility')).toBe(false)
+  })
+
   it('does not protect paths that merely start with the same characters', () => {
     // A naive startsWith('/dashboard') would wrongly catch these.
     expect(isProtectedPath('/dashboards')).toBe(false)

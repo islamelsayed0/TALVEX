@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { cache } from 'react'
 
+import { SiteFooter } from '@/components/site-footer'
 import { getStatusPage, type PublicStatusIncident } from '@/lib/db/status-page'
 import {
   aggregateUptime,
@@ -112,6 +113,7 @@ export default async function StatusPage({
   const monitorName = new Map(page.monitors.map((m) => [m.id, m.name]))
 
   return (
+    <>
     <main className="mx-auto w-full max-w-[860px] flex-1 px-6 pt-16 pb-24">
       {/* Header */}
       <header className="flex flex-col gap-4 border-b border-border pb-8">
@@ -228,9 +230,13 @@ export default async function StatusPage({
         )}
       </section>
 
-      <footer className="mt-14 border-t border-border pt-6 text-center text-[12px] text-quiet">
+      <p className="mt-14 border-t border-border pt-6 text-center text-[12px] text-quiet">
         Status by Talvex
-      </footer>
+      </p>
     </main>
+    {/* The shared public footer, so a visitor who only ever sees a tenant's
+        status page can still reach the Talvex legal pages. */}
+    <SiteFooter />
+    </>
   )
 }
