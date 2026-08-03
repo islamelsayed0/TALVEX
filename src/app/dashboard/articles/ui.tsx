@@ -1,3 +1,4 @@
+import { StatusText, type StatusTone } from '@/components/status-mark'
 import type { Article, ArticleStatus } from '@/lib/db/types'
 
 import { ghostButton, primaryButton } from '../monitors/ui'
@@ -14,24 +15,19 @@ export const ARTICLE_STATUS_LABEL: Record<ArticleStatus, string> = {
   published: 'Published',
 }
 
-const STATUS_TEXT: Record<ArticleStatus, string> = {
-  draft: 'text-status-pending',
-  published: 'text-status-up',
-}
-
-const STATUS_DOT: Record<ArticleStatus, string> = {
-  draft: 'bg-status-pending',
-  published: 'bg-status-up',
+/** Draft is waiting (ring), published is live (circle). */
+const STATUS_TONE: Record<ArticleStatus, StatusTone> = {
+  draft: 'pending',
+  published: 'up',
 }
 
 export function ArticleStatusBadge({ status }: { status: ArticleStatus }) {
   return (
-    <span
-      className={`inline-flex items-center gap-2 text-sm font-medium ${STATUS_TEXT[status]}`}
-    >
-      <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} aria-hidden />
-      {ARTICLE_STATUS_LABEL[status]}
-    </span>
+    <StatusText
+      tone={STATUS_TONE[status]}
+      label={ARTICLE_STATUS_LABEL[status]}
+      size={8}
+    />
   )
 }
 

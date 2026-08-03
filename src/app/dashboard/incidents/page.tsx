@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { StatusMark } from '@/components/status-mark'
 import { requireAdmin } from '@/lib/auth/org-viewer'
 import { listIncidents, type IncidentListItem } from '@/lib/db/incidents'
 
@@ -119,10 +120,9 @@ function ResolvedRow({ r }: { r: IncidentListItem }) {
     : 0
   return (
     <div className="flex items-center gap-3.5 border-t border-divider px-[22px] py-3.5 first:border-t-0">
-      <span
-        className="h-[9px] w-[9px] flex-none rounded-full bg-status-up"
-        aria-hidden
-      />
+      {/* Bare mark on purpose: this row lives under the "Resolved this week"
+          heading, so the state is already in words above it. */}
+      <StatusMark tone="up" size={9} />
       <div className="min-w-0 flex-1">
         <div className="text-sm font-medium text-foreground">{r.monitorName}</div>
         {r.reopenCount > 0 ? (
