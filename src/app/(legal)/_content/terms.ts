@@ -17,10 +17,11 @@ import type { LegalDocument } from '@/lib/legal/documents'
  * The no hyphen house rule does not reach this string. Legal prose is not
  * reworded to satisfy a style guide.
  *
- * THE DRAFT NOTICE IS DELIBERATE. The document declares itself unreviewed by
- * an attorney and it renders on the public page as written. Removing it would
- * present an unreviewed draft as a settled agreement. It comes out when a
- * lawyer has actually read this, and not before. See docs/DECISIONS.md.
+ * THE TRANSPARENCY NOTE IS DELIBERATE. The document states that it has not yet
+ * been reviewed by an attorney, and that renders on the public page as written.
+ * Removing it would present an unreviewed agreement as a settled one. It comes
+ * out when a lawyer has actually read this, and not before, at which point the
+ * effective date changes too. See docs/DECISIONS.md.
  */
 export const TERMS: LegalDocument = {
   title: 'Talvex Terms of Service',
@@ -29,7 +30,7 @@ export const TERMS: LegalDocument = {
 
 **Last updated:** August 3, 2026
 
-> **DRAFT FOR ATTORNEY REVIEW. This template was prepared with AI assistance and is not legal advice. Have a licensed attorney review it before publishing or accepting paying customers, especially medical or dental practices.**
+> **Transparency note:** These terms were prepared with AI assistance and have not yet been reviewed by an attorney. They are the agreement that governs use of the Service while it is free, and they will be updated when professional review is complete.
 
 These Terms of Service (the "Terms") are a binding agreement between you and Islam Elsayed, doing business as Talvex ("Talvex," "we," "us," or "our") governing your access to and use of the Talvex platform, including uptime monitoring, incident management, ticketing, AI assisted support chat, status pages, and related services (collectively, the "Service").
 

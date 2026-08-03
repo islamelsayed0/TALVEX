@@ -76,14 +76,16 @@ try {
       'This statement was last reviewed on August 3, 2026.',
     ],
     '/terms': [
-      'DRAFT FOR ATTORNEY REVIEW',
+      'Transparency note:',
+      'have not yet been reviewed by an attorney',
       'Effective date:',
       '7. Prohibited Data; No PHI Without a BAA',
       'ONE HUNDRED US DOLLARS ($100)',
       'the laws of the State of New York',
     ],
     '/privacy': [
-      'DRAFT FOR ATTORNEY REVIEW',
+      'Transparency note:',
+      'has not yet been reviewed by an attorney',
       '1. Information We Collect',
       'we do not use your content to train AI models',
       'Islam Elsayed, doing business as Talvex',

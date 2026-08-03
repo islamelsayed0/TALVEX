@@ -22,10 +22,11 @@ import {
  * empty; pasting a new draft that carries blanks fails this suite rather than
  * shipping quietly.
  *
- * The attorney review notice: both drafted documents declare themselves
- * unreviewed, and that notice renders on the public page. Deleting it is a
- * decision for whoever has actually had a lawyer read these, so the test
- * refuses to let it disappear as a side effect of an edit.
+ * The transparency note: both documents disclose that they have not yet been
+ * reviewed by an attorney, and that note renders on the public page. Deleting
+ * it is a decision for whoever has actually had a lawyer read these, so the
+ * test refuses to let it disappear as a side effect of an edit, and checks the
+ * admission rather than just the label.
  */
 
 const DOCUMENTS: Array<[string, LegalDocument]> = [
@@ -72,13 +73,17 @@ describe('legal documents', () => {
     )
   })
 
-  it('keeps the attorney review notice on both drafted documents', () => {
+  it('keeps the transparency note on both drafted documents', () => {
     for (const doc of [TERMS, PRIVACY]) {
       const quote = documentBlocks(doc).find((b) => b.kind === 'blockquote')
-      expect(quote, `${doc.title} has the notice as a blockquote`).toBeDefined()
-      expect(markdownPlainText([quote!])).toContain(
-        'DRAFT FOR ATTORNEY REVIEW',
-      )
+      expect(quote, `${doc.title} has the note as a blockquote`).toBeDefined()
+      const text = markdownPlainText([quote!])
+      expect(text).toContain('Transparency note:')
+      // The disclosure itself, not just the label. A note that kept the
+      // heading and lost the admission would pass a looser check. The two
+      // documents differ only in agreement: terms "have", policy "has".
+      expect(text).toMatch(/ha(ve|s) not yet been reviewed by an attorney/)
+      expect(text).toContain('prepared with AI assistance')
     }
   })
 

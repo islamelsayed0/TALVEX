@@ -6,38 +6,47 @@ future work; do not log routine implementation details.
 
 ---
 
-## 2026-08-03 — The attorney review notice ships on the public legal pages
+## 2026-08-03 — The unreviewed status is disclosed on the public legal pages
 
-**Decided.** The terms of service and the privacy policy both open with the
-notice they were drafted with, rendered as a callout at the top of the public
-page:
+**Decided.** The terms of service and the privacy policy both open with a
+transparency note, rendered as a callout at the top of the public page:
 
-> **DRAFT FOR ATTORNEY REVIEW. This template was prepared with AI assistance
-> and is not legal advice.**
+> **Transparency note:** These terms were prepared with AI assistance and have
+> not yet been reviewed by an attorney. They are the agreement that governs use
+> of the Service while it is free, and they will be updated when professional
+> review is complete.
 
 It is not stripped on the way to production. It comes out when a licensed
 attorney has actually reviewed these documents, and not before.
-`tests/legal-pages.test.ts` fails if it disappears.
+`tests/legal-pages.test.ts` fails if it disappears, and checks the admission
+itself rather than the label, so a note that kept the heading and lost the
+sentence would not pass.
 
-**Why.** The documents say what they are. Publishing them with that sentence
-deleted would present an unreviewed AI drafted template as a settled agreement,
+**Why.** The documents say what they are. Publishing them with that disclosure
+deleted would present an unreviewed AI drafted agreement as a settled one,
 which is a misrepresentation to every visitor who reads them, and it would also
-remove the only reminder that the review still has to happen. Nothing about
+remove the only standing reminder that the review has to happen. Nothing about
 Talvex today needs the pretence: the product is free, there are no paying
-customers, and the terms themselves make the review a precondition of taking
-payment.
+customers, and the terms make the review a precondition of taking payment.
 
-The cost is that a visitor sees the word DRAFT on the terms page. That is the
-accurate state of the document, and a portfolio project is a poor place to
-practise hiding one.
+**The wording was chosen, and the first attempt was wrong.** The documents
+arrived carrying a drafting instruction: "DRAFT FOR ATTORNEY REVIEW. This
+template was prepared with AI assistance and is not legal advice. Have a
+licensed attorney review it before publishing." That was published as written,
+which was the wrong call in one respect. It was addressed to the person
+building the site, not to the reader, and it told visitors the agreement
+governing them was a draft, which is not accurate: these terms do govern use of
+the free Service today. The replacement discloses exactly the same fact, that no
+attorney has reviewed this, in language written for the person reading it. The
+honesty is the requirement; the phrasing was not.
 
-**Affects.** Deleting the notice is a deliberate act gated on real legal
-review, not a cleanup. It pairs with the browsewrap entry below: both the
-notice and the missing clickwrap come off the board at the same moment, when
-there is money involved. The terms also name New York law, a HIPAA position,
-and a liability cap, none of which have been reviewed by anyone qualified;
-signing a customer, especially a dental or medical practice, is blocked on that
-review.
+**Affects.** Deleting the note is a deliberate act gated on real legal review,
+not a cleanup, and the effective date changes when it goes. It pairs with the
+browsewrap entry below: the note and the missing clickwrap come off the board
+at the same moment, when there is money involved. The terms also name New York
+law, a HIPAA position, and a liability cap, none of which have been reviewed by
+anyone qualified; signing a customer, especially a dental or medical practice,
+is blocked on that review.
 
 ---
 
