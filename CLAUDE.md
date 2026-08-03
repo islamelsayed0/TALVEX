@@ -66,6 +66,15 @@ rules are what keep that sentence true, so they are not style preferences.
     push directly to main.
 14. When a task is ambiguous, check docs/BRD.md first, then ask, in that
     order. Do not invent requirements.
+15. **A CSS change is not verified until `npm run build` has run.** `tsc` and
+    `eslint` parse no CSS at all, so a malformed rule or an unterminated
+    comment passes both and then 500s every route. Green from those two is not
+    green when a stylesheet was touched.
+16. **A keyboard pass is a standing part of accessibility verification, not an
+    extra.** axe does not check whether a focus indicator exists, so a control
+    with no visible focus passes the gate. Tab through the change and look.
+    That is what caught the Clerk org switcher rendering at
+    `outline: 0px none` on pages axe had already passed.
 
 ## Writing style for user facing copy
 Professional, human, short sentences. No robotic filler. No hyphens in any
