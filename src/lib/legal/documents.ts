@@ -45,7 +45,21 @@ export function findPlaceholders(source: string): string[] {
   return [...new Set([...found].map((m) => m[0]))]
 }
 
-/** Parse a document's markdown into blocks for the renderer. */
+/**
+ * Parse a document's markdown into blocks for the renderer.
+ *
+ * Headings are shifted up one level on the way out. The shared parser assumes
+ * an article whose title is supplied by the page, so it starts `#` at h2. Here
+ * the document's own `# Title` line has already been lifted into `title` and
+ * renders as the page h1, which would leave `## 1. Section` landing at h3 and
+ * skipping h2 entirely. A heading order with a hole in it is a real
+ * accessibility defect, not a cosmetic one, so the levels are corrected rather
+ * than the documents rewritten.
+ */
 export function documentBlocks(doc: LegalDocument): MarkdownBlock[] {
-  return parseMarkdown(doc.source)
+  return parseMarkdown(doc.source).map((block) =>
+    block.kind === 'heading'
+      ? { ...block, level: Math.max(2, block.level - 1) as 2 | 3 | 4 }
+      : block,
+  )
 }

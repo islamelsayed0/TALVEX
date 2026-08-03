@@ -133,6 +133,18 @@ export function DocumentBody({ blocks }: { blocks: MarkdownBlock[] }) {
                 ))}
               </ul>
             )
+          case 'blockquote':
+            // Both drafted documents open with the attorney review notice as a
+            // blockquote. It is the most consequential sentence on the page, so
+            // it renders as a callout rather than as indented body text.
+            return (
+              <div
+                key={i}
+                className="my-5 rounded-card border border-card-border bg-card px-5 py-4 text-[14.5px] leading-[1.7] text-muted-foreground"
+              >
+                <Inlines nodes={block.inlines} />
+              </div>
+            )
           case 'codeblock':
             return (
               <pre
@@ -150,26 +162,6 @@ export function DocumentBody({ blocks }: { blocks: MarkdownBlock[] }) {
             )
         }
       })}
-    </div>
-  )
-}
-
-/**
- * Shown in place of a document whose drafted copy has not landed yet.
- *
- * The route has to exist regardless: the footer and the sign in notice link
- * to it, and a dead link on the screen where somebody agrees to the terms is
- * worse than an honest one. So the page says plainly that the document is not
- * published rather than standing in invented legal language, which would be
- * both worthless and misleading.
- */
-function PendingNotice({ title }: { title: string }) {
-  return (
-    <div className="rounded-card border border-card-border bg-card px-6 py-5">
-      <p className="text-[15px] leading-[1.7] text-secondary-foreground">
-        The {title} is being finalised and is not published yet. It will appear
-        here in full before Talvex begins charging for the service.
-      </p>
     </div>
   )
 }
@@ -196,11 +188,7 @@ export function DocumentPage({
         <p className="mt-3 text-[13.5px] text-quiet">{effective}</p>
       ) : null}
       <div className="mt-10">
-        {blocks.length === 0 ? (
-          <PendingNotice title={title} />
-        ) : (
-          <DocumentBody blocks={blocks} />
-        )}
+        <DocumentBody blocks={blocks} />
       </div>
     </article>
   )

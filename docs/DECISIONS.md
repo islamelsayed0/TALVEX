@@ -6,6 +6,41 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-03 — The attorney review notice ships on the public legal pages
+
+**Decided.** The terms of service and the privacy policy both open with the
+notice they were drafted with, rendered as a callout at the top of the public
+page:
+
+> **DRAFT FOR ATTORNEY REVIEW. This template was prepared with AI assistance
+> and is not legal advice.**
+
+It is not stripped on the way to production. It comes out when a licensed
+attorney has actually reviewed these documents, and not before.
+`tests/legal-pages.test.ts` fails if it disappears.
+
+**Why.** The documents say what they are. Publishing them with that sentence
+deleted would present an unreviewed AI drafted template as a settled agreement,
+which is a misrepresentation to every visitor who reads them, and it would also
+remove the only reminder that the review still has to happen. Nothing about
+Talvex today needs the pretence: the product is free, there are no paying
+customers, and the terms themselves make the review a precondition of taking
+payment.
+
+The cost is that a visitor sees the word DRAFT on the terms page. That is the
+accurate state of the document, and a portfolio project is a poor place to
+practise hiding one.
+
+**Affects.** Deleting the notice is a deliberate act gated on real legal
+review, not a cleanup. It pairs with the browsewrap entry below: both the
+notice and the missing clickwrap come off the board at the same moment, when
+there is money involved. The terms also name New York law, a HIPAA position,
+and a liability cap, none of which have been reviewed by anyone qualified;
+signing a customer, especially a dental or medical practice, is blocked on that
+review.
+
+---
+
 ## 2026-08-03 — Browsewrap acceptance for the free period; clickwrap arrives with billing
 
 **Decided.** The sign in screen carries a notice, not a gate. Below the Clerk
