@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { StatusText } from '@/components/status-mark'
 import type { Monitor } from '@/lib/db/types'
 
 /**
@@ -38,20 +39,11 @@ export const STATUS_TEXT: Record<StatusKind, string> = {
   paused: 'text-quiet',
 }
 
-const STATUS_DOT: Record<StatusKind, string> = {
-  up: 'bg-status-up',
-  down: 'bg-status-down',
-  pending: 'bg-status-pending',
-  paused: 'bg-quiet',
-}
-
 export function StatusBadge({ status }: { status: StatusKind }) {
-  return (
-    <span className={`inline-flex items-center gap-2 text-sm font-medium ${STATUS_TEXT[status]}`}>
-      <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} aria-hidden />
-      {STATUS_LABEL[status]}
-    </span>
-  )
+  // The label was always here, so this was never color alone. What it lacked
+  // was a second visual channel: four states drawn as the same circle meant
+  // the mark itself said nothing. StatusText gives each one its own shape.
+  return <StatusText tone={status} label={STATUS_LABEL[status]} size={8} />
 }
 
 export function formatMs(ms: number | null): string {

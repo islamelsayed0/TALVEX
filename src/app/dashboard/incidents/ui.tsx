@@ -1,3 +1,4 @@
+import { StatusText } from '@/components/status-mark'
 import type { IncidentEventType, IncidentStatus } from '@/lib/db/types'
 import { formatUtc } from '../monitors/ui'
 
@@ -11,17 +12,11 @@ import { formatUtc } from '../monitors/ui'
 export function IncidentBadge({ status }: { status: 'open' | 'resolved' }) {
   const open = status === 'open'
   return (
-    <span
-      className={`inline-flex items-center gap-2 text-sm font-medium ${
-        open ? 'text-status-down' : 'text-status-up'
-      }`}
-    >
-      <span
-        className={`h-2 w-2 rounded-full ${open ? 'bg-status-down' : 'bg-status-up'}`}
-        aria-hidden
-      />
-      {open ? 'Open' : 'Resolved'}
-    </span>
+    <StatusText
+      tone={open ? 'down' : 'up'}
+      label={open ? 'Open' : 'Resolved'}
+      size={8}
+    />
   )
 }
 

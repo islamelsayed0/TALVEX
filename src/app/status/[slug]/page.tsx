@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { cache } from 'react'
 
 import { SiteFooter } from '@/components/site-footer'
+import { StatusMark, StatusText, statusTextClass } from '@/components/status-mark'
 import { getStatusPage, type PublicStatusIncident } from '@/lib/db/status-page'
 import {
   aggregateUptime,
@@ -45,21 +46,33 @@ export async function generateMetadata({
   }
 }
 
+/* Each heatmap tone gets a fill pattern as well as a color, so a reader who
+ * cannot separate green from amber from red can still read 90 days of history
+ * off the shapes. The classes are defined in globals.css. */
 const TONE_CLASS: Record<HeatmapTone, string> = {
-  up: 'bg-status-up',
-  partial: 'bg-status-pending',
-  down: 'bg-status-down',
-  none: 'bg-quiet/25',
+  up: 'heat-up',
+  partial: 'heat-partial',
+  down: 'heat-down',
+  none: 'heat-none',
 }
 
-const DOT_CLASS: Record<'up' | 'down' | 'pending', string> = {
-  up: 'bg-status-up',
-  down: 'bg-status-down',
-  pending: 'bg-status-pending',
+const TONE_LABEL: Record<HeatmapTone, string> = {
+  up: 'no downtime',
+  partial: 'partial downtime',
+  down: 'down',
+  none: 'no data',
 }
 
 function monitorDotKind(last: 'up' | 'down' | null): 'up' | 'down' | 'pending' {
   return last === 'up' ? 'up' : last === 'down' ? 'down' : 'pending'
+}
+
+/** The state in words, for the public page. "Pending" is jargon to a client
+ * looking at their dentist's status page; "No data yet" is not. */
+const MONITOR_STATE_LABEL: Record<'up' | 'down' | 'pending', string> = {
+  up: 'Operational',
+  down: 'Down',
+  pending: 'No data yet',
 }
 
 function formatDay(iso: string): string {
@@ -87,11 +100,34 @@ function Heatmap({ cells }: { cells: HeatmapCell[] }) {
       {cells.map((c) => (
         <div
           key={c.day}
-          title={`${c.day}: ${c.uptime === null ? 'no data' : formatUptime(c.uptime)}`}
+          title={`${c.day}: ${TONE_LABEL[c.tone]}${
+            c.uptime === null ? '' : `, ${formatUptime(c.uptime)}`
+          }`}
           className={`h-9 flex-1 rounded-[2px] ${TONE_CLASS[c.tone]}`}
         />
       ))}
     </div>
+  )
+}
+
+/**
+ * What the heatmap fills mean, in words. The patterns make the three states
+ * separable without color; this says which is which, so neither channel has to
+ * be guessed at.
+ */
+function HeatmapKey() {
+  return (
+    <ul className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[11px] text-quiet">
+      {(['up', 'partial', 'down', 'none'] as HeatmapTone[]).map((tone) => (
+        <li key={tone} className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className={`h-2.5 w-2.5 flex-none rounded-[2px] ${TONE_CLASS[tone]}`}
+          />
+          {TONE_LABEL[tone]}
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -130,18 +166,12 @@ export default async function StatusPage({
             overall.operational ? 'bg-wash-up' : 'bg-wash-down'
           }`}
         >
-          <span
-            className={`h-2.5 w-2.5 rounded-full ${
-              overall.operational ? 'bg-status-up' : 'bg-status-down'
-            }`}
+          <StatusText
+            tone={overall.operational ? 'up' : 'down'}
+            label={overall.label}
+            size={10}
+            className="text-[15px] font-medium"
           />
-          <span
-            className={`text-[15px] font-medium ${
-              overall.operational ? 'text-status-up' : 'text-status-down'
-            }`}
-          >
-            {overall.label}
-          </span>
         </div>
       </header>
 
@@ -157,19 +187,31 @@ export default async function StatusPage({
               key={m.id}
               className="rounded-card border border-card-border bg-card px-5 py-4"
             >
-              <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <span className={`h-2.5 w-2.5 flex-none rounded-full ${DOT_CLASS[dot]}`} />
+                  <StatusMark tone={dot} size={10} />
                   <span className="truncate text-[15px] font-medium text-card-foreground">
                     {m.name}
                   </span>
                 </div>
-                <span className="flex-none text-[13px] text-quiet">
-                  {uptime === null ? 'No data yet' : `${formatUptime(uptime)} uptime`}
-                </span>
+                <div className="flex flex-none items-center gap-3">
+                  {/* The current state in words. Without it the mark beside the
+                      name was the only carrier of up versus down, which is the
+                      color alone failure the accessibility statement rules out. */}
+                  <span
+                    className={`text-[13px] font-medium ${statusTextClass(dot)}`}
+                  >
+                    {MONITOR_STATE_LABEL[dot]}
+                  </span>
+                  <span className="text-[13px] text-quiet">
+                    {uptime === null
+                      ? 'No uptime yet'
+                      : `${formatUptime(uptime)} uptime`}
+                  </span>
+                </div>
               </div>
               <Heatmap cells={cells} />
-              <div className="mt-1.5 flex justify-between text-[11px] text-quiet">
+              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-[11px] text-quiet">
                 <span>{formatDay(cells[0].day)}</span>
                 <span>90 days</span>
                 <span>Today</span>
@@ -177,6 +219,8 @@ export default async function StatusPage({
             </div>
           )
         })}
+        {/* One key for every heatmap above it, not one per card. */}
+        <HeatmapKey />
       </section>
 
       {/* Incident history */}
@@ -199,11 +243,7 @@ export default async function StatusPage({
                   className="flex flex-wrap items-center justify-between gap-2 border-t border-divider py-3.5 first:border-t-0"
                 >
                   <div className="flex items-center gap-2.5">
-                    <span
-                      className={`h-2 w-2 flex-none rounded-full ${
-                        ongoing ? 'bg-status-down' : 'bg-status-up'
-                      }`}
-                    />
+                    <StatusMark tone={ongoing ? 'down' : 'up'} size={9} />
                     <span className="text-[13.5px] font-medium text-card-foreground">
                       {monitorName.get(inc.monitor_id) ?? 'A monitor'}
                     </span>
@@ -219,8 +259,12 @@ export default async function StatusPage({
                       })}{' '}
                       UTC
                     </span>
+                    {/* "4h 12m" on its own left the green mark carrying the
+                        fact that this one is over. Say so in words. */}
                     <span className={ongoing ? 'text-status-down' : ''}>
-                      {ongoing ? 'Ongoing' : incidentDuration(inc, nowMs)}
+                      {ongoing
+                        ? 'Ongoing'
+                        : `Resolved in ${incidentDuration(inc, nowMs)}`}
                     </span>
                   </div>
                 </li>

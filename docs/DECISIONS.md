@@ -6,6 +6,57 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-03 — Status has a shape vocabulary, because color is not a channel we own
+
+**Decided.** Every status indicator is a shape as well as a color, and the five
+shapes are fixed:
+
+| tone | shape | meaning |
+| --- | --- | --- |
+| up | filled circle | operational, resolved, published, connected |
+| down | filled diamond | down, open incident |
+| pending | hollow ring | waiting, unknown, draft, open ticket |
+| active | filled square | in progress; the accent, not a status color |
+| paused | short bar | paused, canceled, not connected; neutral |
+
+They live in one place, `src/components/status-mark.tsx`, and every badge in
+the app renders through it. The mark is always `aria-hidden`; the text label
+beside it is what assistive technology reads, which is why `StatusText` pairs
+the two and is the shape callers reach for.
+
+The status page heatmap gets the same treatment in CSS: a clean day is solid,
+partial downtime is diagonal stripes, a down day is tighter stripes at the
+opposite angle, and a legend names all four.
+
+**Why.** `/accessibility` says status is "always conveyed by text and icons,
+never by color alone." That was a present tense claim the app did not meet.
+Every indicator was the same circle in a different color, so the mark carried
+nothing and the state rested entirely on whatever text happened to sit beside
+it. On the public status page there was no such text: a client looking at their
+dentist's status page saw a green or red dot and nothing else, and ninety days
+of history was three shades of one rectangle. A red/green color blind visitor
+could not read the page at all.
+
+Shipping a public accessibility statement and then not meeting it is worse than
+not shipping one, so the claim was made true rather than softened.
+
+**Guarded, and the guards were proved.** `tests/status-color-alone.test.ts`
+asserts the five silhouettes stay distinct, that up and down never collapse to
+the same shape, and that the two heatmap patterns keep different stripe angles.
+`tests/e2e/status-page.spec.mjs` asserts against a real page that every monitor
+row names its state in words, that downtime cells carry a pattern, and that
+every mark is `aria-hidden`. Both guards were checked by breaking the thing
+they protect and watching them fail; a test that cannot fail proves nothing.
+
+**Affects.** A new status anywhere maps onto one of these five tones or the
+vocabulary grows deliberately, here, with a shape nobody else uses. Reaching
+for a bare colored dot is the failure this entry exists to prevent. The tones
+also respect the reserved palette: `paused` and `active` never touch a
+`--status-*` token, because paused is not a status and in progress is the
+accent.
+
+---
+
 ## 2026-08-03 — The unreviewed status is disclosed on the public legal pages
 
 **Decided.** The terms of service and the privacy policy both open with a

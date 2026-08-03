@@ -1,3 +1,4 @@
+import { StatusMark } from '@/components/status-mark'
 import { requireAdmin } from '@/lib/auth/org-viewer'
 import { UNKNOWN_MEMBER, resolveUserNames } from '@/lib/auth/user-names'
 import { AI_PROVIDER_LABELS } from '@/lib/chat/providers-meta'
@@ -154,10 +155,10 @@ export default async function SettingsPage({
                   className="flex items-center justify-between gap-3 border-t border-divider py-3 first:border-t-0"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <span
-                      className={`h-2 w-2 flex-none rounded-full ${key ? 'bg-status-up' : 'bg-quiet'}`}
-                      aria-hidden
-                    />
+                    {/* The words beside this ("key ••••1234" or "Not
+                        connected") carry the state; the mark is the second
+                        channel, connected as a circle and absent as a bar. */}
+                    <StatusMark tone={key ? 'up' : 'paused'} size={8} />
                     <span className="text-sm font-medium text-foreground">
                       {AI_PROVIDER_LABELS[p]}
                     </span>

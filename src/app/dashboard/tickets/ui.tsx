@@ -1,3 +1,4 @@
+import { StatusText, type StatusTone } from '@/components/status-mark'
 import type { TicketStatus } from '@/lib/db/types'
 
 /**
@@ -24,28 +25,23 @@ export const STATUS_LABEL: Record<TicketStatus, string> = {
   canceled: 'Canceled',
 }
 
-const STATUS_TEXT: Record<TicketStatus, string> = {
-  open: 'text-status-pending',
-  in_progress: 'text-accent-text',
-  resolved: 'text-status-up',
-  canceled: 'text-quiet',
-}
-
-const STATUS_DOT: Record<TicketStatus, string> = {
-  open: 'bg-status-pending',
-  in_progress: 'bg-(--accent-text)',
-  resolved: 'bg-status-up',
-  canceled: 'bg-quiet',
+/** Ticket state onto the shared mark tones. Open is waiting (ring), in
+ * progress is the accent (square), resolved is recovered (circle), canceled is
+ * neutral (bar). */
+const STATUS_TONE: Record<TicketStatus, StatusTone> = {
+  open: 'pending',
+  in_progress: 'active',
+  resolved: 'up',
+  canceled: 'paused',
 }
 
 export function TicketStatusBadge({ status }: { status: TicketStatus }) {
   return (
-    <span
-      className={`inline-flex items-center gap-2 text-sm font-medium ${STATUS_TEXT[status]}`}
-    >
-      <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} aria-hidden />
-      {STATUS_LABEL[status]}
-    </span>
+    <StatusText
+      tone={STATUS_TONE[status]}
+      label={STATUS_LABEL[status]}
+      size={8}
+    />
   )
 }
 

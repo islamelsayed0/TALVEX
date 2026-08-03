@@ -283,6 +283,42 @@
 }
 
 @layer components {
+  /* Status page heatmap fills.
+   *
+   * Ninety days of history used to be three shades of one rectangle, which
+   * meant a reader who cannot separate green from amber from red could not
+   * read it at all. The accessibility statement rules that out, so each tone
+   * carries a fill pattern as well as its color: solid for a clean day,
+   * diagonal stripes for partial downtime, tighter opposed stripes for a down
+   * day, and a flat wash for no data. Strip the color and the four remain
+   * distinguishable, which is the test.
+   *
+   * The stripes are drawn in the same status token as the fill, lightened by
+   * the gradient stops rather than by a second color, so the reserved status
+   * palette is not widened (tests/design-tokens.test.ts). */
+  .heat-up {
+    background-color: var(--status-up);
+  }
+  .heat-partial {
+    background-color: var(--status-pending);
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgba(0, 0, 0, 0.42) 0 2px,
+      transparent 2px 5px
+    );
+  }
+  .heat-down {
+    background-color: var(--status-down);
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgba(0, 0, 0, 0.45) 0 2px,
+      transparent 2px 4px
+    );
+  }
+  .heat-none {
+    background-color: color-mix(in srgb, var(--quiet) 25%, transparent);
+  }
+
   /* Full viewport auth chrome: page gradient, accent glow, film grain.
    * Children that must sit above the overlays need position relative. */
   .page-auth {

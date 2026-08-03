@@ -36,10 +36,53 @@ try {
   assert.match(body, /Acme Corp/, 'shows the org name')
   assert.match(body, /Booking API/, 'shows a monitor name')
   assert.ok(
-    (await page.locator('.bg-status-up').count()) > 0,
+    (await page.locator('.heat-up, .heat-partial, .heat-down, .heat-none').count()) > 0,
     'renders heatmap cells',
   )
   assert.doesNotMatch(body, /https:\/\/api\.acme\.com/, 'never leaks a monitor url')
+
+  // 1b. No state is carried by color alone (the /accessibility commitment).
+  //     Every monitor row names its state in words, and the heatmap fills
+  //     carry a pattern as well as a hue.
+  const rowStates = await page
+    .locator('section >> text=/^(Operational|Down|No data yet)$/')
+    .count()
+  assert.ok(rowStates > 0, 'monitor rows name their state in words')
+
+  const patterned = await page.evaluate(() => {
+    const cell = document.querySelector('.heat-partial, .heat-down')
+    if (!cell) return 'no-downtime-cells'
+    return getComputedStyle(cell).backgroundImage
+  })
+  if (patterned !== 'no-downtime-cells') {
+    assert.match(
+      patterned,
+      /repeating-linear-gradient/,
+      'downtime cells carry a fill pattern, not only a color',
+    )
+  }
+
+  for (const label of ['no downtime', 'partial downtime', 'no data']) {
+    assert.ok(body.includes(label), `heatmap key explains "${label}"`)
+  }
+
+  // Every status mark is decorative. That is the whole design: the mark is a
+  // redundant second channel for sighted readers and the text beside it is
+  // what carries the state, so a mark that is not aria-hidden means some
+  // state is leaning on the mark to be understood.
+  const exposedMarks = await page.evaluate(
+    () =>
+      [...document.querySelectorAll('span, div')].filter((el) => {
+        const c = el.className
+        if (typeof c !== 'string') return false
+        const isMark =
+          /bg-status-(up|down|pending)\b/.test(c) &&
+          !/heat-/.test(c) &&
+          el.textContent?.trim() === ''
+        return isMark && el.getAttribute('aria-hidden') === null
+      }).length,
+  )
+  assert.equal(exposedMarks, 0, 'every status mark is aria-hidden')
 
   // 2. A disabled page 404s, indistinguishable from an unknown slug.
   const disabled = await page.goto(`${BASE_URL}/status/${DISABLED_SLUG}`)
