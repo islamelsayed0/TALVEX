@@ -95,6 +95,16 @@
    * 3:1 non text minimum (WCAG 1.4.11). */
   --ring: rgba(61, 139, 255, 0.75);
 
+  /* The focus ring: one token, applied globally through :focus-visible in the
+   * base layer. Opaque rather than the translucent --ring, because this one
+   * lands on the page, on cards, and on fields alike and must clear the 3:1
+   * non text minimum (WCAG 1.4.11) against all three. 2px is the floor the
+   * accessibility pass set; the 2px offset is what keeps it legible on a dark
+   * UI, by putting page color between the element and the ring. */
+  --focus-ring: #4d97ff;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
   /* Ghost (neutral secondary) buttons */
   --ghost-border: rgba(255, 255, 255, 0.16);
   --ghost-border-hover: rgba(255, 255, 255, 0.32);
@@ -280,9 +290,63 @@
     color: var(--foreground);
     font-family: var(--font-sans);
   }
+
+  /*
+   * The focus ring. One rule, everything, no exceptions.
+   *
+   * WCAG 2.2 AA and the promise on /accessibility. Before this the only focus
+   * treatment was a border color change on fields, and six field classes set
+   * outline-none, so most of the app fell back to whatever the browser drew,
+   * or to nothing. Somebody navigating by keyboard could not see where they
+   * were.
+   *
+   * :focus-visible rather than :focus, so a mouse click on a button does not
+   * leave a ring behind but a Tab to it does. The browser decides, which is
+   * what it is for.
+   *
+   * The offset is what makes this work on a dark UI: 2px of page color between
+   * the element and the ring keeps the blue off the element's own border, so
+   * the ring reads on a field, a card, and the page alike.
+   *
+   * WCAG 2.4.11 (focus not obscured) is why nothing here clips: any ancestor
+   * with overflow hidden would eat the outline on an element at its edge.
+   *
+   * This rule cannot defend itself. The layer order at the top of this file
+   * puts utilities after base, so a Tailwind outline-none on an element beats
+   * it no matter how the selector is written. That utility was therefore
+   * removed from the six field classes that carried it, and
+   * tests/a11y-foundation.test.ts fails if it comes back, which is the only
+   * enforcement that actually holds.
+   */
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+    /* An outline follows the element's border radius in every browser that
+     * supports :focus-visible, so nothing extra is needed to round it. */
+  }
 }
 
 @layer components {
+  /*
+   * The focus ring, again, for Clerk's own controls.
+   *
+   * The layer order declared at the top of this file is
+   * `theme, base, clerk, components, utilities`, which puts Clerk's injected
+   * styles after our base layer. So the global :focus-visible rule in base
+   * loses to Clerk's own reset, and the org switcher and the user button had
+   * no visible focus at all. The keyboard pass caught exactly that: two
+   * buttons reporting `outline: 0px none`.
+   *
+   * Restating the rule here, in a layer that does come after clerk, is the
+   * fix. The attribute selector rather than a fixed class list because Clerk
+   * renders popovers into portals outside .cl-rootBox, and those need the ring
+   * as much as the trigger does.
+   */
+  [class*="cl-"]:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
   /* Status page heatmap fills.
    *
    * Ninety days of history used to be three shades of one rectangle, which

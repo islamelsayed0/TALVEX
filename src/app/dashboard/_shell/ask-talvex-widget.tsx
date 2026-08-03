@@ -63,6 +63,25 @@ export function AskTalvexWidget({
     )
   }, [messages, sending, open])
 
+  /*
+   * Escape closes the panel, from anywhere on the page.
+   *
+   * This used to be an onKeyDown on the wrapper div, which only fired when
+   * focus was already inside the widget. A dialog is expected to answer Escape
+   * regardless, and a keyboard user who tabbed out to the page behind it had no
+   * way to dismiss this one. A document listener, mounted only while open, is
+   * both the accessible behaviour and what stops jsx-a11y flagging a static
+   * element carrying an interaction.
+   */
+  useEffect(() => {
+    if (!open) return
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('keydown', onEscape)
+    return () => document.removeEventListener('keydown', onEscape)
+  }, [open])
+
   // Hidden on Help, which is its own ask entry.
   if (pathname === '/dashboard/help' || pathname.startsWith('/dashboard/help/')) {
     return null
@@ -75,13 +94,9 @@ export function AskTalvexWidget({
     }
   }
 
+
   return (
-    <div
-      className="fixed right-6 bottom-6 z-50 flex flex-col items-end gap-3"
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') setOpen(false)
-      }}
-    >
+    <div className="fixed right-6 bottom-6 z-50 flex flex-col items-end gap-3">
       {open ? (
         <section
           id={panelId}
@@ -173,7 +188,7 @@ export function AskTalvexWidget({
                       onChange={(e) =>
                         setProvider(e.target.value as typeof provider)
                       }
-                      className="rounded-field border border-input bg-field px-2 py-1 text-xs text-field-text outline-none focus:border-(--ring)"
+                      className="rounded-field border border-input bg-field px-2 py-1 text-xs text-field-text focus:border-(--ring)"
                     >
                       {providers.map((p) => (
                         <option key={p.value} value={p.value}>
@@ -192,7 +207,7 @@ export function AskTalvexWidget({
                     rows={1}
                     maxLength={8000}
                     placeholder="Ask a question…"
-                    className="max-h-28 min-h-[42px] w-full resize-y rounded-field border border-input bg-field px-3 py-2.5 text-sm leading-relaxed text-field-text outline-none transition-colors placeholder:text-placeholder focus:border-(--ring) focus:bg-field-focus"
+                    className="max-h-28 min-h-[42px] w-full resize-y rounded-field border border-input bg-field px-3 py-2.5 text-sm leading-relaxed text-field-text transition-colors placeholder:text-placeholder focus:border-(--ring) focus:bg-field-focus"
                     disabled={sending}
                   />
                   <button

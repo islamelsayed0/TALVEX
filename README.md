@@ -97,17 +97,30 @@ something real rather than that there was nothing to find. The environment
 hygiene guard was checked the same way, by planting a realistically shaped key
 in `.env.example`, confirming the test went red, and then removing it.
 
-**The whole suite is 794 tests across 57 files**, run on every pull request
+**The whole suite is 899 tests across 62 files**, run on every pull request
 alongside a typecheck and lint. Because the isolation job boots the stack from
 `supabase/migrations/`, every pull request also proves the 18 migrations replay
 cleanly into an empty database.
 
-**End to end specs drive the real screens with real Clerk sessions.** Six of
-the nine Playwright specs sign in through Clerk's testing integration and click
-through the actual product, including publishing a document and watching a
-tagged member get a citation for it while an untagged member gets none. The
-other three cover surfaces that have no session to sign into: the landing page,
-the health endpoint, and the public status page. All of them need a built app,
+**Accessibility is a published commitment, so it is checked rather than
+claimed.** The public statement at `/accessibility` targets WCAG 2.2 Level AA,
+and four things hold it up. No state is ever conveyed by color alone: the five
+status shapes in `src/components/status-mark.tsx` stay distinct, so up and down
+are separable without seeing red or green. One focus ring token applies
+globally through `:focus-visible`, and `outline-none` is banned in a test
+because the CSS layer order means that utility would silently beat the rule.
+`eslint-plugin-jsx-a11y` runs in the lint job. And `tests/e2e/accessibility.spec.mjs`
+runs axe over the real running app, nine pages signed out and in, failing on
+any serious or critical violation, with zero rule exclusions. The guards were
+checked by breaking what they protect: collapsing two status shapes and
+stripping `aria-hidden` both turn the suites red.
+
+**End to end specs drive the real screens with real Clerk sessions.** Seven of
+the twelve Playwright specs sign in through Clerk's testing integration and
+click through the actual product, including publishing a document and watching
+a tagged member get a citation for it while an untagged member gets none. The
+others cover surfaces that have no session to sign into: the landing page, the
+legal pages, the health endpoint, and the public status page. All of them need a built app,
 and the signed in ones need a seeded organization, so they are run deliberately
 rather than on every pull request.
 

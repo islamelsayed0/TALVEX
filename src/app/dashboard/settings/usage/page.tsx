@@ -121,7 +121,7 @@ export default async function UsageSettingsPage({
     : [usage.timezone, ...zones]
 
   return (
-    <main className="mx-auto w-full max-w-[780px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
+    <main id="main-content" className="mx-auto w-full max-w-[780px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
       <AutoTimezone zoneIsSet={usage.timezoneStored} />
 
       <div className="mb-[22px]">

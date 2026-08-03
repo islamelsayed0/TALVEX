@@ -38,10 +38,33 @@ before making product decisions.
 8. Every feature PR includes at least one test. The tenant isolation tests
    in tests/isolation/ must never be skipped, weakened, or deleted.
 
+### Accessibility
+We publish a public commitment at /accessibility to WCAG 2.2 Level AA. These
+rules are what keep that sentence true, so they are not style preferences.
+
+9. **No state is ever communicated by color alone.** Every status indicator
+   pairs its color with a shape and a text label. The five shapes are fixed in
+   src/components/status-mark.tsx (circle up, diamond down, ring pending,
+   square in progress, bar paused); a new status maps onto one of them or the
+   vocabulary grows deliberately. A link inside a sentence is underlined, not
+   just tinted. Never ship a bare colored dot.
+10. **Focus is always visible.** One token, one global `:focus-visible` rule in
+    globals.css, at least 2px. No component removes a focus style without
+    replacing it, and `outline-none` is banned outright: the layer order means
+    that utility silently beats the global rule, so tests/a11y-foundation.test.ts
+    fails the build if it reappears.
+11. **Every page has one h1, a `<main id="main-content">`, and a logical
+    heading order.** The skip link in the root layout targets that id. Icon
+    only buttons get an aria-label; decorative images get `alt=""`.
+12. **eslint-plugin-jsx-a11y runs in the CI lint job**, and
+    tests/e2e/accessibility.spec.mjs runs axe over the real running app,
+    failing on any serious or critical violation. Default rule exclusions:
+    zero. The one configured rule carries its reason inline.
+
 ### Process
-9. Work in small branches, open PRs, let CI go green before merge. Never
-   push directly to main.
-10. When a task is ambiguous, check docs/BRD.md first, then ask, in that
+13. Work in small branches, open PRs, let CI go green before merge. Never
+    push directly to main.
+14. When a task is ambiguous, check docs/BRD.md first, then ask, in that
     order. Do not invent requirements.
 
 ## Writing style for user facing copy

@@ -121,7 +121,7 @@ export default async function OverviewPage() {
   })
 
   return (
-    <main className="mx-auto w-full max-w-[1360px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
+    <main id="main-content" className="mx-auto w-full max-w-[1360px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
       {/* Greeting. No scenario switcher: that was a prototype demo control. */}
       <div className="mb-[22px]">
         <h1 className="text-title text-foreground">
@@ -232,7 +232,17 @@ export default async function OverviewPage() {
               </Link>
             </div>
           ) : (
-            <div className="max-h-[296px] overflow-y-auto">
+            /* A scrollable region needs to be reachable by keyboard, or the
+               rows below the fold cannot be read without a mouse (WCAG 2.1.1,
+               axe scrollable-region-focusable). tabIndex makes it a tab stop
+               that responds to arrow keys; the group role and label say what
+               the stop is when it gets focus. */
+            <div
+              className="max-h-[296px] overflow-y-auto"
+              tabIndex={0}
+              role="group"
+              aria-label="Monitors"
+            >
               {withStatus.map(({ m }) => (
                 <MonitorRow key={m.id} m={m} nowMs={nowMs} />
               ))}

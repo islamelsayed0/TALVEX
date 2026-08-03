@@ -22,7 +22,7 @@ export default async function NewInventoryItemPage({
     typeof v === 'string' ? v : ''
 
   return (
-    <main className="flex flex-1 flex-col gap-6 p-8">
+    <main id="main-content" className="flex flex-1 flex-col gap-6 p-8">
       <div>
         <h1 className="text-title text-foreground">Add item</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">

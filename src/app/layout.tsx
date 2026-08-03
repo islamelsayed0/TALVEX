@@ -2,6 +2,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { SkipLink } from "@/components/skip-link";
 import { generalSans } from "@/lib/fonts/general-sans";
 import { clerkAppearance } from "@/lib/theme/clerk-appearance";
 import { clerkLocalization } from "@/lib/theme/clerk-localization";
@@ -48,6 +49,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${generalSans.variable} h-full antialiased`}
       >
         <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
+          {/* First focusable element in the document, on every route. */}
+          <SkipLink />
           {children}
         </body>
       </html>

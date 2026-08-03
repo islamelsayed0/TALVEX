@@ -79,7 +79,7 @@ export const ghostButton =
   'inline-flex items-center justify-center rounded-button border border-(--ghost-border) px-4 py-2.5 text-sm font-semibold text-ghost-text transition-colors hover:border-(--ghost-border-hover) hover:bg-(--ghost-hover-bg)'
 
 const fieldClass =
-  'h-12 w-full rounded-field border border-input bg-field px-4 text-sm text-field-text outline-none transition-colors placeholder:text-placeholder focus:border-(--ring) focus:bg-field-focus'
+  'h-12 w-full rounded-field border border-input bg-field px-4 text-sm text-field-text transition-colors placeholder:text-placeholder focus:border-(--ring) focus:bg-field-focus'
 
 const INTERVAL_OPTIONS = [
   { seconds: 300, label: 'Every 5 minutes' },

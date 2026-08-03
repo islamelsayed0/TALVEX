@@ -19,7 +19,7 @@ const primaryButton =
   'inline-flex items-center justify-center rounded-button bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-60'
 
 const fieldClass =
-  'w-full rounded-field border border-input bg-field px-4 py-3 text-sm leading-relaxed text-field-text outline-none transition-colors placeholder:text-placeholder focus:border-(--ring) focus:bg-field-focus'
+  'w-full rounded-field border border-input bg-field px-4 py-3 text-sm leading-relaxed text-field-text transition-colors placeholder:text-placeholder focus:border-(--ring) focus:bg-field-focus'
 
 export function ChatPane({
   conversationId,
@@ -112,7 +112,7 @@ export function ChatPane({
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value as typeof provider)}
-              className="rounded-field border border-input bg-field px-2 py-1 text-xs text-field-text outline-none focus:border-(--ring)"
+              className="rounded-field border border-input bg-field px-2 py-1 text-xs text-field-text focus:border-(--ring)"
             >
               {providers.map((p) => (
                 <option key={p.value} value={p.value}>

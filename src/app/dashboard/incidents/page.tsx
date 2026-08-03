@@ -27,7 +27,7 @@ export default async function IncidentsPage() {
   const empty = open.length === 0 && resolvedWeek.length === 0
 
   return (
-    <main className="mx-auto w-full max-w-[1360px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
+    <main id="main-content" className="mx-auto w-full max-w-[1360px] flex-1 animate-fade-up px-8 pt-[30px] pb-[72px]">
       <div className="mb-[22px]">
         <h1 className="text-title text-foreground">Incidents</h1>
         <p className="mt-1.5 text-[14px] text-quiet">

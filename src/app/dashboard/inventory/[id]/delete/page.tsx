@@ -27,7 +27,7 @@ export default async function DeleteInventoryItemPage({
   if (!item) notFound()
 
   return (
-    <main className="flex flex-1 flex-col gap-6 p-8">
+    <main id="main-content" className="flex flex-1 flex-col gap-6 p-8">
       <div className="flex max-w-md flex-col gap-4 rounded-button border border-border bg-card p-6">
         <h1 className="text-title text-card-foreground">Delete {item.name}?</h1>
         <p className="text-sm leading-relaxed text-muted-foreground">

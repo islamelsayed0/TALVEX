@@ -32,7 +32,7 @@ export default async function HelpArticlesPage({
   const groups = groupArticlesByCategory(articles)
 
   return (
-    <main className="mx-auto w-full max-w-[720px] flex-1 animate-fade-up px-6 pt-[30px] pb-[72px]">
+    <main id="main-content" className="mx-auto w-full max-w-[720px] flex-1 animate-fade-up px-6 pt-[30px] pb-[72px]">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-title text-foreground">Documents</h1>

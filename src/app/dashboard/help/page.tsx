@@ -78,7 +78,7 @@ export default async function HelpHomePage() {
   const readableArticles = articles.filter((a) => a.status === 'published').length
 
   return (
-    <main className="mx-auto w-full max-w-[600px] flex-1 animate-fade-up px-6 pt-8 pb-20">
+    <main id="main-content" className="mx-auto w-full max-w-[600px] flex-1 animate-fade-up px-6 pt-8 pb-20">
       <div className="mx-auto max-w-[600px] text-center">
         <h1 className="text-[30px] font-semibold tracking-[-0.02em] text-foreground">
           Hi, {firstName}
@@ -150,9 +150,14 @@ export default async function HelpHomePage() {
       {!hasKey && viewer.isAdmin ? (
         <p className="mt-3.5 text-center text-xs text-quiet">
           Want the AI assistant here too?{' '}
+          {/* Underlined always, not only on hover. A link sitting inside a
+              sentence and marked out by color alone is invisible to a reader
+              who cannot see that color (WCAG 1.4.1, axe link-in-text-block).
+              Standalone links elsewhere are fine; it is the in sentence case
+              that needs the second cue. */}
           <Link
             href="/dashboard/settings/api-keys"
-            className="text-accent-text hover:underline"
+            className="text-accent-text underline underline-offset-2"
           >
             Add an API key in settings
           </Link>

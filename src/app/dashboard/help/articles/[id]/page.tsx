@@ -27,7 +27,7 @@ export default async function HelpArticlePage({
   const blocks = parseMarkdown(article.body)
 
   return (
-    <main className="mx-auto w-full max-w-[720px] flex-1 animate-fade-up px-6 pt-[30px] pb-[72px]">
+    <main id="main-content" className="mx-auto w-full max-w-[720px] flex-1 animate-fade-up px-6 pt-[30px] pb-[72px]">
       <div className="mb-6">
         <Link
           href="/dashboard/help/articles"

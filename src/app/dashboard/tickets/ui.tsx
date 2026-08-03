@@ -60,7 +60,7 @@ export function InternalChip() {
 }
 
 export const ticketFieldClass =
-  'w-full rounded-field border border-input bg-field px-4 text-sm text-field-text outline-none transition-colors placeholder:text-placeholder focus:border-(--ring) focus:bg-field-focus'
+  'w-full rounded-field border border-input bg-field px-4 text-sm text-field-text transition-colors placeholder:text-placeholder focus:border-(--ring) focus:bg-field-focus'
 
 export function FormError({ message }: { message?: string }) {
   if (!message) return null

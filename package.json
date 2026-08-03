@@ -26,6 +26,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@clerk/testing": "^2.2.14",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
@@ -33,6 +34,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "playwright": "1.54.1",
     "supabase": "2.109.1",
     "tailwindcss": "^4",
