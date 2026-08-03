@@ -6,6 +6,105 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-03 — The unreviewed status is disclosed on the public legal pages
+
+**Decided.** The terms of service and the privacy policy both open with a
+transparency note, rendered as a callout at the top of the public page:
+
+> **Transparency note:** These terms were prepared with AI assistance and have
+> not yet been reviewed by an attorney. They are the agreement that governs use
+> of the Service while it is free, and they will be updated when professional
+> review is complete.
+
+It is not stripped on the way to production. It comes out when a licensed
+attorney has actually reviewed these documents, and not before.
+`tests/legal-pages.test.ts` fails if it disappears, and checks the admission
+itself rather than the label, so a note that kept the heading and lost the
+sentence would not pass.
+
+**Why.** The documents say what they are. Publishing them with that disclosure
+deleted would present an unreviewed AI drafted agreement as a settled one,
+which is a misrepresentation to every visitor who reads them, and it would also
+remove the only standing reminder that the review has to happen. Nothing about
+Talvex today needs the pretence: the product is free, there are no paying
+customers, and the terms make the review a precondition of taking payment.
+
+**The wording was chosen, and the first attempt was wrong.** The documents
+arrived carrying a drafting instruction: "DRAFT FOR ATTORNEY REVIEW. This
+template was prepared with AI assistance and is not legal advice. Have a
+licensed attorney review it before publishing." That was published as written,
+which was the wrong call in one respect. It was addressed to the person
+building the site, not to the reader, and it told visitors the agreement
+governing them was a draft, which is not accurate: these terms do govern use of
+the free Service today. The replacement discloses exactly the same fact, that no
+attorney has reviewed this, in language written for the person reading it. The
+honesty is the requirement; the phrasing was not.
+
+**Affects.** Deleting the note is a deliberate act gated on real legal review,
+not a cleanup, and the effective date changes when it goes. It pairs with the
+browsewrap entry below: the note and the missing clickwrap come off the board
+at the same moment, when there is money involved. The terms also name New York
+law, a HIPAA position, and a liability cap, none of which have been reviewed by
+anyone qualified; signing a customer, especially a dental or medical practice,
+is blocked on that review.
+
+---
+
+## 2026-08-03 — Browsewrap acceptance for the free period; clickwrap arrives with billing
+
+**Decided.** The sign in screen carries a notice, not a gate. Below the Clerk
+widget one line of muted text reads "By continuing you agree to the Terms of
+Service and Privacy Policy", with both phrases linked to `/terms` and
+`/privacy`. There is no checkbox, and no acceptance timestamp is stored.
+
+Clickwrap replaces it before Talvex takes money: an explicit checkbox, the
+document version the user accepted, and a stored timestamp against the user
+record. That work belongs with billing in Phase 1, not before it.
+
+**Why.** Browsewrap is the weaker instrument, and the weakness is real: an
+agreement nobody clicked is harder to enforce, and courts have declined to
+enforce it where the notice was not conspicuous. It is accepted here anyway,
+for the free prelaunch period only, on two grounds. There is no transaction to
+dispute, so the practical exposure during this period is close to nothing. And
+storing an acceptance record properly means deciding what a version of a
+document is and where consent lives, which is the same schema question billing
+forces anyway. Doing it once, with billing, beats doing it twice.
+
+The notice itself is not a placeholder for that work. Conspicuous notice
+adjacent to the action is what makes browsewrap defensible at all, so the line
+sits directly under the button the user is about to press, not in the footer.
+
+**Affects.** Whoever builds billing inherits this: clickwrap is a blocker on
+the first paid plan, not a nice to have alongside it. The acceptance record
+needs a document version, so the legal documents need versioning at the same
+time. Until then, `/terms` and `/privacy` must stay reachable while signed out,
+which is why `tests/auth-routes.test.ts` now asserts the legal routes are
+public.
+
+---
+
+## 2026-08-03 — The legal pages are dark, because the product has no light theme
+
+**Decided.** `/terms`, `/privacy`, and `/accessibility` render in the same dark
+palette as the rest of the app. The task that specified them asked for a light
+theme "matching the status page and client help flow default". That premise is
+out of date and was not followed.
+
+**Why.** Light mode was removed on 2026-07-25 (see that entry). `data-theme="dark"`
+is hardcoded on `<html>` in the root layout, `globals.css` carries a single
+palette with no light override, and `tests/design-tokens.test.ts` fails the
+build if one appears. The status page named as the light reference is itself
+dark and has been since it shipped. Building these three pages light would have
+meant reintroducing a second theme, and a decision that a task prompt did not
+know it was making is the wrong way to reverse a locked one.
+
+**Affects.** Any future task prompt that reasons from a light status page is
+working from the same stale premise and should be checked against this entry
+before it is implemented. If light mode ever returns it returns deliberately,
+through the design system, and these pages follow it rather than leading it.
+
+---
+
 ## 2026-08-03 — A branch is cut from main and proved so, and a stray file in a diff stops the PR
 
 **Decided.** Two mechanical checks join the working conventions, both cheap,

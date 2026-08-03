@@ -124,4 +124,41 @@ describe('parseMarkdown', () => {
     const blocks = parseMarkdown('```\nline one\nline two')
     expect(blocks).toEqual([{ kind: 'codeblock', text: 'line one\nline two' }])
   })
+
+  // Blockquotes arrived with the legal pages, whose drafted documents open
+  // with the attorney review notice as one.
+  it('parses a blockquote, with the marker stripped', () => {
+    expect(parseMarkdown('> **Notice.** Read this.')).toEqual([
+      {
+        kind: 'blockquote',
+        inlines: [
+          { kind: 'strong', text: 'Notice.' },
+          { kind: 'text', text: ' Read this.' },
+        ],
+      },
+    ])
+  })
+
+  it('joins consecutive quoted lines into one blockquote', () => {
+    const blocks = parseMarkdown('> one\n> two\n\nafter')
+    expect(blocks).toEqual([
+      { kind: 'blockquote', inlines: [{ kind: 'text', text: 'one two' }] },
+      { kind: 'paragraph', inlines: [{ kind: 'text', text: 'after' }] },
+    ])
+  })
+
+  it('does not let a quote bleed into the paragraph above it', () => {
+    const blocks = parseMarkdown('lead in\n> quoted')
+    expect(blocks).toEqual([
+      { kind: 'paragraph', inlines: [{ kind: 'text', text: 'lead in' }] },
+      { kind: 'blockquote', inlines: [{ kind: 'text', text: 'quoted' }] },
+    ])
+  })
+
+  it('strips HTML inside a quote like anywhere else', () => {
+    const blocks = parseMarkdown('> <script>alert(1)</script>keep me')
+    expect(blocks).toEqual([
+      { kind: 'blockquote', inlines: [{ kind: 'text', text: 'alert(1)keep me' }] },
+    ])
+  })
 })

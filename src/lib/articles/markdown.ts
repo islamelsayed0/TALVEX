@@ -13,10 +13,15 @@
  * definition, which React renders inert.
  *
  * Supported, matching what help articles actually need: headings, paragraphs,
- * bulleted and numbered lists, bold, italics, inline code, fenced code
- * blocks, and links restricted to safe destinations. Everything else is
+ * blockquotes, bulleted and numbered lists, bold, italics, inline code, fenced
+ * code blocks, and links restricted to safe destinations. Everything else is
  * plain text. No images by ruling (non goals), so image syntax renders as
  * its alt text link form, harmless.
+ *
+ * Blockquotes were added with the legal pages, whose drafted documents open
+ * with one. Without the rule a quoted line rendered as a paragraph with a
+ * stray "> " in front of it, which on a terms of service page meant the
+ * attorney review notice read as body text.
  */
 
 export type InlineNode =
@@ -29,6 +34,7 @@ export type InlineNode =
 export type MarkdownBlock =
   | { kind: 'heading'; level: 2 | 3 | 4; inlines: InlineNode[] }
   | { kind: 'paragraph'; inlines: InlineNode[] }
+  | { kind: 'blockquote'; inlines: InlineNode[] }
   | { kind: 'list'; ordered: boolean; items: InlineNode[][] }
   | { kind: 'codeblock'; text: string }
 
@@ -88,6 +94,7 @@ const HEADING = /^(#{1,6})\s+(.*)$/
 const BULLET = /^[-*]\s+(.*)$/
 const NUMBERED = /^\d+[.)]\s+(.*)$/
 const FENCE = /^```/
+const QUOTE = /^>\s?(.*)$/
 
 /** The whole document, top to bottom, one pass. */
 export function parseMarkdown(source: string): MarkdownBlock[] {
@@ -128,6 +135,22 @@ export function parseMarkdown(source: string): MarkdownBlock[] {
       continue
     }
 
+    if (QUOTE.test(line)) {
+      // Consecutive quoted lines are one quote, joined the way a paragraph is.
+      const quoted: string[] = []
+      while (i < lines.length) {
+        const q = QUOTE.exec(lines[i])
+        if (!q) break
+        quoted.push(q[1].trim())
+        i += 1
+      }
+      blocks.push({
+        kind: 'blockquote',
+        inlines: parseInlines(stripHtml(quoted.join(' ').trim())),
+      })
+      continue
+    }
+
     if (BULLET.test(line) || NUMBERED.test(line)) {
       const ordered = NUMBERED.test(line)
       const marker = ordered ? NUMBERED : BULLET
@@ -149,6 +172,7 @@ export function parseMarkdown(source: string): MarkdownBlock[] {
       lines[i].trim() !== '' &&
       !FENCE.test(lines[i]) &&
       !HEADING.test(lines[i]) &&
+      !QUOTE.test(lines[i]) &&
       !BULLET.test(lines[i]) &&
       !NUMBERED.test(lines[i])
     ) {
@@ -174,6 +198,7 @@ export function markdownPlainText(blocks: MarkdownBlock[]): string {
       switch (block.kind) {
         case 'heading':
         case 'paragraph':
+        case 'blockquote':
           return inlineText(block.inlines)
         case 'list':
           return block.items.map(inlineText).join(' ')

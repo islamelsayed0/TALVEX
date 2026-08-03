@@ -91,6 +91,15 @@ export function MarkdownView({ blocks }: { blocks: MarkdownBlock[] }) {
                 ))}
               </ul>
             )
+          case 'blockquote':
+            return (
+              <blockquote
+                key={i}
+                className="border-l-2 border-card-border pl-4 text-secondary-foreground"
+              >
+                <Inlines nodes={block.inlines} />
+              </blockquote>
+            )
           case 'codeblock':
             return (
               <pre
