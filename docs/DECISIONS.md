@@ -6,6 +6,48 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-04 — The Cloudflare proxy stays in front of talvext.com
+
+**Decided.** `talvext.com` is served through the Cloudflare proxy (orange
+cloud), not DNS only, because the free edge layer buys what the application
+cannot provide: distributed rate limiting and DDoS absorption in front of
+Vercel. The in memory limiters (chat at 30 a minute per user, status and
+health at 60 a minute per IP) are per server instance by design and their own
+header says they do not stop a distributed attack; the edge does.
+
+**The settings the proxy requires:**
+
+- SSL/TLS mode **Full (strict)**. Flexible loops against Vercel and plain
+  Full accepts any origin certificate. Verified externally 2026-08-04: apex
+  200, `www` 308 to the apex, health and legal pages serving.
+- The free plan's single edge rate limiting rule goes to `/api/chat` (more
+  than 10 requests in 10 seconds per IP, block), because chat is the only
+  surface that spends money per request. **Its acceptance check is a burst
+  test: 15 rapid requests against `/api/chat` must end in Cloudflare 429s.
+  As of this entry the deployed rule fails that check** (the path value
+  appears to carry a trailing space, so it matches nothing), which means it
+  counts as no protection until a burst passes; the application's own
+  limiters stand alone meanwhile. A rule that shows Active while matching
+  nothing is worse than none, so it gets repaired or deleted, never left.
+- **Bot Fight Mode stays off.** On the free plan it applies globally and no
+  rule can exempt a path. Turned on, it would challenge Clerk webhook
+  deliveries after the production migration, which does not error, it
+  silently stops org sync: the `docs/DEPLOY_LOG.md` Fault 2 shape.
+
+**The standing rule that makes the proxy safe: machine traffic never crosses
+it.** The cron scheduler, the external watcher, and the future Clerk
+production webhook all target `talvex-chi.vercel.app` directly, so no
+challenge, cache, or edge rule can ever sit between the platform and its own
+machinery. The runbook's section 7 records this for the webhook step.
+
+**Accepted costs.** Vercel's domain check reports talvext.com as
+misconfigured forever (it cannot see through the proxy), the browser shows a
+Cloudflare edge certificate rather than a Vercel one, and every future DNS
+record on the zone, including Clerk's CNAMEs, must be created DNS only
+because Cloudflare defaults to Proxied.
+
+---
+
 ## 2026-08-03 — Renamed to Talvext, and the naming rule that makes it the last rename
 
 **Decided.** The product is named Talvext, the third and final name after
