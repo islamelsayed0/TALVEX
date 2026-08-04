@@ -8,7 +8,7 @@ import { ghostButton } from '../../../monitors/ui'
 import { updateInventoryItemAction } from '../../actions'
 import { InventoryForm, StockChip, inventoryFormDefaults } from '../../ui'
 
-export const metadata = { title: 'Edit inventory item — Talvex' }
+export const metadata = { title: 'Edit inventory item — Talvext' }
 
 /**
  * Edit an item or head to deletion. The stock chip up top reflects the

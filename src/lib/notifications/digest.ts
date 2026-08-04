@@ -319,7 +319,7 @@ export function digestSubject(data: DigestData): string {
   if (data.lowStock.total > 0) {
     parts.push(`${plural(data.lowStock.total, 'item', 'items')} low on stock`)
   }
-  return `[Talvex] Your day: ${parts.slice(0, 2).join(', ')}`
+  return `[Talvext] Your day: ${parts.slice(0, 2).join(', ')}`
 }
 
 /**

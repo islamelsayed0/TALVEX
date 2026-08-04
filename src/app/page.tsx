@@ -19,7 +19,7 @@ import {
 import { HeroBackground } from './_landing/hero-background'
 
 export const metadata = {
-  title: 'Talvex — one calm place for your systems',
+  title: 'Talvext — one calm place for your systems',
   description: HERO.sub,
 }
 
@@ -65,7 +65,7 @@ export default function Home() {
               href="#top"
               className="font-display text-[22px] font-semibold tracking-[-0.02em] text-foreground"
             >
-              Talvex
+              Talvext
             </Link>
             <nav className="liquid-glass hidden items-center gap-0.5 rounded-full px-1.5 py-[5px] md:flex">
               <Link href="#product" className={NAV_LINK}>
@@ -149,7 +149,7 @@ export default function Home() {
         {/* 2. Product proof */}
         <section id="product" className="mx-auto max-w-[1240px] px-8 pt-16">
           <div className="scroll-reveal landing-frame rounded-[22px] p-2.5">
-            <FrameBar url="talvex.app/dashboard" />
+            <FrameBar url="talvext.com/dashboard" />
             <div className="relative aspect-[16/10] overflow-hidden rounded-tile">
               <Image
                 src="/landing/dashboard-shot.png"
@@ -178,7 +178,7 @@ export default function Home() {
               </p>
             </div>
             <div className="scroll-reveal landing-frame rounded-card p-[9px]">
-              <FrameBar url="talvex.app/dashboard/chat" small />
+              <FrameBar url="talvext.com/dashboard/chat" small />
               <div className="relative aspect-[16/10] overflow-hidden rounded-[13px]">
                 <Image
                   src="/landing/chat-shot.png"
@@ -194,7 +194,7 @@ export default function Home() {
           <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2">
             <div className="scroll-reveal">
               <div className="landing-frame rounded-card p-[9px]">
-                <FrameBar url="talvex.app/status/northwind" small />
+                <FrameBar url="talvext.com/status/northwind" small />
                 <div className="relative aspect-[16/10] overflow-hidden rounded-[13px]">
                   <Image
                     src="/landing/status-shot.png"
@@ -211,7 +211,7 @@ export default function Home() {
             </div>
             <div className="scroll-reveal">
               <div className="landing-frame rounded-card p-[9px]">
-                <FrameBar url="talvex.app/dashboard/inventory" small />
+                <FrameBar url="talvext.com/dashboard/inventory" small />
                 <div className="relative aspect-[16/10] overflow-hidden rounded-[13px]">
                   <Image
                     src="/landing/inventory-shot.png"
@@ -244,11 +244,11 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 4. What Talvex is */}
+        {/* 4. What Talvext is */}
         <section id="what" className={SECTION}>
           <div className="grid grid-cols-1 items-start gap-14 md:grid-cols-[17rem_minmax(0,1fr)]">
             <h2 className="scroll-reveal text-balance font-display text-[clamp(26px,3.2vw,38px)] font-semibold leading-[1.12] tracking-[-0.028em] text-foreground">
-              What Talvex is
+              What Talvext is
             </h2>
             <div className="scroll-reveal max-w-[44rem]">
               <p className="text-pretty font-display text-[clamp(19px,2vw,23px)] font-normal leading-[1.62] tracking-[-0.01em] text-ghost-text">

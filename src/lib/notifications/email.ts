@@ -7,7 +7,7 @@ import { logError } from '@/lib/log'
 /**
  * Alert emails via Resend (BRD F10). Ported from NetPulse
  * lib/notifications/resend-alerts.ts: the graceful degradation and the one
- * time log guard pattern survive; the copy is Talvex and the bodies are
+ * time log guard pattern survive; the copy is Talvext and the bodies are
  * plain text only in this PR. Nothing here touches the database.
  *
  * Degrades gracefully: a deployment without RESEND_API_KEY or RESEND_FROM
@@ -76,7 +76,7 @@ export function buildDownEmail(input: {
     ? `${input.monitorName} went down again shortly after recovering, so its incident reopened.`
     : `${input.monitorName} is not responding. Two checks in a row failed, so an incident is open.`
   return {
-    subject: `[Talvex] ${input.monitorName} is down`,
+    subject: `[Talvext] ${input.monitorName} is down`,
     text: [
       lead,
       '',
@@ -84,7 +84,7 @@ export function buildDownEmail(input: {
       `URL: ${input.monitorUrl}`,
       `Down since: ${formatUtcMinute(input.occurredAtIso)}`,
       '',
-      'Talvex keeps checking and resolves the incident on the first healthy response.',
+      'Talvext keeps checking and resolves the incident on the first healthy response.',
     ].join('\n'),
   }
 }
@@ -96,7 +96,7 @@ export function buildRecoveredEmail(input: {
   occurredAtIso: string
 }): AlertEmail {
   return {
-    subject: `[Talvex] ${input.monitorName} recovered`,
+    subject: `[Talvext] ${input.monitorName} recovered`,
     text: [
       `${input.monitorName} responded normally again and its incident resolved.`,
       '',
@@ -137,9 +137,9 @@ export async function sendAlertEmail(input: {
 /** The email body for a test triggered from Settings. Not a real incident. */
 export function buildTestEmail(): AlertEmail {
   return {
-    subject: '[Talvex] Test notification',
+    subject: '[Talvext] Test notification',
     text: [
-      'Your Talvex alerts are set up correctly.',
+      'Your Talvext alerts are set up correctly.',
       '',
       'This is a test you triggered from Settings, not a real incident.',
     ].join('\n'),

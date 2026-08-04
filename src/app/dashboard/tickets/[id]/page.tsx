@@ -31,7 +31,7 @@ import {
   ticketFieldClass,
 } from '../ui'
 
-export const metadata = { title: 'Ticket — Talvex' }
+export const metadata = { title: 'Ticket — Talvext' }
 
 /**
  * Ticket detail: the request, then everything that happened to it, in
@@ -70,7 +70,7 @@ export default async function TicketDetailPage({
     ...events.map((e) => e.actor),
   ])
   const nameOf = (userId: string | null) =>
-    userId === null ? 'Talvex' : (names.get(userId) ?? UNKNOWN_MEMBER)
+    userId === null ? 'Talvext' : (names.get(userId) ?? UNKNOWN_MEMBER)
 
   // The incident this ticket was created from, if any (Task 4). Status is read
   // live from the incidents table on every render, so the card reflects the

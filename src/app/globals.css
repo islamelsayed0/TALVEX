@@ -1,5 +1,5 @@
 /*
- * Talvex design tokens: the single source of truth for color, type, radii,
+ * Talvext design tokens: the single source of truth for color, type, radii,
  * shadows, and spacing. Extracted from docs/design/README.md (Task 7).
  *
  * Rules enforced here and by tests/design-tokens.test.ts:
@@ -444,7 +444,7 @@
     pointer-events: none;
   }
   /* Accent glass: the tinted variant of .glass for the AI affordance (the
-   * floating Ask Talvex pill). Same recipe, a blue fill and a blue gradient
+   * floating Ask Talvext pill). Same recipe, a blue fill and a blue gradient
    * edge, because the AI action is the one accent affordance. The blue rgba
    * values pass the reserved color rule (blue dominant, not green/amber/red). */
   .glass-accent {

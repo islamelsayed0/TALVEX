@@ -9,7 +9,7 @@ import { FormError, ticketFieldClass } from '../../tickets/ui'
 import { SettingsNav } from '../nav'
 import { updateMemberTagsAction } from './actions'
 
-export const metadata = { title: 'Settings — Talvex' }
+export const metadata = { title: 'Settings — Talvext' }
 
 const ROLE_LABEL: Record<string, string> = {
   owner: 'Owner',

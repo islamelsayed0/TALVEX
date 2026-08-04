@@ -2,7 +2,7 @@ import { requireAdmin } from '@/lib/auth/org-viewer'
 import { createMonitorAction } from '../actions'
 import { MonitorForm } from '../ui'
 
-export const metadata = { title: 'Add monitor — Talvex' }
+export const metadata = { title: 'Add monitor — Talvext' }
 
 /**
  * Add a monitor. On a failed submit the server action redirects back here

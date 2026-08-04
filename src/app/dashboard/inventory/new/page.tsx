@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/auth/org-viewer'
 import { createInventoryItemAction } from '../actions'
 import { InventoryForm } from '../ui'
 
-export const metadata = { title: 'Add inventory item — Talvex' }
+export const metadata = { title: 'Add inventory item — Talvext' }
 
 /**
  * Add an item. On a failed submit the server action redirects back here

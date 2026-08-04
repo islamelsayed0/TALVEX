@@ -8,7 +8,7 @@ import { Card } from '../_overview/ui'
 import { formatUtc } from '../monitors/ui'
 import { elapsedSince, formatDuration, resolvedWithin } from './ui'
 
-export const metadata = { title: 'Incidents — Talvex' }
+export const metadata = { title: 'Incidents — Talvext' }
 
 /**
  * The incidents screen, restyled to the handoff (Phase 1 Task 2 data). Server

@@ -13,7 +13,7 @@ import { chromium } from 'playwright'
  *   BASE_URL=http://localhost:3000 STATUS_SLUG=northwind \
  *     node tests/e2e/accessibility.spec.mjs
  *
- * /accessibility commits Talvex to WCAG 2.2 Level AA. This is what stops that
+ * /accessibility commits Talvext to WCAG 2.2 Level AA. This is what stops that
  * from being a sentence nobody checks. Any violation axe rates serious or
  * critical fails the run.
  *

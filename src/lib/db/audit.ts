@@ -166,7 +166,7 @@ export function auditDetailSummary(entry: {
         from && to
           ? `${from.replaceAll('_', ' ')} to ${to.replaceAll('_', ' ')}`
           : ''
-      const by = kind === 'member' ? 'by the requester' : kind === 'system' ? 'by Talvex' : ''
+      const by = kind === 'member' ? 'by the requester' : kind === 'system' ? 'by Talvext' : ''
       return [move, by].filter(Boolean).join(', ')
     }
     case 'member_tags_changed': {

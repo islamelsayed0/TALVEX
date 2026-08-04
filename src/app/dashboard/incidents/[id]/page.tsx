@@ -15,7 +15,7 @@ import {
   incidentTicketPrefill,
 } from '../ui'
 
-export const metadata = { title: 'Incident — Talvex' }
+export const metadata = { title: 'Incident — Talvext' }
 
 /**
  * Incident detail: the record of one outage. The timeline is the feature.

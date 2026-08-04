@@ -5,7 +5,7 @@ import { getTicket, getTicketViewer } from '@/lib/db/tickets'
 import { ghostButton, primaryButton } from '../../../monitors/ui'
 import { memberSetTicketStatusAction } from '../../actions'
 
-export const metadata = { title: 'Cancel request — Talvex' }
+export const metadata = { title: 'Cancel request — Talvext' }
 
 /**
  * The confirmation for withdrawing your own request, its own page in the

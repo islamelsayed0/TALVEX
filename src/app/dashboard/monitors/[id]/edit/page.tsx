@@ -5,7 +5,7 @@ import { getMonitor } from '@/lib/db/monitors'
 import { updateMonitorAction } from '../../actions'
 import { MonitorForm } from '../../ui'
 
-export const metadata = { title: 'Edit monitor — Talvex' }
+export const metadata = { title: 'Edit monitor — Talvext' }
 
 export default async function EditMonitorPage({
   params,

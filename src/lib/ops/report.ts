@@ -21,7 +21,7 @@ import {
  *
  * OPS_DISCORD_WEBHOOK is platform level and has nothing to do with any org's
  * discord_webhook in org_notification_settings. A customer's channel must
- * never receive Talvex's internal failures, and the operator's channel must
+ * never receive Talvext's internal failures, and the operator's channel must
  * never receive a customer's incidents.
  *
  * Honest limitation, and the reason the external watcher is a separate thing:
@@ -69,7 +69,7 @@ export async function reportOpsError(report: OpsReport): Promise<void> {
 
   try {
     await postDiscordWebhook(url, {
-      title: 'Talvex platform error',
+      title: 'Talvext platform error',
       description: 'A server side step failed. Check the runtime logs for the full line.',
       color: DISCORD_DOWN_COLOR,
       fields: [

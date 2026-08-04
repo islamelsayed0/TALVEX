@@ -14,7 +14,7 @@ import {
   primaryButton,
 } from './ui'
 
-export const metadata = { title: 'Monitors — Talvex' }
+export const metadata = { title: 'Monitors — Talvext' }
 
 const GRID = 'grid grid-cols-[minmax(0,1fr)_200px_148px_88px_96px] gap-3.5'
 
@@ -79,7 +79,7 @@ export default async function MonitorsPage() {
           </h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             A monitor checks a URL on a schedule and records whether it
-            responded and how fast. Add your first one and Talvex starts
+            responded and how fast. Add your first one and Talvext starts
             watching it for you.
           </p>
           <Link href="/dashboard/monitors/new" className={primaryButton}>

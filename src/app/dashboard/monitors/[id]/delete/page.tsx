@@ -6,7 +6,7 @@ import { getMonitor } from '@/lib/db/monitors'
 import { deleteMonitorAction } from '../../actions'
 import { ghostButton, primaryButton } from '../../ui'
 
-export const metadata = { title: 'Delete monitor — Talvex' }
+export const metadata = { title: 'Delete monitor — Talvext' }
 
 /**
  * The plain confirmation for deletion: its own page, fully server side.

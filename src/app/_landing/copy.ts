@@ -6,39 +6,39 @@
  */
 
 export const HERO = {
-  sub: 'Talvex watches your systems, takes the requests when something breaks, and answers staff questions from your own documentation. Built for small offices where IT is one person.',
+  sub: 'Talvext watches your systems, takes the requests when something breaks, and answers staff questions from your own documentation. Built for small offices where IT is one person.',
 }
 
 export const PROOF = {
   overviewAlt:
-    'The Talvex overview: monitor status, open incidents and the ticket queue on one screen, with the sidebar listing Monitors, Incidents, Tickets, Documents and Inventory',
+    'The Talvext overview: monitor status, open incidents and the ticket queue on one screen, with the sidebar listing Monitors, Incidents, Tickets, Documents and Inventory',
   overviewCaption:
     'The overview, as it ships. Is anything down, is anything on fire, what needs me today.',
   chatHeading: 'And when your staff ask, it answers in your words',
   chatBody1:
-    'The AI chat answers from the documents your organization keeps in Talvex, and it shows which document the answer came from. No internet guesses about your specific printer.',
+    'The AI chat answers from the documents your organization keeps in Talvext, and it shows which document the answer came from. No internet guesses about your specific printer.',
   chatBody2:
     'Each person only gets answers from documents they are allowed to see. The front desk and the office manager can ask the same question and each gets what is theirs to know.',
   chatAlt:
-    'A Talvex chat answering a question about an offline label printer, with a From your documents section citing the two documents the answer came from',
+    'A Talvext chat answering a question about an offline label printer, with a From your documents section citing the two documents the answer came from',
   statusCaption:
     'A public status page. During an outage, people check a link instead of emailing you.',
   statusAlt:
-    'A public Talvex status page showing an outage banner and ninety days of uptime for each monitored system',
+    'A public Talvext status page showing an outage banner and ninety days of uptime for each monitored system',
   inventoryCaption:
     'The supply closet, tracked. Whatever is low on stock rises to the top before it runs out.',
   inventoryAlt:
-    'The Talvex inventory list with quantities, locations and a red Low stock chip on items below their minimum',
+    'The Talvext inventory list with quantities, locations and a red Low stock chip on items below their minimum',
 }
 
 export const PROBLEM = [
   'The printer is down. Three people have emailed you about it, one of them walked over to your desk, and the outage is in one tool while the emails are in another. By the time you have pieced it together, someone asks you for a status update.',
-  'Talvex keeps them together. The outage and the requests it caused sit in one system, the status page answers the walk ups, and the incident becomes a linked ticket without retyping what broke. You stop being the integration between two tools.',
+  'Talvext keeps them together. The outage and the requests it caused sit in one system, the status page answers the walk ups, and the incident becomes a linked ticket without retyping what broke. You stop being the integration between two tools.',
 ]
 
 export const WHAT = {
   intro:
-    'Talvex is where your office goes when something breaks, and where it checks before asking. It watches the systems you depend on, opens an incident when one goes down, keeps your documentation where staff can actually find it, and gives everyone one screen to ask for help without needing to know what a server is.',
+    'Talvext is where your office goes when something breaks, and where it checks before asking. It watches the systems you depend on, opens an incident when one goes down, keeps your documentation where staff can actually find it, and gives everyone one screen to ask for help without needing to know what a server is.',
   ruleLabel: 'The rule',
   rule: 'The rule for every screen is the same: someone who does not work in IT should be able to get help in one screen, with one obvious action and no jargon.',
   ruleClose: 'If a screen fails that, it gets rebuilt.',
@@ -61,7 +61,7 @@ export const FEATURES = [
   },
   {
     title: 'Answers from your documents',
-    body: 'The AI chat answers from the documents your organization keeps in Talvex and cites the one it used. Each person only gets answers from documents they are allowed to see.',
+    body: 'The AI chat answers from the documents your organization keeps in Talvext and cites the one it used. Each person only gets answers from documents they are allowed to see.',
   },
   {
     title: 'Public status pages',

@@ -11,7 +11,7 @@ import { clientIp, createSlidingWindow } from '@/lib/rate-limit'
  * anyone, because the sweep is the thing that sends email. The dashboard
  * banner added with the heartbeat is real but passive: it only fires when a
  * human happens to look. And self monitoring does not help either, because
- * Talvex's own monitors are checked by the same dead sweep and would sit there
+ * Talvext's own monitors are checked by the same dead sweep and would sit there
  * showing stale green. Only something outside the deployment can notice, and
  * something outside the deployment needs something to poll.
  *

@@ -12,7 +12,7 @@ import { FormError, ticketFieldClass } from '../../tickets/ui'
 import { SettingsNav } from '../nav'
 import { deleteApiKeyAction, saveApiKeyAction } from './actions'
 
-export const metadata = { title: 'Settings — Talvex' }
+export const metadata = { title: 'Settings — Talvext' }
 
 const EVENT_LABEL: Record<ApiKeyEventType, string> = {
   added: 'Key added',

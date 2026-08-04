@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 /**
  * The accessibility foundation, held as a test.
  *
- * /accessibility commits Talvex to WCAG 2.2 AA. tests/e2e/accessibility.spec.mjs
+ * /accessibility commits Talvext to WCAG 2.2 AA. tests/e2e/accessibility.spec.mjs
  * proves the pages it scans, but it needs a running app and a session, so it is
  * not what CI runs on every push. These are the structural promises that can be
  * checked from the source alone, and they are the ones that rot quietly:
