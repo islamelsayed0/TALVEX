@@ -8,7 +8,7 @@ import { countOpenIncidents } from '@/lib/db/incidents'
 
 import { ghostButton, primaryButton } from '../monitors/ui'
 
-export const metadata = { title: 'Help — Talvex' }
+export const metadata = { title: 'Help — Talvext' }
 
 const TICKET_HREF = '/dashboard/help/ticket'
 const CHAT_HREF = '/dashboard/chat/new'

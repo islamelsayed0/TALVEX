@@ -6,7 +6,7 @@ import type { LegalDocument } from '@/lib/legal/documents'
  * Nothing here is edited, summarised, or reworded. Two structural moves only,
  * neither of which changes a word:
  *
- * 1. The document's own "# Talvex Terms of Service" line is lifted into
+ * 1. The document's own "# Talvext Terms of Service" line is lifted into
  *    `title` and renders as the page h1, so it is not repeated in the body.
  * 2. The effective and last updated lines are separated by a blank line.
  *    Markdown joins adjacent lines into one paragraph, which would have run
@@ -24,21 +24,21 @@ import type { LegalDocument } from '@/lib/legal/documents'
  * effective date changes too. See docs/DECISIONS.md.
  */
 export const TERMS: LegalDocument = {
-  title: 'Talvex Terms of Service',
-  description: 'The terms that govern use of the Talvex platform.',
+  title: 'Talvext Terms of Service',
+  description: 'The terms that govern use of the Talvext platform.',
   source: `**Effective date:** August 3, 2026
 
 **Last updated:** August 3, 2026
 
 > **Transparency note:** These terms were prepared with AI assistance and have not yet been reviewed by an attorney. They are the agreement that governs use of the Service while it is free, and they will be updated when professional review is complete.
 
-These Terms of Service (the "Terms") are a binding agreement between you and Islam Elsayed, doing business as Talvex ("Talvex," "we," "us," or "our") governing your access to and use of the Talvex platform, including uptime monitoring, incident management, ticketing, AI assisted support chat, status pages, and related services (collectively, the "Service").
+These Terms of Service (the "Terms") are a binding agreement between you and Islam Elsayed, doing business as Talvext ("Talvext," "we," "us," or "our") governing your access to and use of the Talvext platform, including uptime monitoring, incident management, ticketing, AI assisted support chat, status pages, and related services (collectively, the "Service").
 
 By creating an account, clicking to accept, or using the Service, you agree to these Terms. If you are accepting on behalf of a company or organization, you represent that you have authority to bind that organization, and "you" refers to that organization. If you do not agree, do not use the Service.
 
 ## 1. The Service
 
-Talvex provides a multitenant IT operations platform. We may add, modify, or remove features at any time. The Service is intended for business use by organizations, not for personal or household use.
+Talvext provides a multitenant IT operations platform. We may add, modify, or remove features at any time. The Service is intended for business use by organizations, not for personal or household use.
 
 **The Service uses artificial intelligence.** Certain features, including the support chat, generate responses using automated AI systems rather than a human. AI generated content in the Service may be labeled as such, and Section 4 governs your use of these features.
 
@@ -90,7 +90,7 @@ You must not, and must not permit anyone to: (a) use the Service to violate law 
 
 The Service is not intended to store or process regulated categories of sensitive data. You must not submit to the Service: (a) protected health information ("PHI") as defined under HIPAA, unless and until we have signed a Business Associate Agreement ("BAA") with you in writing; (b) payment card numbers or full financial account credentials; (c) government issued identification numbers; or (d) any data whose processing would impose regulatory obligations on us that we have not expressly agreed to in writing.
 
-**Talvex is not a HIPAA covered entity or business associate by default and does not sign a BAA unless expressly agreed in a separate written document. If you are a medical, dental, or other healthcare practice, do not include patient names, health conditions, or any other PHI in tickets, chat messages, monitor names, or any other field unless a BAA is in place.** You agree that you are solely responsible for any regulated data you submit in violation of this Section, and that this Section survives termination.
+**Talvext is not a HIPAA covered entity or business associate by default and does not sign a BAA unless expressly agreed in a separate written document. If you are a medical, dental, or other healthcare practice, do not include patient names, health conditions, or any other PHI in tickets, chat messages, monitor names, or any other field unless a BAA is in place.** You agree that you are solely responsible for any regulated data you submit in violation of this Section, and that this Section survives termination.
 
 ## 8. Fees and Payment
 
@@ -142,7 +142,7 @@ Our Privacy Policy, available at /privacy, describes how we collect, use, and sh
 
 ## 18. Indemnification
 
-You will defend, indemnify, and hold harmless Talvex and its owner, affiliates, and personnel from and against any claims, damages, liabilities, costs, and expenses (including reasonable attorneys' fees) arising out of or related to: (a) Customer Content or Input; (b) your use of the Service, including use of Output and use of AI Providers through Customer Keys; (c) your violation of these Terms or applicable law, including submission of PHI or other prohibited data; (d) your monitoring of endpoints without authorization; or (e) disputes between you and your end users or clients. We will promptly notify you of any such claim and may participate in the defense with our own counsel at our expense.
+You will defend, indemnify, and hold harmless Talvext and its owner, affiliates, and personnel from and against any claims, damages, liabilities, costs, and expenses (including reasonable attorneys' fees) arising out of or related to: (a) Customer Content or Input; (b) your use of the Service, including use of Output and use of AI Providers through Customer Keys; (c) your violation of these Terms or applicable law, including submission of PHI or other prohibited data; (d) your monitoring of endpoints without authorization; or (e) disputes between you and your end users or clients. We will promptly notify you of any such claim and may participate in the defense with our own counsel at our expense.
 
 ## 19. Suspension and Termination
 
@@ -158,6 +158,6 @@ These Terms are governed by the laws of the State of New York, without regard to
 
 ## Contact
 
-Islam Elsayed, doing business as Talvex
+Islam Elsayed, doing business as Talvext
 islamelsayed02@gmail.com`,
 }

@@ -7,7 +7,7 @@ import { getArticle } from '@/lib/db/articles'
 import { ghostButton, primaryButton } from '../../../monitors/ui'
 import { deleteArticleAction } from '../../actions'
 
-export const metadata = { title: 'Delete document — Talvex' }
+export const metadata = { title: 'Delete document — Talvext' }
 
 /**
  * The plain confirmation for deletion, the monitors idiom: its own page,

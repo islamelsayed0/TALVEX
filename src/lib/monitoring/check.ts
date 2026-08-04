@@ -94,7 +94,7 @@ export async function runMonitorCheck(rawUrl: string): Promise<CheckOutcome> {
         method: 'GET',
         redirect: 'manual',
         signal,
-        headers: { 'user-agent': 'TalvexMonitor/1.0' },
+        headers: { 'user-agent': 'TalvextMonitor/1.0' },
       })
       // Headers are enough to judge the check; drop the body.
       await response.body?.cancel()

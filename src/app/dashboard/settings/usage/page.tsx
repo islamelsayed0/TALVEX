@@ -16,7 +16,7 @@ import { SettingsNav } from '../nav'
 import { saveTimezoneAction } from './actions'
 import { AutoTimezone } from './auto-timezone'
 
-export const metadata = { title: 'Settings — Talvex' }
+export const metadata = { title: 'Settings — Talvext' }
 
 const n = (value: number) => value.toLocaleString('en-US')
 

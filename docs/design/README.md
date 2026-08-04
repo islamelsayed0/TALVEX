@@ -1,7 +1,7 @@
-# Handoff: Talvex Sign In
+# Handoff: Talvext Sign In
 
 ## Overview
-The sign-in screen for Talvex, an IT operations platform used by small offices
+The sign-in screen for Talvext, an IT operations platform used by small offices
 (law firms, dental practices, medical clinics) and the solo IT person who
 supports them. The person signing in is often non-technical and can feel
 anxious around IT tools, so the screen is deliberately calm, uncluttered, and
@@ -11,7 +11,7 @@ The screen supports both dark (default) and light themes with a toggle.
 ## About the Design Files
 The files in this bundle are **design references created in HTML** — prototypes
 that show the intended look and behavior. They are **not** production code to
-copy directly. The task is to **recreate these designs in the Talvex codebase's
+copy directly. The task is to **recreate these designs in the Talvext codebase's
 existing environment** (Next.js App Router + Clerk + Tailwind), using its
 established patterns. The current sign-in route renders a default Clerk `<SignIn>`
 widget; this design replaces that presentation.
@@ -47,8 +47,8 @@ options / theming rather than rebuilding the flow.
   three-quarter ring (a `border: 2.5px solid` circle with
   `border-right-color: transparent`, rotated `-45deg`) — a quiet "monitoring"
   motif. Ring color is `#08111f` in dark, `#ffffff` in light. This is a
-  placeholder mark; swap for the real Talvex logo when available.
-- **Wordmark "Talvex":** Geist, `600`, `27px`, `letter-spacing: -0.022em`.
+  placeholder mark; swap for the real Talvext logo when available.
+- **Wordmark "Talvext":** Geist, `600`, `27px`, `letter-spacing: -0.022em`.
   Color `#f6f4f0` (dark) / `#17150f` (light).
 - **Subhead:** "Everything about your systems, in one calm place. Sign in to
   pick up where you left off." Geist `400`, `14.5px`, `line-height: 1.55`,
@@ -89,7 +89,7 @@ This file holds every explored option and state, grouped by turn (newest at top)
     One moment. This is safe to leave open.") and *Error* ("That did not go
     through" + calm retry, no red).
   - **3c** *Choose an organization* — the Clerk `/select-org` step, styled to
-    match. Copy: "Everything in Talvex belongs to an organization. Pick one or
+    match. Copy: "Everything in Talvext belongs to an organization. Pick one or
     create your first." Org rows + "Create your first organization".
   - **3d** the sign-in shown in a browser frame at `talvex.app/signin`.
 - **Turns 1–2** are the wireframe → mid-fi → hi-fi progression that led here.
@@ -165,7 +165,7 @@ This file holds every explored option and state, grouped by turn (newest at top)
 
 ## Assets
 - **Logo mark:** placeholder built in CSS (blue gradient tile + three-quarter
-  ring). Replace with the real Talvex logo.
+  ring). Replace with the real Talvext logo.
 - **Google "G":** monochrome placeholder. Decide on official Google branding vs.
   the monochrome treatment before shipping, given the no red/green/amber rule.
 - **Font:** Geist, loaded via `next/font/google` in the codebase.

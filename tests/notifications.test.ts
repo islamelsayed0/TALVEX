@@ -90,14 +90,14 @@ describe('normalizeDiscordWebhookUrl', () => {
   })
 })
 
-describe('builders carry Talvex copy and design system colors', () => {
+describe('builders carry Talvext copy and design system colors', () => {
   it('subjects are the F10 contract', () => {
     expect(
       buildDownEmail({ monitorName: 'X', monitorUrl: 'u', occurredAtIso: '2026-07-27T10:00:00.000Z', reopened: false }).subject,
-    ).toBe('[Talvex] X is down')
+    ).toBe('[Talvext] X is down')
     expect(
       buildRecoveredEmail({ monitorName: 'X', monitorUrl: 'u', occurredAtIso: '2026-07-27T10:00:00.000Z' }).subject,
-    ).toBe('[Talvex] X recovered')
+    ).toBe('[Talvext] X recovered')
   })
 
   it('embed colors are the status tokens, not the NetPulse palette', () => {
@@ -124,7 +124,7 @@ describe('dispatch fans out by configuration', () => {
     expect(attempted).toBe(true)
     expect(emailCalls).toHaveLength(1)
     expect(emailCalls[0].to).toBe('ops@example.com')
-    expect(emailCalls[0].subject).toBe('[Talvex] Prod API is down')
+    expect(emailCalls[0].subject).toBe('[Talvext] Prod API is down')
     expect(discordCalls).toHaveLength(0)
   })
 

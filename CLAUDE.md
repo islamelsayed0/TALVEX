@@ -1,7 +1,7 @@
-# CLAUDE.md — Talvex Project Conventions
+# CLAUDE.md — Talvext Project Conventions
 
 ## What this project is
-Talvex is an all in one IT operations platform: uptime monitoring, incidents,
+Talvext is an all in one IT operations platform: uptime monitoring, incidents,
 ticketing, AI support chat, client status pages, and usage metering, built as
 a multitenant SaaS. It merges two predecessor projects: NetPulse (monitoring,
 the architectural base) and HelpMe Hub (helpdesk features, being ported from

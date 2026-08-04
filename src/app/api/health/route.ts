@@ -8,7 +8,7 @@ import { clientIp, createSlidingWindow } from '@/lib/rate-limit'
  *
  * One question, one bit of answer. The freshness endpoint next door says
  * whether the sweep is running; this says whether the runtime and Postgres are
- * talking at all, which is the thing Talvex's own monitors check and the thing
+ * talking at all, which is the thing Talvext's own monitors check and the thing
  * that distinguishes "the app is down" from "the app is up and the scheduler
  * is not".
  *

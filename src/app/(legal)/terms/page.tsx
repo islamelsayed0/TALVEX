@@ -4,7 +4,7 @@ import { TERMS } from '../_content/terms'
 import { DocumentPage } from '../ui'
 
 export const metadata = {
-  title: `${TERMS.title} — Talvex`,
+  title: `${TERMS.title} — Talvext`,
   description: TERMS.description,
 }
 

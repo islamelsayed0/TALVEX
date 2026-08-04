@@ -17,7 +17,7 @@ import {
   sendTestNotificationAction,
 } from './actions'
 
-export const metadata = { title: 'Settings — Talvex' }
+export const metadata = { title: 'Settings — Talvext' }
 
 /**
  * Notification settings (F10), admin only exactly like api-keys: same
@@ -88,7 +88,7 @@ export default async function NotificationSettingsPage({
       <Card className="px-[22px] py-5">
         <h2 className="text-base font-semibold text-foreground">Notifications</h2>
         <p className="mt-1 text-[12.5px] text-quiet">
-          When a monitor goes down or recovers, Talvex tells you here. Included
+          When a monitor goes down or recovers, Talvext tells you here. Included
           on every plan.
         </p>
 
@@ -169,7 +169,7 @@ export default async function NotificationSettingsPage({
             />
             <span className="text-[12px] text-quiet">
               If a monitor goes down again within this window of the last alert,
-              Talvex stays quiet instead of alerting twice.
+              Talvext stays quiet instead of alerting twice.
             </span>
           </label>
 
@@ -241,13 +241,13 @@ export default async function NotificationSettingsPage({
             />
             <span className="text-[12px] text-quiet">
               Around this time in your organization&rsquo;s timezone,{' '}
-              {org.timezone}. Talvex checks every few minutes, so the email
+              {org.timezone}. Talvext checks every few minutes, so the email
               arrives at your chosen time or a few minutes after.
             </span>
           </label>
 
           <p className="border-t border-divider pt-4 text-[12px] text-quiet">
-            If there is nothing that needs you, there is no email. Talvex does
+            If there is nothing that needs you, there is no email. Talvext does
             not send an all clear. An email arriving means something is waiting.
           </p>
 

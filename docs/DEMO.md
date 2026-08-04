@@ -1,4 +1,4 @@
-# Talvex demo script
+# Talvext demo script
 
 Ten minutes, run against production at https://talvex-chi.vercel.app. Written to
 be read while presenting: each beat says what you do, what you say, and what the
@@ -43,7 +43,7 @@ on the demo org if you are using the prepared one.
    [RUNBOOK.md](RUNBOOK.md) section 2).
 2. **An AI provider key.** Settings, AI providers: add an Anthropic, OpenAI, or
    Google key. **Without this the chat beat does not work at all**, because
-   Talvex is bring your own key and there is no platform key. This also writes
+   Talvext is bring your own key and there is no platform key. This also writes
    an `api_key_added` row you can point at later.
 3. **At least two published documents**, one of which plainly answers the
    question you plan to ask. The seeded set uses a label printer article; if you
@@ -95,7 +95,7 @@ question rather than broke the answer.
 **Do.** Sign in. On the dashboard, open the organization switcher in the top
 left.
 
-**Say.** "Talvex is multitenant. Everything you are about to see belongs to one
+**Say.** "Talvext is multitenant. Everything you are about to see belongs to one
 organization, and the separation is not a filter in my application code, it is
 row level security in Postgres. If I switch organizations, every screen changes,
 because the database is answering a different question, not because the UI is
@@ -139,7 +139,7 @@ in public."
 Then, immediately and without being asked:
 
 "The one I actually broke for this demo is the other monitor, about eight
-minutes before we started. Talvex will not open an incident on a single failed
+minutes before we started. Talvext will not open an incident on a single failed
 check. It stamps the failure, waits for the next sweep, and rechecks. One
 dropped packet should not wake anybody up. That costs two sweep cycles, so the
 one I just broke in front of you opens in five to ten minutes, and the one I
@@ -151,7 +151,7 @@ checked yet and the product says so rather than guessing.
 ### Beat 4 — The part that deflects the tickets (3:00 to 5:30)
 
 **Do.** Documents in the sidebar, to show a couple of articles exist. Then Help,
-or the Ask Talvex button, and ask the question your document answers. Wait for
+or the Ask Talvext button, and ask the question your document answers. Wait for
 the reply. Point at the reference card underneath it, then click through to the
 document.
 
@@ -165,7 +165,7 @@ retrieval runs on the caller's own database session. It is not filtered
 afterwards in application code. So the assistant is physically unable to quote a
 document this person could not open themselves, and documents can be targeted at
 some members and not others. Also worth saying out loud: this is the
-organization's own key, not mine. Talvex never pays for anyone's inference and
+organization's own key, not mine. Talvext never pays for anyone's inference and
 the key is encrypted before it reaches the database.
 
 *If the reply is slow*, that is the honest state: replies are not streamed yet,
@@ -258,7 +258,7 @@ written down in the decision log.
 | Monitor still says Pending after ten minutes | The sweep is not running, or the monitor was created just after a sweep. | Check the heartbeat. Fall back to an incident that already exists. |
 | Incident never opens | The target is answering 2xx. Deployment protection can take a moment, and a cached response can look fine in your browser. | Reload the target hard. If it is 200, the product is right and the target is not dead. |
 | No email arrives | `RESEND_API_KEY` or `RESEND_FROM` unset, or alert on open unchecked, or the cooldown suppressed it. | Show the Discord message instead. Both channels are configured independently on purpose. |
-| Chat says it needs a key | The organization has no provider key. | You cannot recover this live. Talvex is bring your own key and there is no platform fallback. Skip to beat 6. |
+| Chat says it needs a key | The organization has no provider key. | You cannot recover this live. Talvext is bring your own key and there is no platform fallback. Skip to beat 6. |
 | A deep link returns 404 | The live deployment runs on a Clerk development instance, where a cold deep link 404s instead of redirecting to sign in. | Navigate from the home page. It is a known cost of not owning a domain yet, and it is in the decision log. |
 
 **If something breaks that you cannot explain, say so and move on.** The

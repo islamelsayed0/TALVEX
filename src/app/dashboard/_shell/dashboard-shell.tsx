@@ -9,7 +9,7 @@ import { Wordmark } from '@/components/brand/wordmark'
 
 import { isNavItemActive, type NavItem } from '../nav-items'
 import type { ProviderOption } from '../chat/ui'
-import { AskTalvexWidget } from './ask-talvex-widget'
+import { AskTalvextWidget } from './ask-talvext-widget'
 import { NAV_ICON } from './nav-icons'
 
 /**
@@ -18,7 +18,7 @@ import { NAV_ICON } from './nav-icons'
  * the org switcher, the role aware nav, the settings entry, and the UserButton
  * into a vertical rail. Client because the collapse and the narrow overlay are
  * session state (React state in the layout, no database, no localStorage), and
- * the active nav item follows the route. The Ask Talvex pill stays floating over
+ * the active nav item follows the route. The Ask Talvext pill stays floating over
  * the content, untouched.
  *
  * Visual language is unchanged: the active item keeps the existing .nav-item
@@ -323,7 +323,7 @@ export function DashboardShell({
       </div>
 
       {/* The floating assistant, over the content, unchanged. */}
-      <AskTalvexWidget hasKey={hasKey} isAdmin={isAdmin} providers={providers} />
+      <AskTalvextWidget hasKey={hasKey} isAdmin={isAdmin} providers={providers} />
     </div>
   )
 }

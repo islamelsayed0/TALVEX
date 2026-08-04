@@ -6,16 +6,16 @@ import type { LegalDocument } from '@/lib/legal/documents'
  * rule does not reach legal prose, and the transparency note stays.
  */
 export const PRIVACY: LegalDocument = {
-  title: 'Talvex Privacy Policy',
+  title: 'Talvext Privacy Policy',
   description:
-    'What data Talvex collects, why we hold it, and the choices you have over it.',
+    'What data Talvext collects, why we hold it, and the choices you have over it.',
   source: `**Effective date:** August 3, 2026
 
 **Last updated:** August 3, 2026
 
 > **Transparency note:** This policy was prepared with AI assistance and has not yet been reviewed by an attorney. It describes our actual practices while the Service is free, and it will be updated when professional review is complete.
 
-This Privacy Policy describes how Islam Elsayed, doing business as Talvex ("Talvex," "we," "us," or "our") collects, uses, and shares personal information when you use the Talvex platform, including uptime monitoring, incident management, ticketing, AI assisted support chat, status pages, and related services (the "Service"), or visit our websites.
+This Privacy Policy describes how Islam Elsayed, doing business as Talvext ("Talvext," "we," "us," or "our") collects, uses, and shares personal information when you use the Talvext platform, including uptime monitoring, incident management, ticketing, AI assisted support chat, status pages, and related services (the "Service"), or visit our websites.
 
 If you use the Service as a member or end user of an organization (for example, an employee submitting a ticket to your company's IT team), that organization controls its workspace and its data. This Policy describes our practices; your organization's own policies govern how it handles your information.
 
@@ -73,6 +73,6 @@ We may update this Policy from time to time. Material changes will be announced 
 
 ## Contact
 
-Islam Elsayed, doing business as Talvex
+Islam Elsayed, doing business as Talvext
 islamelsayed02@gmail.com`,
 }

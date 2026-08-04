@@ -35,7 +35,7 @@ import {
   VerdictBanner,
 } from './_overview/ui'
 
-export const metadata = { title: 'Overview — Talvex' }
+export const metadata = { title: 'Overview — Talvext' }
 
 /**
  * The admin Overview: five second triage. Every number, bar, and line here is
@@ -348,7 +348,7 @@ export default async function OverviewPage() {
               </svg>
             </span>
             <span className="flex-1 text-sm text-quiet">
-              Ask Talvex about anything on your systems
+              Ask Talvext about anything on your systems
             </span>
             <span className="flex-none text-[13px] font-semibold text-accent-text">
               Open

@@ -19,18 +19,18 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000'
 const PAGES = [
   {
     path: '/terms',
-    h1: 'Talvex Terms of Service',
-    title: 'Talvex Terms of Service — Talvex',
+    h1: 'Talvext Terms of Service',
+    title: 'Talvext Terms of Service — Talvext',
   },
   {
     path: '/privacy',
-    h1: 'Talvex Privacy Policy',
-    title: 'Talvex Privacy Policy — Talvex',
+    h1: 'Talvext Privacy Policy',
+    title: 'Talvext Privacy Policy — Talvext',
   },
   {
     path: '/accessibility',
-    h1: 'Accessibility at Talvex',
-    title: 'Accessibility at Talvex — Talvex',
+    h1: 'Accessibility at Talvext',
+    title: 'Accessibility at Talvext — Talvext',
   },
 ]
 
@@ -88,7 +88,7 @@ try {
       'has not yet been reviewed by an attorney',
       '1. Information We Collect',
       'we do not use your content to train AI models',
-      'Islam Elsayed, doing business as Talvex',
+      'Islam Elsayed, doing business as Talvext',
     ],
   }
   for (const [path, phrases] of Object.entries(CONTENT)) {

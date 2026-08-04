@@ -134,7 +134,7 @@ async function navLabels(page) {
 
   await page.goto(`${BASE}/dashboard`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(300)
-  const pill = page.getByRole('button', { name: /ask talvex/i })
+  const pill = page.getByRole('button', { name: /ask talvext/i })
   if (await pill.count()) {
     await pill.first().click()
     await page.waitForTimeout(500)

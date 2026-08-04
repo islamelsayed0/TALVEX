@@ -28,13 +28,13 @@ export default function LegalLayout({
             href="/"
             className="font-display text-[22px] font-semibold tracking-[-0.02em] text-foreground"
           >
-            Talvex
+            Talvext
           </Link>
           <Link
             href="/"
             className="text-[14.5px] font-medium text-secondary-foreground transition-colors hover:text-foreground"
           >
-            Back to Talvex
+            Back to Talvext
           </Link>
         </div>
       </header>

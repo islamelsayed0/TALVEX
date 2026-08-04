@@ -7,7 +7,7 @@ import { getArticle } from '@/lib/db/articles'
 import { ghostButton } from '../../../monitors/ui'
 import { MarkdownView } from '../markdown-view'
 
-export const metadata = { title: 'Documents — Talvex' }
+export const metadata = { title: 'Documents — Talvext' }
 
 /**
  * One article, rendered from markdown to React elements server side (never

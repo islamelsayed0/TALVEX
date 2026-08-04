@@ -4,7 +4,7 @@ import { ACCESSIBILITY } from '../_content/accessibility'
 import { DocumentPage } from '../ui'
 
 export const metadata = {
-  title: `${ACCESSIBILITY.title} — Talvex`,
+  title: `${ACCESSIBILITY.title} — Talvext`,
   description: ACCESSIBILITY.description,
 }
 

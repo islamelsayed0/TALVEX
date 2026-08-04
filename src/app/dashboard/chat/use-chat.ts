@@ -8,7 +8,7 @@ import type { ProviderOption } from './ui'
 
 /**
  * The chat send flow, shared by the full chat pane (chat-pane.tsx) and the
- * floating popup (ask-talvex-widget.tsx) so both behave identically: optimistic
+ * floating popup (ask-talvext-widget.tsx) so both behave identically: optimistic
  * user bubble, POST to /api/chat (non streaming), typed error to a calm line,
  * and the assistant reply appended when it lands. Message writes and the
  * provider call happen server side; this only reflects them.

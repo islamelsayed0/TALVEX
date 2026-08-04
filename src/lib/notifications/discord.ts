@@ -3,7 +3,7 @@ import 'server-only'
 /**
  * Discord webhook notifications (BRD F10). Ported from NetPulse
  * lib/notifications/discord-webhook.ts: the URL normalizer and the post
- * helper survive nearly verbatim; the embeds are rebuilt with Talvex copy
+ * helper survive nearly verbatim; the embeds are rebuilt with Talvext copy
  * and the design system status colors. Nothing here touches the database.
  *
  * A webhook URL is capability bearing (anyone holding it can post into the
@@ -21,7 +21,7 @@ export const DISCORD_RECOVERED_COLOR = 0x4ade80
  * colors stay reserved for real incident state. */
 export const DISCORD_TEST_COLOR = 0x3d8bff
 
-const TALVEX_FOOTER = 'Talvex Monitoring'
+const TALVEXT_FOOTER = 'Talvext Monitoring'
 
 /**
  * Accepts a Discord webhook URL and returns its normalized form, or null for
@@ -77,7 +77,7 @@ export function buildDownEmbed(input: {
       { name: 'Down since', value: formatUtcMinute(input.occurredAtIso), inline: true },
     ],
     timestamp: input.occurredAtIso,
-    footer: { text: TALVEX_FOOTER },
+    footer: { text: TALVEXT_FOOTER },
   }
 }
 
@@ -96,18 +96,18 @@ export function buildRecoveredEmbed(input: {
       { name: 'Recovered at', value: formatUtcMinute(input.occurredAtIso), inline: true },
     ],
     timestamp: input.occurredAtIso,
-    footer: { text: TALVEX_FOOTER },
+    footer: { text: TALVEXT_FOOTER },
   }
 }
 
 /** The embed for a test triggered from Settings. Clearly not a real incident. */
 export function buildTestEmbed(): DiscordEmbed {
   return {
-    title: 'Talvex test notification',
+    title: 'Talvext test notification',
     description:
       'Your Discord alerts are set up correctly. This is a test from Settings, not a real incident.',
     color: DISCORD_TEST_COLOR,
-    footer: { text: TALVEX_FOOTER },
+    footer: { text: TALVEXT_FOOTER },
   }
 }
 
@@ -124,7 +124,7 @@ export async function postDiscordWebhook(
     const res = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'Talvex', embeds: [embed] }),
+      body: JSON.stringify({ username: 'Talvext', embeds: [embed] }),
     })
     if (!res.ok) {
       return { ok: false, error: `Discord returned HTTP ${res.status}` }

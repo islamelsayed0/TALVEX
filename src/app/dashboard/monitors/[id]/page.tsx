@@ -19,7 +19,7 @@ import {
 } from '../ui'
 import { ResponseChart } from './response-chart'
 
-export const metadata = { title: 'Monitor — Talvex' }
+export const metadata = { title: 'Monitor — Talvext' }
 
 /**
  * Monitor detail: current status, the 30 day uptime figure, response time

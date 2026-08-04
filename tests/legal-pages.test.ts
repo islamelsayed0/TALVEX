@@ -99,9 +99,9 @@ describe('legal documents', () => {
   })
 
   it('keeps the accessibility statement exactly as supplied', () => {
-    expect(ACCESSIBILITY.title).toBe('Accessibility at Talvex')
+    expect(ACCESSIBILITY.title).toBe('Accessibility at Talvext')
     expect(ACCESSIBILITY.source).toBe(
-      `Talvex is committed to making our platform usable by as many people as possible, including people with disabilities. We aim to conform to the Web Content Accessibility Guidelines (WCAG) 2.2 Level AA.
+      `Talvext is committed to making our platform usable by as many people as possible, including people with disabilities. We aim to conform to the Web Content Accessibility Guidelines (WCAG) 2.2 Level AA.
 
 Our platform is designed and tested with keyboard navigation, screen reader compatibility, visible focus indicators, and sufficient color contrast in mind. Status information is always conveyed by text and icons, never by color alone. Accessibility is an ongoing effort, and some portions of the platform may not yet fully conform. We review accessibility as part of every release.
 
@@ -117,8 +117,8 @@ This statement was last reviewed on August 3, 2026.`,
     // prohibition, and the liability cap.
     const terms = words(TERMS.source)
     for (const clause of [
-      'These Terms of Service (the "Terms") are a binding agreement between you and Islam Elsayed, doing business as Talvex',
-      'Talvex is not a HIPAA covered entity or business associate by default and does not sign a BAA unless expressly agreed in a separate written document.',
+      'These Terms of Service (the "Terms") are a binding agreement between you and Islam Elsayed, doing business as Talvext',
+      'Talvext is not a HIPAA covered entity or business associate by default and does not sign a BAA unless expressly agreed in a separate written document.',
       'THE SERVICE, INCLUDING ALL AI FEATURES, OUTPUT, AND SECURITY MEASURES, IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND',
       'WILL NOT EXCEED THE GREATER OF (i) THE AMOUNTS YOU PAID US FOR THE SERVICE IN THE TWELVE MONTHS PRECEDING THE EVENT GIVING RISE TO THE CLAIM, OR (ii) ONE HUNDRED US DOLLARS ($100).',
       'These Terms are governed by the laws of the State of New York',
