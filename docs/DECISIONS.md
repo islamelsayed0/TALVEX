@@ -112,6 +112,36 @@ slug moves to `talvext` as a manual step recorded in `docs/RUNBOOK.md`.
 
 ---
 
+## 2026-08-03 — Two verification gaps, found the hard way, now working rules
+
+Both of these came out of the accessibility pass (#57, #58). Neither is a
+preference; each is a case where a check reported green over something broken.
+
+**A CSS change is not verified until `npm run build` has run.** `tsc` and
+`eslint` parse no CSS. A comment edit in `globals.css` left prose outside its
+`/* */`, both tools reported clean, and every route returned 500 until the next
+build. The failure mode is specific and repeatable: the two checks that run
+fastest are exactly the two that cannot see a stylesheet, so "typecheck and
+lint pass" reads as verified when nothing has looked at the CSS at all. Any
+change touching a stylesheet runs a build before the word green is used. Now
+CLAUDE.md rule 15.
+
+**A keyboard pass is a standing part of accessibility verification.** axe
+checks contrast, structure, names, and roles. It does not check whether a
+focus indicator exists. The Clerk org switcher and user button were rendering
+at `outline: 0px none` on pages axe had already passed, because the layer order
+put Clerk's styles after our base rule. Tabbing through found it in seconds;
+the gate could not have found it at all, and adding more axe rules would not
+change that. The gate is necessary and it is not sufficient. Now CLAUDE.md
+rule 16, and `tests/e2e/accessibility.spec.mjs` carries the keyboard section
+that encodes it.
+
+**The shape of both.** A passing check answers the question it was built to
+ask, which is never the same as the question "is this correct". Worth knowing
+what each tool is structurally blind to before quoting its output as proof.
+
+---
+
 ## 2026-08-03 — The focus ring is a global rule that CSS cannot defend, so a test does
 
 **Decided.** One focus ring: `--focus-ring`, `--focus-ring-width` (2px),
