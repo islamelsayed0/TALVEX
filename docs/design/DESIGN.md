@@ -107,8 +107,13 @@ and are imported across the dashboard screens.
 | **Landing (public)** | `/` | This document, §5 |
 
 Reference renders for every screen are in
-[`docs/design/screenshots/`](screenshots/) (the `*-dark.png` set is current;
-`*-light.png` predate the dark-only decision and are historical).
+[`docs/design/screenshots/`](screenshots/). The `*-dark.png` set was retaken
+2026-08-04 after the Talvext rename, except four captures that need staged
+state to reproduce (`monitors-empty`, `incidents-empty`, `tickets-empty`, and
+`tickets-queue-member`): those predate the rename, show the old wordmark, and
+are kept as dated references until an empty org and a member session are next
+staged. `*-light.png` predate the dark-only decision and are historical, as
+are the `before-`/`after-` process captures.
 
 Detail pages, forms, and the chat experience are still on pre-reskin styling and
 are tracked as follow-up work, not yet part of the locked design.

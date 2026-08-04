@@ -152,7 +152,7 @@ export default function Home() {
             <FrameBar url="talvext.com/dashboard" />
             <div className="relative aspect-[16/10] overflow-hidden rounded-tile">
               <Image
-                src="/landing/dashboard-shot.png"
+                src="/landing/dashboard-view.png"
                 alt={PROOF.overviewAlt}
                 fill
                 priority
@@ -181,7 +181,7 @@ export default function Home() {
               <FrameBar url="talvext.com/dashboard/chat" small />
               <div className="relative aspect-[16/10] overflow-hidden rounded-[13px]">
                 <Image
-                  src="/landing/chat-shot.png"
+                  src="/landing/chat-view.png"
                   alt={PROOF.chatAlt}
                   fill
                   sizes="(max-width: 768px) 100vw, 700px"
@@ -197,7 +197,7 @@ export default function Home() {
                 <FrameBar url="talvext.com/status/northwind" small />
                 <div className="relative aspect-[16/10] overflow-hidden rounded-[13px]">
                   <Image
-                    src="/landing/status-shot.png"
+                    src="/landing/status-view.png"
                     alt={PROOF.statusAlt}
                     fill
                     sizes="(max-width: 768px) 100vw, 590px"
@@ -214,7 +214,7 @@ export default function Home() {
                 <FrameBar url="talvext.com/dashboard/inventory" small />
                 <div className="relative aspect-[16/10] overflow-hidden rounded-[13px]">
                   <Image
-                    src="/landing/inventory-shot.png"
+                    src="/landing/inventory-view.png"
                     alt={PROOF.inventoryAlt}
                     fill
                     sizes="(max-width: 768px) 100vw, 590px"

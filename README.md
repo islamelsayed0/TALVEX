@@ -10,9 +10,9 @@ office's own written documents, and turns the rest into tickets. One
 organization's data is separated from another's by the database, not by
 application code that has to remember.
 
-![The Overview screen: two monitors down, open incidents, the ticket queue](docs/readme/overview.png)
+![The Overview screen: eight monitors down, open incidents, the ticket queue](docs/readme/overview-talvext.png)
 
-![Support chat answering from the organization's own documents, with the sources it used](docs/readme/chat-grounded.png)
+![Support chat answering from the organization's own documents, with the sources it used](docs/readme/chat-grounded-talvext.png)
 
 Both screenshots are the running app against a seeded demo organization. No
 mockups, and nothing on screen that the product does not do.
