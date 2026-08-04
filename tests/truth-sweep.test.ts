@@ -64,10 +64,15 @@ const ALLOWLIST: ReadonlyArray<{ path: string; reason: string }> = [
 
 const SCANNED_EXTENSIONS = /\.(md|ts|tsx|mjs|js|css|html|toml|yml|yaml)$/
 
+/** The hunter must name its prey: this file spells out the old names in its
+ * patterns, comments, and allowlist reasons, so it is the one file the scan
+ * skips by construction rather than by allowlist. */
+const SELF = 'tests/truth-sweep.test.ts'
+
 function trackedFiles(): string[] {
   return execFileSync('git', ['ls-files'], { encoding: 'utf8' })
     .split('\n')
-    .filter((f) => SCANNED_EXTENSIONS.test(f))
+    .filter((f) => SCANNED_EXTENSIONS.test(f) && f !== SELF)
 }
 
 function hits(file: string, pattern: RegExp): string[] {
