@@ -20,7 +20,7 @@ import {
 import { ChatPane } from '../chat-pane'
 import { DisclosureLine, Transcript, toProviderOptions } from '../ui'
 
-export const metadata = { title: 'Conversation — Talvex' }
+export const metadata = { title: 'Conversation — Talvext' }
 
 const STATUS_LABEL: Record<ChatConversationStatus, string> = {
   open: 'Open',

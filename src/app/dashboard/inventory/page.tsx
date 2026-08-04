@@ -8,7 +8,7 @@ import { ghostButton, primaryButton } from '../monitors/ui'
 import { ticketFieldClass } from '../tickets/ui'
 import { StockChip } from './ui'
 
-export const metadata = { title: 'Inventory — Talvex' }
+export const metadata = { title: 'Inventory — Talvext' }
 
 const ROW = 'grid grid-cols-[minmax(0,1fr)_130px_minmax(0,190px)_120px_120px] gap-3.5'
 
@@ -105,7 +105,7 @@ export default async function InventoryPage({
           </h2>
           <p className="mt-3 max-w-[460px] text-sm leading-relaxed text-muted-foreground">
             {all.length === 0
-              ? 'Track the physical things your team looks after here: machines, printers, spare parts, cables, toner. Each item carries a quantity and a minimum stock, and Talvex flags anything running low.'
+              ? 'Track the physical things your team looks after here: machines, printers, spare parts, cables, toner. Each item carries a quantity and a minimum stock, and Talvext flags anything running low.'
               : 'No items match this filter. Clear it or try another search.'}
           </p>
           {all.length === 0 ? (

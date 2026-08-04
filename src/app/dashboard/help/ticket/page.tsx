@@ -4,7 +4,7 @@ import { createTicketAction } from '../../tickets/actions'
 import { FormError, ticketFieldClass } from '../../tickets/ui'
 import { primaryButton } from '../../monitors/ui'
 
-export const metadata = { title: 'Create a ticket — Talvex' }
+export const metadata = { title: 'Create a ticket — Talvext' }
 
 /**
  * The ticket form (Task 3's Get help surface, now the secondary door behind the

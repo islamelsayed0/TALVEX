@@ -24,7 +24,7 @@ export default function SelectOrgPage() {
         Choose an organization
       </h1>
       <p className="mt-3 max-w-[296px] text-sm leading-relaxed text-muted-foreground">
-        Everything in Talvex belongs to an organization. Pick one or create
+        Everything in Talvext belongs to an organization. Pick one or create
         your first.
       </p>
       <div className="org-list-shell mt-[30px] w-full">

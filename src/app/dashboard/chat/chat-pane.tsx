@@ -61,7 +61,7 @@ export function ChatPane({
         {messages.length === 0 ? (
           <div className={bubbleRow.assistant}>
             <div className={bubble.assistant}>
-              Hi, I am the Talvex assistant. Tell me what you need help with and I
+              Hi, I am the Talvext assistant. Tell me what you need help with and I
               will do my best. If I cannot sort it out, I can help you send it to
               your IT team.
             </div>

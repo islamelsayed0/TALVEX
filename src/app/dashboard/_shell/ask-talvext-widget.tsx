@@ -20,7 +20,7 @@ import { useChat } from '../chat/use-chat'
  * own ask entry). When the org has no provider key, the panel explains that
  * instead of taking input.
  */
-export function AskTalvexWidget({
+export function AskTalvextWidget({
   hasKey,
   isAdmin,
   providers,
@@ -101,14 +101,14 @@ export function AskTalvexWidget({
         <section
           id={panelId}
           role="dialog"
-          aria-label="Talvex AI assistant"
+          aria-label="Talvext AI assistant"
           className="flex h-[min(70vh,560px)] w-[min(380px,calc(100vw-3rem))] flex-col overflow-hidden rounded-card border border-card-border bg-card shadow-card"
         >
           {/* Header */}
           <header className="flex items-center justify-between gap-3 border-b border-divider px-4 py-3">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-foreground">
-                Talvex AI
+                Talvext AI
               </span>
               <Link
                 href={fullChatHref(conversationId)}
@@ -146,7 +146,7 @@ export function AskTalvexWidget({
                 {messages.length === 0 ? (
                   <div className={bubbleRow.assistant}>
                     <div className={bubble.assistant}>
-                      Hi, I am the Talvex assistant. Tell me what you need help
+                      Hi, I am the Talvext assistant. Tell me what you need help
                       with. If I cannot sort it out, I can help you send it to
                       your IT team.
                     </div>
@@ -268,7 +268,7 @@ export function AskTalvexWidget({
           <path d="M12 3l1.5 5.1L18.5 9.5 13.5 11 12 16l-1.5-5L5.5 9.5 10.5 8.1z" />
           <path d="M18.5 15.5l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7z" />
         </svg>
-        Ask Talvex
+        Ask Talvext
       </button>
     </div>
   )

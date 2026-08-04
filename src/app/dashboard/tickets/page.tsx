@@ -15,7 +15,7 @@ import { Card, TicketTile } from '../_overview/ui'
 import { primaryButton } from '../monitors/ui'
 import { STATUS_LABEL, TicketStatusBadge } from './ui'
 
-export const metadata = { title: 'Tickets — Talvex' }
+export const metadata = { title: 'Tickets — Talvext' }
 
 const ROW = 'grid grid-cols-[minmax(0,1fr)_150px_140px_118px] gap-3.5'
 

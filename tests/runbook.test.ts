@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
  * gets tidied away in a later edit, and both would leave someone believing in
  * coverage that does not exist:
  *
- *   1. Self monitoring cannot detect a dead sweep. Talvex's own monitors are
+ *   1. Self monitoring cannot detect a dead sweep. Talvext's own monitors are
  *      checked by that same sweep, so when it dies the status page freezes on
  *      green. Anyone who forgets this thinks S5 replaced the external watcher.
  *   2. Point in time recovery is not enabled and cannot be on the free plan.

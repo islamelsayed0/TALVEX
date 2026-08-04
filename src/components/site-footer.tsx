@@ -29,9 +29,9 @@ export function SiteFooter({ trailing }: { trailing?: React.ReactNode }) {
       <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-[18px] px-8">
         <div className="flex flex-wrap items-center gap-4">
           <span className="font-display text-[18px] font-semibold text-secondary-foreground">
-            Talvex
+            Talvext
           </span>
-          <p className="text-[13px] text-quiet">© {year} Talvex</p>
+          <p className="text-[13px] text-quiet">© {year} Talvext</p>
         </div>
         <div className="flex flex-wrap items-center gap-5">
           <nav aria-label="Legal" className="flex flex-wrap items-center gap-5">

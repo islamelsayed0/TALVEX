@@ -275,11 +275,11 @@ export default async function StatusPage({
       </section>
 
       <p className="mt-14 border-t border-border pt-6 text-center text-[12px] text-quiet">
-        Status by Talvex
+        Status by Talvext
       </p>
     </main>
     {/* The shared public footer, so a visitor who only ever sees a tenant's
-        status page can still reach the Talvex legal pages. */}
+        status page can still reach the Talvext legal pages. */}
     <SiteFooter />
     </>
   )

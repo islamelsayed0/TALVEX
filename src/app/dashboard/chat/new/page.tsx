@@ -5,7 +5,7 @@ import { listKeyProviders } from '@/lib/db/api-keys'
 import { ChatPane } from '../chat-pane'
 import { DisclosureLine, toProviderOptions } from '../ui'
 
-export const metadata = { title: 'New conversation — Talvex' }
+export const metadata = { title: 'New conversation — Talvext' }
 
 /**
  * A fresh conversation. It exists only in the pane until the first message is

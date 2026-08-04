@@ -93,7 +93,7 @@ export function incidentTicketPrefill(incident: {
   reopenCount: number
 }): { title: string; description: string } {
   const lines = [
-    'Talvex opened an incident on this monitor and this ticket was created from it.',
+    'Talvext opened an incident on this monitor and this ticket was created from it.',
     '',
     `Monitor: ${incident.monitorName}`,
   ]

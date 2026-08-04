@@ -4,7 +4,7 @@ import { collectAudienceTags, collectCategories, listArticles } from '@/lib/db/a
 import { createArticleAction } from '../actions'
 import { ArticleForm } from '../ui'
 
-export const metadata = { title: 'New document — Talvex' }
+export const metadata = { title: 'New document — Talvext' }
 
 /**
  * Write an article. Every article is born a draft; publishing is a separate

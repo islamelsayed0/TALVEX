@@ -6,7 +6,7 @@ import { Card } from '../../_overview/ui'
 import { ghostButton } from '../../monitors/ui'
 import { ticketFieldClass } from '../../tickets/ui'
 
-export const metadata = { title: 'Documents — Talvex' }
+export const metadata = { title: 'Documents — Talvext' }
 
 /**
  * The member reading list (F14), a door off Get Help. RLS is the entire

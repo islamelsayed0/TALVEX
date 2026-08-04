@@ -15,7 +15,7 @@ import { updateArticleAction } from '../../actions'
 import { ArticleForm, ArticleStatusBadge, articleFormDefaults } from '../../ui'
 import type { ArticleStatus } from '@/lib/db/types'
 
-export const metadata = { title: 'Edit document — Talvex' }
+export const metadata = { title: 'Edit document — Talvext' }
 
 /**
  * Edit, publish, unpublish, or head to deletion. Publish state is its own

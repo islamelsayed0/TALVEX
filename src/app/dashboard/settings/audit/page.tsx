@@ -11,7 +11,7 @@ import { Card } from '../../_overview/ui'
 import { formatUtc } from '../../monitors/ui'
 import { SettingsNav } from '../nav'
 
-export const metadata = { title: 'Settings — Talvex' }
+export const metadata = { title: 'Settings — Talvext' }
 
 /**
  * The audit log (F12), read only by construction: the database triggers are
