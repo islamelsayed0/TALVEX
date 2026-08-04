@@ -26,7 +26,7 @@ import assert from 'node:assert/strict'
  */
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3200'
-const TALVEX_SLUG = process.env.TALVEX_SLUG ?? 'talvex'
+const TALVEX_SLUG = process.env.TALVEX_SLUG ?? 'talvext'
 
 // 1. Health: the runtime can reach Postgres.
 const health = await fetch(`${BASE_URL}/api/health`)
