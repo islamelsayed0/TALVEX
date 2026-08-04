@@ -248,10 +248,14 @@ Finishing it is a dashboard task, tracked in `docs/DEPLOY_LOG.md`.
 
 ## 7. The domain, and the Clerk production instance
 
-**Status: not done.** Talvext runs on `talvex-chi.vercel.app` with Clerk
-**development** keys. This section is the sequence that changes that. Every
-step here is yours: it involves a purchase, DNS, and three dashboards, and
-none of it can or should be automated.
+**Status: partly done.** Steps 1 and 2 were completed on 2026-08-04:
+`talvext.com` is attached to the Vercel project and serves the app, with
+`www` as a 308 redirect to the apex. The domain sits behind the Cloudflare
+proxy on purpose, for the edge protections recorded in `docs/DECISIONS.md`
+(2026-08-04); that entry also lists the settings the proxy requires. Clerk
+still runs **development** keys, so steps 3 through 9 remain. Every step here
+is yours: it involves DNS and three dashboards, and none of it can or should
+be automated.
 
 **Why it is worth an evening.** The development instance costs more than the
 banner suggests. A signed out visitor who deep links to `/dashboard` gets a
@@ -319,6 +323,11 @@ to a `*.vercel.app` subdomain because Vercel owns that zone, which is why
 "free subdomain" and "Clerk production instance" were mutually exclusive
 (`docs/DECISIONS.md`, 2026-07-22).
 
+**Every one of these records must be DNS only (grey cloud) in Cloudflare.**
+The zone proxies the apex, and Cloudflare defaults new records to Proxied;
+a proxied `clerk.` or `accounts.` CNAME fails Clerk's verification and there
+is no error pointing at the cloud icon.
+
 Clerk verifies them on its own screen. Give it time before assuming failure.
 
 ### 4. Google: your own OAuth application, now mandatory
@@ -384,7 +393,12 @@ follow you.
 
 Clerk (production instance), Configure, Webhooks, Add Endpoint.
 
-- URL: `https://<domain>/api/webhooks/clerk`
+- URL: `https://talvex-chi.vercel.app/api/webhooks/clerk` — the vercel.app
+  hostname, **not** the domain. The domain sits behind the Cloudflare proxy,
+  and a challenged webhook delivery does not error, it silently stops org
+  sync, which is the exact fault shape of `docs/DEPLOY_LOG.md` Fault 2. The
+  vercel.app hostname bypasses the proxy entirely, the same reason the
+  external watcher and the cron scheduler already target it.
 - Subscribe to exactly these six, the ones `src/lib/db/clerk-sync.ts` handles:
   `organization.created`, `organization.updated`, `organization.deleted`,
   `organizationMembership.created`, `organizationMembership.updated`,
