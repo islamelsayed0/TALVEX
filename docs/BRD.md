@@ -1,6 +1,8 @@
 # Business Requirements Document
 ## All In One IT Operations Platform (Working Name: Talvex)
 
+> The product this document calls Talvex was renamed Talvext on 2026-08-03; see `docs/DECISIONS.md`. This is the founding record and keeps the original name throughout.
+
 **Author:** Islam Elsayed
 **Date:** July 20, 2026
 **Version:** 1.0 Draft

@@ -1,6 +1,6 @@
-# Talvex — Master Design Document
+# Talvext — Master Design Document
 
-The single entry point for how Talvex looks and why. It defines the design
+The single entry point for how Talvext looks and why. It defines the design
 language, the token system, the component vocabulary, and the screen inventory,
 and points to the detailed handoffs and the decision log for the rest. If a
 design question is not answered here, the order is: this document → the relevant
@@ -14,7 +14,7 @@ rules below are enforced by [`tests/design-tokens.test.ts`](../../tests/design-t
 
 ## 1. Principles
 
-Talvex is used by small offices (medical, legal, small IT) and the one person
+Talvext is used by small offices (medical, legal, small IT) and the one person
 who keeps their systems running. That person is often non technical and a little
 anxious around IT tools. Every screen answers to that.
 
@@ -84,7 +84,7 @@ components`), so their values sit in one place.
 | Class | Where | What |
 | --- | --- | --- |
 | `.page-auth` | Auth screens | Full-viewport gradient + glow + film grain |
-| `.glass` / `.glass-accent` | Dashboard chrome | The one translucent treatment: nav pill, org pill, the accent `Ask Talvex` pill. Cards stay flat |
+| `.glass` / `.glass-accent` | Dashboard chrome | The one translucent treatment: nav pill, org pill, the accent `Ask Talvext` pill. Cards stay flat |
 | `.nav-item` | Nav pills | Neutral, lifting to an inset highlight when `aria-current="page"` |
 | `.liquid-glass` | Landing | The faintest glass, over the background video: nav pill and the secondary CTA |
 | `.landing-frame` | Landing | Browser-chrome product-shot panel, deep shadow |
@@ -123,7 +123,7 @@ stack ([`src/app/page.tsx`](../../src/app/page.tsx) + the client
 
 - **Structure:** sticky header (wordmark, `.liquid-glass` nav pill, auth link) →
   hero "One *calm* place" → product proof (overview shot, the grounded chat
-  split, status page + inventory pair) → the problem → what Talvex is + the rule
+  split, status page + inventory pair) → the problem → what Talvext is + the rule
   → features (hairline definition rows, one per shipped capability) → how it's
   built → who it's for → start free → footer.
 - **Copy lives in one module:** every prose string is in
