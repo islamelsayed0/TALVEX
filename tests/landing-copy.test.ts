@@ -58,6 +58,6 @@ describe('landing copy', () => {
   })
 
   it('points the repository link at the real repository', () => {
-    expect(copy.REPO_URL).toBe('https://github.com/islamelsayed0/TALVEX')
+    expect(copy.REPO_URL).toBe('https://github.com/islamelsayed0/TALVEXT')
   })
 })
