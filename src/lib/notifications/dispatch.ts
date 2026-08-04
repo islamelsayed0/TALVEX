@@ -3,12 +3,18 @@ import 'server-only'
 import { logError } from '@/lib/log'
 
 import {
+  buildCertExpiryEmbed,
   buildDownEmbed,
   buildRecoveredEmbed,
   postDiscordWebhook,
   type DiscordEmbed,
 } from './discord'
-import { buildDownEmail, buildRecoveredEmail, sendAlertEmail } from './email'
+import {
+  buildCertExpiryEmail,
+  buildDownEmail,
+  buildRecoveredEmail,
+  sendAlertEmail,
+} from './email'
 
 /**
  * The single fan out point for incident notifications (BRD F10). The cron
@@ -151,6 +157,67 @@ export async function notifyIncidentEvent(
       }
     } catch {
       logError('notifications.dispatch.discord_failed', 'failed')
+    }
+  }
+
+  return { attempted }
+}
+
+/**
+ * Fans one certificate expiry warning out to the configured channels. A
+ * warning, not an incident: nothing here touches the incidents tables, and
+ * dedup lives in monitors.cert_alerted_threshold, written by the caller, so
+ * this function carries no cooldown logic.
+ *
+ * Gating: the email rides emailOnOpen, the problem opening toggle, so an org
+ * that silenced problem emails is not surprised by a new kind of them.
+ * Discord fires whenever a webhook is configured, the standing channel
+ * contract. Same never throw discipline as notifyIncidentEvent.
+ */
+export async function notifyCertExpiry(
+  settings: NotifyChannelSettings,
+  monitor: NotifyMonitor,
+  info: { daysLeft: number; expiresAtIso: string; expired: boolean },
+  senders: NotifySenders = REAL_SENDERS,
+): Promise<{ attempted: boolean }> {
+  let attempted = false
+
+  const email = settings.notificationEmail?.trim()
+  if (email && settings.emailOnOpen) {
+    attempted = true
+    const body = buildCertExpiryEmail({
+      monitorName: monitor.name,
+      monitorUrl: monitor.url,
+      daysLeft: info.daysLeft,
+      expiresAtIso: info.expiresAtIso,
+      expired: info.expired,
+    })
+    try {
+      await senders.sendEmail({ to: email, subject: body.subject, text: body.text })
+    } catch {
+      logError('notifications.dispatch.cert_email_failed', 'failed')
+    }
+  }
+
+  const webhook = settings.discordWebhook?.trim()
+  if (webhook) {
+    attempted = true
+    const embed = buildCertExpiryEmbed({
+      monitorName: monitor.name,
+      monitorUrl: monitor.url,
+      daysLeft: info.daysLeft,
+      expiresAtIso: info.expiresAtIso,
+      expired: info.expired,
+    })
+    try {
+      const result = await senders.postDiscord(webhook, embed)
+      if (!result.ok) {
+        logError('notifications.dispatch.cert_discord_rejected', 'rejected', {
+          reason: result.error,
+        })
+      }
+    } catch {
+      logError('notifications.dispatch.cert_discord_failed', 'failed')
     }
   }
 

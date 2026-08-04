@@ -20,6 +20,9 @@ export const DISCORD_RECOVERED_COLOR = 0x4ade80
 /** The accent blue (#3d8bff), for a test that is neither up nor down. Status
  * colors stay reserved for real incident state. */
 export const DISCORD_TEST_COLOR = 0x3d8bff
+/** The pending amber (--status-pending #fbbf24), for a certificate warning
+ * that is a heads up rather than an outage. Expired certs use the down red. */
+export const DISCORD_CERT_WARNING_COLOR = 0xfbbf24
 
 const TALVEXT_FOOTER = 'Talvext Monitoring'
 
@@ -96,6 +99,59 @@ export function buildRecoveredEmbed(input: {
       { name: 'Recovered at', value: formatUtcMinute(input.occurredAtIso), inline: true },
     ],
     timestamp: input.occurredAtIso,
+    footer: { text: TALVEXT_FOOTER },
+  }
+}
+
+/**
+ * The embed for a certificate expiry warning. Amber while it is a heads up,
+ * the down red once the certificate has actually expired.
+ */
+export function buildCertExpiryEmbed(input: {
+  monitorName: string
+  monitorUrl: string
+  daysLeft: number
+  expiresAtIso: string
+  expired: boolean
+}): DiscordEmbed {
+  if (input.expired) {
+    return {
+      title: `Certificate for ${input.monitorName} has expired`,
+      description:
+        'Browsers now refuse the connection until the certificate is renewed.',
+      color: DISCORD_DOWN_COLOR,
+      fields: [
+        { name: 'URL', value: input.monitorUrl, inline: false },
+        {
+          name: 'Expired',
+          value: formatUtcMinute(input.expiresAtIso),
+          inline: true,
+        },
+      ],
+      timestamp: input.expiresAtIso,
+      footer: { text: TALVEXT_FOOTER },
+    }
+  }
+  const when =
+    input.daysLeft <= 0
+      ? 'today'
+      : input.daysLeft === 1
+        ? 'in 1 day'
+        : `in ${input.daysLeft} days`
+  return {
+    title: `Certificate for ${input.monitorName} expires ${when}`,
+    description:
+      'Renew it before then so visitors never see a browser warning.',
+    color: DISCORD_CERT_WARNING_COLOR,
+    fields: [
+      { name: 'URL', value: input.monitorUrl, inline: false },
+      {
+        name: 'Expires',
+        value: formatUtcMinute(input.expiresAtIso),
+        inline: true,
+      },
+    ],
+    timestamp: input.expiresAtIso,
     footer: { text: TALVEXT_FOOTER },
   }
 }

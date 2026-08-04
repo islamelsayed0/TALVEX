@@ -2,10 +2,12 @@ import Link from 'next/link'
 
 import { requireAdmin } from '@/lib/auth/org-viewer'
 import { listMonitorsWithRecentChecks } from '@/lib/db/monitors'
+import { getOrgTimezone } from '@/lib/db/usage'
 
 import { MiniSpark, StatusDot, UptimeStrip } from '../_overview/ui'
 import { shortAge } from '../_overview/lib'
 import {
+  CertChip,
   STATUS_LABEL,
   STATUS_TEXT,
   formatInterval,
@@ -34,7 +36,10 @@ function hostOf(url: string): string {
  */
 export default async function MonitorsPage() {
   await requireAdmin()
-  const monitors = await listMonitorsWithRecentChecks()
+  const [monitors, { timezone: timeZone }] = await Promise.all([
+    listMonitorsWithRecentChecks(),
+    getOrgTimezone(),
+  ])
   const nowMs = new Date().getTime()
 
   const withStatus = monitors.map((m) => ({ m, status: monitorStatus(m) }))
@@ -117,6 +122,11 @@ export default async function MonitorsPage() {
                       ? ` · ${shortAge(m.last_checked_at, nowMs)} ago`
                       : ' · no checks yet'}
                   </div>
+                  <CertChip
+                    certExpiresAt={m.cert_expires_at}
+                    nowMs={nowMs}
+                    timeZone={timeZone}
+                  />
                 </div>
               </div>
               <div className="min-w-0">
