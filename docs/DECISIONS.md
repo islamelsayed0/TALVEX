@@ -6,6 +6,41 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-04 — Reversal, same day: the Cloudflare proxy is off, talvext.com is DNS only
+
+**Decided.** This supersedes the entry below it. `talvext.com` resolves
+directly to Vercel: both Cloudflare records are DNS only, and the proxy
+layer is deliberately off. The orphaned `chat-api-limit` rule is deleted
+rather than left showing Active, per the rule the earlier entry itself
+states: protection that looks on but is not is worse than none.
+
+**Why the reversal.** The layers that actually fit the risk were already in
+place before the proxy: the spend bearing path (chat) sits behind sign in
+and an org's own provider key, the application limits every user to 30
+messages a minute, and Vercel's baseline DDoS mitigation fronts everything.
+The one thing the proxy added on the free plan, a single edge rate limiting
+rule, never passed its burst acceptance check, and a day of configuration
+attempts produced an unconditional block rule (deleted before it could break
+chat) and a rule that matched nothing. An unverified edge rule is exactly
+the coverage that does not exist, and the proxy's standing costs (a
+permanently misconfigured domain check in Vercel, a foreign edge
+certificate, a Bot Fight Mode trap waiting for the Clerk webhook) bought
+nothing real in exchange.
+
+**What survives from the superseded entry.** Machine traffic still targets
+`talvex-chi.vercel.app` directly: that rule was defense against anything
+sitting in front of the domain, and it stays true whether anything does.
+Clerk's future DNS records still must be DNS only, because the zone still
+lives at Cloudflare and its records default to Proxied. Bot Fight Mode
+stays off.
+
+**If the proxy ever comes back** (real observed abuse is the trigger, per
+the rate limiter's own header comment), the superseded entry below is the
+checklist: Full strict TLS, the burst acceptance check before any edge rule
+is trusted, and the webhook already out of the blast radius.
+
+---
+
 ## 2026-08-04 — The Cloudflare proxy stays in front of talvext.com
 
 **Decided.** `talvext.com` is served through the Cloudflare proxy (orange

@@ -250,9 +250,10 @@ Finishing it is a dashboard task, tracked in `docs/DEPLOY_LOG.md`.
 
 **Status: partly done.** Steps 1 and 2 were completed on 2026-08-04:
 `talvext.com` is attached to the Vercel project and serves the app, with
-`www` as a 308 redirect to the apex. The domain sits behind the Cloudflare
-proxy on purpose, for the edge protections recorded in `docs/DECISIONS.md`
-(2026-08-04); that entry also lists the settings the proxy requires. Clerk
+`www` as a 308 redirect to the apex. DNS lives at Cloudflare but the records
+are DNS only, deliberately: the proxy was tried and reversed the same day,
+and the superseding entry in `docs/DECISIONS.md` (2026-08-04) records why and
+what it would take to turn it back on. Clerk
 still runs **development** keys, so steps 3 through 9 remain. Every step here
 is yours: it involves DNS and three dashboards, and none of it can or should
 be automated.
@@ -324,9 +325,10 @@ to a `*.vercel.app` subdomain because Vercel owns that zone, which is why
 (`docs/DECISIONS.md`, 2026-07-22).
 
 **Every one of these records must be DNS only (grey cloud) in Cloudflare.**
-The zone proxies the apex, and Cloudflare defaults new records to Proxied;
-a proxied `clerk.` or `accounts.` CNAME fails Clerk's verification and there
-is no error pointing at the cloud icon.
+Cloudflare defaults new records to Proxied, and a proxied `clerk.` or
+`accounts.` CNAME fails Clerk's verification with no error pointing at the
+cloud icon. The whole zone is DNS only by decision, so any orange cloud on
+this zone is a mistake.
 
 Clerk verifies them on its own screen. Give it time before assuming failure.
 
@@ -394,11 +396,12 @@ follow you.
 Clerk (production instance), Configure, Webhooks, Add Endpoint.
 
 - URL: `https://talvex-chi.vercel.app/api/webhooks/clerk` — the vercel.app
-  hostname, **not** the domain. The domain sits behind the Cloudflare proxy,
-  and a challenged webhook delivery does not error, it silently stops org
-  sync, which is the exact fault shape of `docs/DEPLOY_LOG.md` Fault 2. The
-  vercel.app hostname bypasses the proxy entirely, the same reason the
-  external watcher and the cron scheduler already target it.
+  hostname, **not** the domain. The hostname is immune to whatever sits in
+  front of the domain, now or later: a future proxy, an edge rule, or a DNS
+  change could challenge or drop webhook deliveries, which does not error,
+  it silently stops org sync, the exact fault shape of `docs/DEPLOY_LOG.md`
+  Fault 2. The external watcher and the cron scheduler target the vercel.app
+  hostname for the same reason.
 - Subscribe to exactly these six, the ones `src/lib/db/clerk-sync.ts` handles:
   `organization.created`, `organization.updated`, `organization.deleted`,
   `organizationMembership.created`, `organizationMembership.updated`,
