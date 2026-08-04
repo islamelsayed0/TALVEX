@@ -111,4 +111,4 @@ export const STEPS = [
   'Nothing to install. No server to run and no agent on your machines.',
 ]
 
-export const REPO_URL = 'https://github.com/islamelsayed0/TALVEX'
+export const REPO_URL = 'https://github.com/islamelsayed0/TALVEXT'
