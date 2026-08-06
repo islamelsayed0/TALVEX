@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createTicketAction } from '../../tickets/actions'
 import { FormError, ticketFieldClass } from '../../tickets/ui'
 import { primaryButton } from '../../monitors/ui'
+import { TicketFieldsWithSuggestions } from './suggestions'
 
 export const metadata = { title: 'Create a ticket — Talvext' }
 
@@ -62,33 +63,14 @@ export default async function CreateTicketPage({
           ) : null}
           <FormError message={asString(sp.error) || undefined} />
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm text-muted-foreground">
-              What do you need help with?
-            </span>
-            <input
-              name="title"
-              type="text"
-              required
-              maxLength={200}
-              defaultValue={asString(sp.title)}
-              placeholder="A few words, like: the printer will not print"
-              className={`${ticketFieldClass} h-12`}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm text-muted-foreground">What happened?</span>
-            <textarea
-              name="description"
-              required
-              rows={6}
-              maxLength={10000}
-              defaultValue={asString(sp.description)}
-              placeholder="What were you trying to do, and what did you see instead?"
-              className={`${ticketFieldClass} resize-y py-3 leading-relaxed`}
-            />
-          </label>
+          {/* The two questions, as a client island (the first in the help
+              subtree): same names, same server action submit, plus the
+              document suggestions strip fed by the draft. */}
+          <TicketFieldsWithSuggestions
+            defaultTitle={asString(sp.title)}
+            defaultDescription={asString(sp.description)}
+            fieldClass={ticketFieldClass}
+          />
 
           <div className="mt-1 flex flex-col gap-3">
             <button type="submit" className={primaryButton}>

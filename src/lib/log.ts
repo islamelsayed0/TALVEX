@@ -54,6 +54,9 @@ export type LogEvent =
   | 'cron.digest.send_failed'
   | 'cron.digest.org_failed'
   | 'cron.digest.stamp_failed'
+  // Document suggestions on the ticket form. The name only; never a draft,
+  // a term, or a result.
+  | 'help.suggestions.failed'
   // Incident notification channels.
   | 'notifications.email.not_configured'
   | 'notifications.email.send_failed'
