@@ -8,6 +8,7 @@ import type { ChatMessage } from '@/lib/db/types'
 import { readProviderKey } from './key-vault'
 import { generateReply } from './providers'
 import { isAiProvider } from './providers-meta'
+import { checkChatRateLimit } from './rate-limit'
 
 /**
  * Draft a ticket from a chat conversation for escalation (Task 5 addendum). The
@@ -86,6 +87,14 @@ export async function draftEscalation(
   if (mErr) throw mErr
 
   const fallback = fallbackDraft(convo.title, messages ?? [])
+
+  // The provider call rides the same limiter as chat sends (audit M2): this
+  // was the one unthrottled path to the org's key. Throttled means the
+  // DETERMINISTIC draft, not a dead end, so the escalation flow itself is
+  // never rate limited, only the spend is.
+  if (!checkChatRateLimit(orgId, userId).allowed) {
+    return fallback
+  }
 
   // Try an AI draft; any failure falls back so escalation never dead ends.
   try {

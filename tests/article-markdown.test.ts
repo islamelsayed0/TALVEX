@@ -53,6 +53,11 @@ describe('isSafeHref', () => {
     expect(isSafeHref('data:text/html,<script>1</script>')).toBe(false)
     expect(isSafeHref('vbscript:x')).toBe(false)
     expect(isSafeHref('//protocol-relative.example')).toBe(false)
+    // Browsers normalize \ to /, so this is protocol relative in disguise:
+    // it would look internal, open same tab, and leak a referrer (audit L4).
+    expect(isSafeHref('/\\evil.example')).toBe(false)
+    expect(isSafeHref('\\\\evil.example')).toBe(false)
+    expect(isSafeHref('/dashboard\\..\\x')).toBe(false)
   })
 })
 

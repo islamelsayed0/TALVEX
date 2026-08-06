@@ -1,3 +1,4 @@
+import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
 import {
@@ -17,13 +18,22 @@ import { AdminConfigError } from '@/lib/db/admin'
  * The chat send endpoint (Task 5). POST a message; get back the assistant
  * reply. The whole provider call, key decryption, and message persistence
  * happen server side in the engine; this route only parses input, calls it, and
- * maps typed failures to statuses. Clerk middleware authenticates the request
- * (the /api matcher covers it), so the engine has a signed in user.
+ * maps typed failures to statuses.
+ *
+ * Authentication is checked HERE, explicitly (audit M3). The Clerk middleware
+ * matcher makes clerkMiddleware run on /api routes but auth.protect() fires
+ * only for the dashboard prefixes, so a route under /api must gate itself; an
+ * unauthenticated caller gets a typed 401, never a parse or an engine crash.
  *
  * Non streaming (engine choice, stated in the PR): the client shows a thinking
  * indicator and renders the reply when it lands.
  */
 export async function POST(req: Request): Promise<Response> {
+  const { userId, orgId } = await auth()
+  if (!userId || !orgId) {
+    return NextResponse.json({ error: 'Sign in required.' }, { status: 401 })
+  }
+
   let body: unknown
   try {
     body = await req.json()
