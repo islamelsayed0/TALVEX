@@ -57,6 +57,8 @@ export type LogEvent =
   // Document suggestions on the ticket form. The name only; never a draft,
   // a term, or a result.
   | 'help.suggestions.failed'
+  // The immediate first check after a monitor is created.
+  | 'monitors.first_check_failed'
   // Incident notification channels.
   | 'notifications.email.not_configured'
   | 'notifications.email.send_failed'
