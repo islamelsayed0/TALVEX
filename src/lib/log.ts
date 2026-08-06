@@ -35,6 +35,7 @@ export type LogEvent =
   // The AI chat path.
   | 'chat.provider.call'
   | 'chat.send.failed'
+  | 'chat.grounding.failed'
   // The Clerk webhook that syncs organizations and memberships.
   | 'clerk.webhook.applied'
   | 'clerk.webhook.failed'
@@ -54,6 +55,11 @@ export type LogEvent =
   | 'cron.digest.send_failed'
   | 'cron.digest.org_failed'
   | 'cron.digest.stamp_failed'
+  // Document suggestions on the ticket form. The name only; never a draft,
+  // a term, or a result.
+  | 'help.suggestions.failed'
+  // The immediate first check after a monitor is created.
+  | 'monitors.first_check_failed'
   // Incident notification channels.
   | 'notifications.email.not_configured'
   | 'notifications.email.send_failed'

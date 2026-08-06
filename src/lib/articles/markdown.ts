@@ -49,6 +49,10 @@ export function stripHtml(text: string): string {
  * is refused and the link renders as its text. */
 export function isSafeHref(href: string): boolean {
   const value = href.trim().toLowerCase()
+  // A backslash never belongs in an href this product links: browsers
+  // normalize \ to /, so "/\evil.example" would parse as protocol relative
+  // while passing the leading slash check below (audit L4).
+  if (value.includes('\\')) return false
   return (
     value.startsWith('https://') ||
     value.startsWith('http://') ||

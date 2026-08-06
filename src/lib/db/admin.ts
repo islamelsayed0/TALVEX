@@ -32,6 +32,10 @@ export class AdminConfigError extends Error {
  *   - src/lib/chat/engine.ts  (writes chat_messages; those rows are system
  *     written like monitor_checks, so authenticated has no insert verb and the
  *     server is the only writer, migration 008)
+ *   - src/lib/monitoring/first-check.ts  (the immediate check after a
+ *     monitor is created; it writes the same sweep owned rows and columns
+ *     the cron route does, scheduled by the create action via after(), and
+ *     it is the create path's only reach into service role territory)
  *   - future cron route handlers and migration tooling, added to this list
  *     when they exist
  *
