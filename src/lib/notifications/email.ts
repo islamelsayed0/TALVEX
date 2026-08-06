@@ -134,6 +134,50 @@ export async function sendAlertEmail(input: {
   }
 }
 
+/**
+ * The email for a certificate expiry warning. A warning, not an outage: the
+ * copy names the monitor and the date and stays calm. daysLeft 0 reads as
+ * expiring today; the expired flag switches to the past tense variant.
+ */
+export function buildCertExpiryEmail(input: {
+  monitorName: string
+  monitorUrl: string
+  daysLeft: number
+  expiresAtIso: string
+  expired: boolean
+}): AlertEmail {
+  if (input.expired) {
+    return {
+      subject: `[Talvext] Certificate for ${input.monitorName} has expired`,
+      text: [
+        `The TLS certificate for ${input.monitorName} has expired. Browsers now refuse the connection until it is renewed.`,
+        '',
+        `Monitor: ${input.monitorName}`,
+        `URL: ${input.monitorUrl}`,
+        `Expired: ${formatUtcMinute(input.expiresAtIso)}`,
+        '',
+        'Renew the certificate to restore the site for visitors.',
+      ].join('\n'),
+    }
+  }
+  const when =
+    input.daysLeft <= 0
+      ? 'today'
+      : input.daysLeft === 1
+        ? 'in 1 day'
+        : `in ${input.daysLeft} days`
+  return {
+    subject: `[Talvext] Certificate for ${input.monitorName} expires ${when}`,
+    text: [
+      `The TLS certificate for ${input.monitorName} expires ${when}. Renew it before then so visitors never see a browser warning.`,
+      '',
+      `Monitor: ${input.monitorName}`,
+      `URL: ${input.monitorUrl}`,
+      `Expires: ${formatUtcMinute(input.expiresAtIso)}`,
+    ].join('\n'),
+  }
+}
+
 /** The email body for a test triggered from Settings. Not a real incident. */
 export function buildTestEmail(): AlertEmail {
   return {

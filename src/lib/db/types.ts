@@ -489,6 +489,8 @@ export type Database = {
       monitors: {
         Row: {
           active: boolean
+          cert_alerted_threshold: string | null
+          cert_expires_at: string | null
           created_at: string
           failing_since: string | null
           id: string
@@ -497,11 +499,15 @@ export type Database = {
           last_status: string | null
           name: string
           org_id: string
+          suppress_set_at: string | null
+          suppress_until: string | null
           updated_at: string
           url: string
         }
         Insert: {
           active?: boolean
+          cert_alerted_threshold?: string | null
+          cert_expires_at?: string | null
           created_at?: string
           failing_since?: string | null
           id?: string
@@ -510,11 +516,15 @@ export type Database = {
           last_status?: string | null
           name: string
           org_id: string
+          suppress_set_at?: string | null
+          suppress_until?: string | null
           updated_at?: string
           url: string
         }
         Update: {
           active?: boolean
+          cert_alerted_threshold?: string | null
+          cert_expires_at?: string | null
           created_at?: string
           failing_since?: string | null
           id?: string
@@ -523,6 +533,8 @@ export type Database = {
           last_status?: string | null
           name?: string
           org_id?: string
+          suppress_set_at?: string | null
+          suppress_until?: string | null
           updated_at?: string
           url?: string
         }

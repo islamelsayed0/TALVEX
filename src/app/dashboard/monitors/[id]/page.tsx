@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { StatusText } from '@/components/status-mark'
 import { requireAdmin } from '@/lib/auth/org-viewer'
 import { listMonitorIncidents } from '@/lib/db/incidents'
 import {
@@ -8,13 +9,19 @@ import {
   getUptimePercent30d,
   listRecentChecks,
 } from '@/lib/db/monitors'
+import { getOrgTimezone, zonedMinuteLabel } from '@/lib/db/usage'
+import { certBand, certDaysLeft } from '@/lib/monitoring/cert-alerts'
 import { IncidentBadge, incidentDuration } from '../../incidents/ui'
 import {
+  alertsPaused,
+  AlertsPausedBanner,
+  certWhen,
   formatMs,
   formatUptime,
   formatUtc,
   ghostButton,
   monitorStatus,
+  PauseAlertsControl,
   StatusBadge,
 } from '../ui'
 import { ResponseChart } from './response-chart'
@@ -31,22 +38,41 @@ export const metadata = { title: 'Monitor — Talvext' }
  */
 export default async function MonitorDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ pause_error?: string }>
 }) {
   await requireAdmin()
 
   const { id } = await params
+  const { pause_error: pauseError } = await searchParams
   const monitor = await getMonitor(id)
   if (!monitor) notFound()
 
-  const [checks, uptime, incidents] = await Promise.all([
+  const [checks, uptime, incidents, { timezone: timeZone }] = await Promise.all([
     listRecentChecks(monitor.id),
     getUptimePercent30d(monitor.id),
     listMonitorIncidents(monitor.id),
+    getOrgTimezone(),
   ])
 
   const intervalMinutes = Math.round(monitor.interval_seconds / 60)
+
+  // The certificate card exists only for https monitors whose expiry has been
+  // read: http monitors show nothing (spec ruling 2), and an unread cert is
+  // silence rather than an empty state.
+  const nowMs = new Date().getTime()
+  const paused = alertsPaused(monitor, nowMs)
+  const certExpiresAt = monitor.url.startsWith('https:')
+    ? monitor.cert_expires_at
+    : null
+  const certDays = certExpiresAt
+    ? certDaysLeft(certExpiresAt, nowMs, timeZone)
+    : null
+  const certToneBand = certExpiresAt
+    ? certBand(certExpiresAt, nowMs, timeZone)
+    : null
 
   return (
     <main id="main-content" className="flex flex-1 flex-col gap-6 p-8">
@@ -62,6 +88,7 @@ export default async function MonitorDetailPage({
           <p className="mt-1 font-mono text-xs text-quiet">{monitor.url}</p>
         </div>
         <div className="flex items-center gap-3">
+          {!paused ? <PauseAlertsControl monitorId={monitor.id} /> : null}
           <Link href={`/dashboard/monitors/${monitor.id}/edit`} className={ghostButton}>
             Edit
           </Link>
@@ -70,6 +97,19 @@ export default async function MonitorDetailPage({
           </Link>
         </div>
       </div>
+
+      {pauseError ? (
+        <p role="alert" className="text-sm text-status-down">
+          {pauseError}
+        </p>
+      ) : null}
+
+      {paused && monitor.suppress_until !== null ? (
+        <AlertsPausedBanner
+          monitorId={monitor.id}
+          untilLabel={zonedMinuteLabel(Date.parse(monitor.suppress_until), timeZone)}
+        />
+      ) : null}
 
       <dl className="grid max-w-2xl grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-button border border-border bg-card p-4">
@@ -98,6 +138,26 @@ export default async function MonitorDetailPage({
             {monitor.last_checked_at ? formatUtc(monitor.last_checked_at) : 'Not yet'}
           </dd>
         </div>
+        {certExpiresAt !== null && certDays !== null ? (
+          <div className="rounded-button border border-border bg-card p-4">
+            <dt className="text-xs text-quiet">Certificate expires</dt>
+            <dd className="mt-1.5 text-sm font-medium text-card-foreground">
+              {formatUtc(certExpiresAt)}
+              <span className="mt-1 block">
+                {certToneBand === null ? (
+                  <span className="text-xs text-quiet">{certWhen(certDays)}</span>
+                ) : (
+                  <StatusText
+                    tone={certToneBand === 'expired' ? 'down' : 'pending'}
+                    label={certWhen(certDays)}
+                    size={7}
+                    className="text-xs font-medium"
+                  />
+                )}
+              </span>
+            </dd>
+          </div>
+        ) : null}
       </dl>
 
       {checks.some((c) => c.response_time_ms !== null) ? (

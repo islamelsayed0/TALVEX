@@ -242,6 +242,20 @@ export type DigestTicket = {
   sinceIso: string
 }
 
+export type DigestCertificate = {
+  monitorId: string
+  monitorName: string
+  /** Calendar days in the org zone. 0 is today; negative is already expired. */
+  daysLeft: number
+}
+
+export type DigestSuppressedMonitor = {
+  monitorId: string
+  monitorName: string
+  /** The window's end, already rendered in the org zone by the gather side. */
+  untilLabel: string
+}
+
 export type DigestLowStockItem = {
   itemId: string
   name: string
@@ -272,6 +286,8 @@ export function digestSection<T>(all: T[]): DigestSection<T> {
 /** Everything the composition needs, already narrowed to one org. */
 export type DigestData = {
   openIncidents: DigestSection<DigestIncident>
+  expiringCertificates: DigestSection<DigestCertificate>
+  suppressedMonitors: DigestSection<DigestSuppressedMonitor>
   awaitingReply: DigestSection<DigestTicket>
   newTickets: DigestSection<DigestTicket>
   lowStock: DigestSection<DigestLowStockItem>
@@ -310,6 +326,11 @@ export function digestSubject(data: DigestData): string {
   if (data.openIncidents.total > 0) {
     parts.push(plural(data.openIncidents.total, 'incident', 'incidents'))
   }
+  if (data.expiringCertificates.total > 0) {
+    parts.push(
+      `${plural(data.expiringCertificates.total, 'certificate', 'certificates')} expiring`,
+    )
+  }
   if (data.awaitingReply.total > 0) {
     parts.push(`${plural(data.awaitingReply.total, 'ticket', 'tickets')} waiting`)
   }
@@ -339,6 +360,8 @@ export function composeDigest(
 ): DigestEmail | null {
   const empty =
     data.openIncidents.total === 0 &&
+    data.expiringCertificates.total === 0 &&
+    data.suppressedMonitors.total === 0 &&
     data.awaitingReply.total === 0 &&
     data.newTickets.total === 0 &&
     data.lowStock.total === 0
@@ -371,6 +394,13 @@ export function composeDigest(
 
   const age = (iso: string) => formatAge(opts.nowMs - Date.parse(iso))
 
+  /** "3 days left", "1 day left", "expires today", "expired". */
+  const certRow = (c: DigestCertificate) => {
+    if (c.daysLeft < 0) return `${c.monitorName}, certificate expired`
+    if (c.daysLeft === 0) return `${c.monitorName}, certificate expires today`
+    return `${c.monitorName}, ${plural(c.daysLeft, 'day', 'days')} left`
+  }
+
   section(
     'Open incidents',
     data.openIncidents,
@@ -378,6 +408,26 @@ export function composeDigest(
     (i) => `${i.monitorName}, down ${age(i.openedAtIso)}`,
     (i) => i.incidentId,
     (id) => `/dashboard/incidents/${id}`,
+  )
+  section(
+    'Certificates expiring soon',
+    data.expiringCertificates,
+    '/dashboard/monitors',
+    certRow,
+    (c) => c.monitorId,
+    (id) => `/dashboard/monitors/${id}`,
+  )
+  // Forgotten maintenance windows surface here every morning until someone
+  // resumes them; a section, not a suppression: the digest ALWAYS shows open
+  // incidents above regardless of any window, because the digest is the
+  // person asking, not the system interrupting.
+  section(
+    'Alerts paused',
+    data.suppressedMonitors,
+    '/dashboard/monitors',
+    (m) => `${m.monitorName}, until ${m.untilLabel}`,
+    (m) => m.monitorId,
+    (id) => `/dashboard/monitors/${id}`,
   )
   section(
     'Tickets waiting on a reply',

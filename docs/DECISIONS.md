@@ -6,6 +6,73 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-04 — The monitors write grants are column scoped, and sweep state is sweep owned by grant
+
+**Decided.** Migration 020 (certificate expiry alerts) converts the
+authenticated write grants on `monitors` from table wide to column lists:
+insert reaches `org_id, name, url, interval_seconds, active`, update reaches
+`name, url, interval_seconds, active`, and nothing else. The immediate
+reason was the two new certificate columns, `cert_expires_at` and
+`cert_alerted_threshold`, which are sweep owned ledgers no user session may
+write. But the conversion carries a deliberate side effect worth its own
+entry: `last_status`, `last_checked_at`, and `failing_since`, which had
+been service role territory by convention only since migrations 003 and
+004, are now service role territory by grant.
+
+**Why it matters.** Until now, a compromised or misused app role
+credential, any authenticated session, could write `last_status = 'up'` on
+its own org's monitors and the dashboard would repeat the lie. Monitor
+status is telemetry the product vouches for, and after this change the
+database refuses the forgery with a privilege error instead of trusting
+the caller. The same argument covers the certificate columns from birth: a
+writable expiry would let a user fabricate warnings, a writable ledger
+would let one replay or suppress them.
+
+**What it constrains.** Any future column on `monitors` that user sessions
+should write must be added to the grant lists explicitly; nothing is
+inherited from the table any more. That is the point: the writable surface
+of the table is now a statement in the migration, not a default. The
+pattern is the one migration 017 set on `org_notification_settings`
+(`digest_last_sent_on`), and the isolation suite proves both the refusals
+and the survival of the legitimate write shapes.
+
+---
+
+## 2026-08-04 — Reversal, same day: the Cloudflare proxy is off, talvext.com is DNS only
+
+**Decided.** This supersedes the entry below it. `talvext.com` resolves
+directly to Vercel: both Cloudflare records are DNS only, and the proxy
+layer is deliberately off. The orphaned `chat-api-limit` rule is deleted
+rather than left showing Active, per the rule the earlier entry itself
+states: protection that looks on but is not is worse than none.
+
+**Why the reversal.** The layers that actually fit the risk were already in
+place before the proxy: the spend bearing path (chat) sits behind sign in
+and an org's own provider key, the application limits every user to 30
+messages a minute, and Vercel's baseline DDoS mitigation fronts everything.
+The one thing the proxy added on the free plan, a single edge rate limiting
+rule, never passed its burst acceptance check, and a day of configuration
+attempts produced an unconditional block rule (deleted before it could break
+chat) and a rule that matched nothing. An unverified edge rule is exactly
+the coverage that does not exist, and the proxy's standing costs (a
+permanently misconfigured domain check in Vercel, a foreign edge
+certificate, a Bot Fight Mode trap waiting for the Clerk webhook) bought
+nothing real in exchange.
+
+**What survives from the superseded entry.** Machine traffic still targets
+`talvex-chi.vercel.app` directly: that rule was defense against anything
+sitting in front of the domain, and it stays true whether anything does.
+Clerk's future DNS records still must be DNS only, because the zone still
+lives at Cloudflare and its records default to Proxied. Bot Fight Mode
+stays off.
+
+**If the proxy ever comes back** (real observed abuse is the trigger, per
+the rate limiter's own header comment), the superseded entry below is the
+checklist: Full strict TLS, the burst acceptance check before any edge rule
+is trusted, and the webhook already out of the blast radius.
+
+---
+
 ## 2026-08-04 — The Cloudflare proxy stays in front of talvext.com
 
 **Decided.** `talvext.com` is served through the Cloudflare proxy (orange
@@ -74,6 +141,36 @@ the rename; it is the founding record. The Resend sending domain stays on
 `islamelsayed.net` until email on the new domain is its own decision; only the
 display name and subject prefix changed. The self monitoring org's status page
 slug moves to `talvext` as a manual step recorded in `docs/RUNBOOK.md`.
+
+---
+
+## 2026-08-03 — Two verification gaps, found the hard way, now working rules
+
+Both of these came out of the accessibility pass (#57, #58). Neither is a
+preference; each is a case where a check reported green over something broken.
+
+**A CSS change is not verified until `npm run build` has run.** `tsc` and
+`eslint` parse no CSS. A comment edit in `globals.css` left prose outside its
+`/* */`, both tools reported clean, and every route returned 500 until the next
+build. The failure mode is specific and repeatable: the two checks that run
+fastest are exactly the two that cannot see a stylesheet, so "typecheck and
+lint pass" reads as verified when nothing has looked at the CSS at all. Any
+change touching a stylesheet runs a build before the word green is used. Now
+CLAUDE.md rule 15.
+
+**A keyboard pass is a standing part of accessibility verification.** axe
+checks contrast, structure, names, and roles. It does not check whether a
+focus indicator exists. The Clerk org switcher and user button were rendering
+at `outline: 0px none` on pages axe had already passed, because the layer order
+put Clerk's styles after our base rule. Tabbing through found it in seconds;
+the gate could not have found it at all, and adding more axe rules would not
+change that. The gate is necessary and it is not sufficient. Now CLAUDE.md
+rule 16, and `tests/e2e/accessibility.spec.mjs` carries the keyboard section
+that encodes it.
+
+**The shape of both.** A passing check answers the question it was built to
+ask, which is never the same as the question "is this correct". Worth knowing
+what each tool is structurally blind to before quoting its output as proof.
 
 ---
 

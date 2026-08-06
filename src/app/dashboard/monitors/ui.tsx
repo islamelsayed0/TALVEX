@@ -1,7 +1,11 @@
 import Link from 'next/link'
 
 import { StatusText } from '@/components/status-mark'
+import { SUPPRESS_PRESET_HOURS } from '@/lib/db/monitors'
+import { certBand, certDaysLeft } from '@/lib/monitoring/cert-alerts'
 import type { Monitor } from '@/lib/db/types'
+
+import { pauseMonitorAlertsAction, resumeMonitorAlertsAction } from './actions'
 
 /**
  * Shared server rendered pieces for the monitors screens. No client
@@ -44,6 +48,121 @@ export function StatusBadge({ status }: { status: StatusKind }) {
   // was a second visual channel: four states drawn as the same circle meant
   // the mark itself said nothing. StatusText gives each one its own shape.
   return <StatusText tone={status} label={STATUS_LABEL[status]} size={8} />
+}
+
+/** "in 12 days", "in 1 day", "today", "expired 3 days ago". */
+export function certWhen(daysLeft: number): string {
+  if (daysLeft > 1) return `in ${daysLeft} days`
+  if (daysLeft === 1) return 'in 1 day'
+  if (daysLeft === 0) return 'today'
+  const ago = -daysLeft
+  return `expired ${ago} ${ago === 1 ? 'day' : 'days'} ago`
+}
+
+/**
+ * The certificate warning chip for a monitor row. Renders nothing when the
+ * certificate is healthy or unread: absence of warning IS the healthy state,
+ * so a chip only ever means attention. Existing tones, no new silhouette: the
+ * amber hollow ring already means "pending attention" and the red diamond
+ * already means "down"; the label carries the certificate meaning, which is
+ * what keeps this inside the no color alone rule.
+ */
+export function CertChip({
+  certExpiresAt,
+  nowMs,
+  timeZone,
+}: {
+  certExpiresAt: string | null
+  nowMs: number
+  timeZone: string
+}) {
+  const band = certBand(certExpiresAt, nowMs, timeZone)
+  if (band === null) return null
+  if (band === 'expired') {
+    return (
+      <StatusText tone="down" label="Cert expired" size={7} className="text-xs font-medium" />
+    )
+  }
+  const daysLeft = certDaysLeft(certExpiresAt!, nowMs, timeZone)
+  const label =
+    daysLeft === 0 ? 'Cert expires today' : `Cert expires ${certWhen(daysLeft)}`
+  return <StatusText tone="pending" label={label} size={7} className="text-xs font-medium" />
+}
+
+/** True when a maintenance window is active on this monitor right now. */
+export function alertsPaused(
+  monitor: Pick<Monitor, 'suppress_until'>,
+  nowMs: number,
+): boolean {
+  return (
+    monitor.suppress_until !== null &&
+    Date.parse(monitor.suppress_until) > nowMs
+  )
+}
+
+/**
+ * The pause alerts control (migration 021): duration presets rendering to a
+ * concrete until time server side. Admin only by placement: every monitors
+ * screen sits behind requireAdmin, and the database gate trigger is the
+ * boundary the UI placement merely reflects.
+ */
+export function PauseAlertsControl({ monitorId }: { monitorId: string }) {
+  return (
+    <form action={pauseMonitorAlertsAction} className="flex items-center gap-2">
+      <input type="hidden" name="id" value={monitorId} />
+      <label htmlFor="pause-hours" className="text-xs text-quiet">
+        Pause alerts for
+      </label>
+      <select
+        id="pause-hours"
+        name="hours"
+        defaultValue="1"
+        className="appearance-none rounded-button border border-(--ghost-border) bg-transparent px-3 py-2.5 text-sm font-semibold text-ghost-text"
+      >
+        {SUPPRESS_PRESET_HOURS.map((hours) => (
+          <option key={hours} value={hours}>
+            {hours === 1 ? '1 hour' : `${hours} hours`}
+          </option>
+        ))}
+      </select>
+      <button type="submit" className={ghostButton}>
+        Pause
+      </button>
+    </form>
+  )
+}
+
+/**
+ * The loud state while a window is active: an amber banner with the until
+ * time in the org zone and a one click resume. Impossible to miss is the
+ * ruling; this sits above the stat cards, full width, in the reserved amber.
+ */
+export function AlertsPausedBanner({
+  monitorId,
+  untilLabel,
+}: {
+  monitorId: string
+  untilLabel: string
+}) {
+  return (
+    <div
+      role="status"
+      className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-status-pending/40 bg-wash-pending px-5 py-4"
+    >
+      <StatusText
+        tone="pending"
+        label={`Alerts paused until ${untilLabel}`}
+        size={9}
+        className="text-sm font-semibold"
+      />
+      <form action={resumeMonitorAlertsAction}>
+        <input type="hidden" name="id" value={monitorId} />
+        <button type="submit" className={ghostButton}>
+          Resume alerts
+        </button>
+      </form>
+    </div>
+  )
 }
 
 export function formatMs(ms: number | null): string {

@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import {
   CLAIM_SHAPES,
+  createAnonClient,
   createMemberClient,
   createServiceClient,
   memberToken,
@@ -327,6 +328,119 @@ describe.each(CLAIM_SHAPES)(
         .select()
         .eq('day', '2001-01-01')
       expect(fake.data).toEqual([])
+    })
+  },
+)
+
+describe.each(CLAIM_SHAPES)(
+  'certificate columns are sweep owned (migration 020, %s claim shape)',
+  (shape) => {
+    // cert_expires_at and cert_alerted_threshold are ledgers the cron sweep
+    // writes; no user session holds a grant on either. Unlike the RLS cases
+    // above, these refusals are COLUMN PRIVILEGE refusals (42501): the verb
+    // is denied outright rather than the rows being filtered, even on the
+    // member's own monitor.
+    it('a member cannot write either column, even on their own monitor', async () => {
+      const expiry = await asMemberB(shape)
+        .from('monitors')
+        .update({ cert_expires_at: '2030-01-01T00:00:00Z' })
+        .eq('id', monitorBId)
+      expect(expiry.error).not.toBeNull()
+      expect(expiry.error!.code).toBe('42501')
+
+      const ledger = await asMemberB(shape)
+        .from('monitors')
+        .update({ cert_alerted_threshold: '14d' })
+        .eq('id', monitorBId)
+      expect(ledger.error).not.toBeNull()
+      expect(ledger.error!.code).toBe('42501')
+    })
+
+    it('a member cannot smuggle cert state into an insert', async () => {
+      const { error } = await asMemberB(shape).from('monitors').insert({
+        org_id: orgBId,
+        name: 'forged cert state',
+        url: 'https://forged.example.com',
+        cert_expires_at: '2030-01-01T00:00:00Z',
+      })
+      expect(error).not.toBeNull()
+      expect(error!.code).toBe('42501')
+
+      const { data: planted } = await service
+        .from('monitors')
+        .select('id')
+        .eq('name', 'forged cert state')
+      expect(planted).toEqual([])
+    })
+
+    it('the legitimate write shapes still work after the grant conversion', async () => {
+      // Migration 020 converted the table wide insert and update grants to
+      // column lists; this is the regression proof that the app's actual
+      // write shapes survived it. The insert shape is proven by the seeding
+      // above, so this covers the update shape.
+      const { data, error } = await asMemberB(shape)
+        .from('monitors')
+        .update({
+          name: 'B one renamed',
+          url: 'https://b-one.example.com',
+          interval_seconds: 600,
+          active: true,
+        })
+        .eq('id', monitorBId)
+        .select('name, interval_seconds')
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual({ name: 'B one renamed', interval_seconds: 600 })
+
+      // Restore the seed name for the read cases that assert on it.
+      await service
+        .from('monitors')
+        .update({ name: 'B one' })
+        .eq('id', monitorBId)
+    })
+
+    it('the service role writes both columns, and members can read them', async () => {
+      const write = await service
+        .from('monitors')
+        .update({
+          cert_expires_at: '2030-01-01T00:00:00Z',
+          cert_alerted_threshold: '14d',
+        })
+        .eq('id', monitorBId)
+        .select('cert_expires_at, cert_alerted_threshold')
+        .single()
+      expect(write.error).toBeNull()
+      expect(write.data!.cert_alerted_threshold).toBe('14d')
+
+      const read = await asMemberB(shape)
+        .from('monitors')
+        .select('cert_expires_at, cert_alerted_threshold')
+        .eq('id', monitorBId)
+        .single()
+      expect(read.error).toBeNull()
+      expect(read.data!.cert_alerted_threshold).toBe('14d')
+
+      // And org A's member still sees none of B's cert data: the existing
+      // row filter covers the new columns like any other.
+      const crossOrg = await asMemberA(shape)
+        .from('monitors')
+        .select('cert_expires_at')
+        .eq('id', monitorBId)
+      expect(crossOrg.error).toBeNull()
+      expect(crossOrg.data).toEqual([])
+
+      await service
+        .from('monitors')
+        .update({ cert_expires_at: null, cert_alerted_threshold: null })
+        .eq('id', monitorBId)
+    })
+
+    it('the anon status page grant does not reach the cert columns', async () => {
+      const { error } = await createAnonClient()
+        .from('monitors')
+        .select('cert_expires_at')
+      expect(error).not.toBeNull()
+      expect(error!.code).toBe('42501')
     })
   },
 )

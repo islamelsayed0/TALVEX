@@ -42,6 +42,8 @@ function section<T>(items: T[], total = items.length) {
 
 const EMPTY: DigestData = {
   openIncidents: section([]),
+  expiringCertificates: section([]),
+  suppressedMonitors: section([]),
   awaitingReply: section([]),
   newTickets: section([]),
   lowStock: section([]),
@@ -324,6 +326,12 @@ describe('composeDigest', () => {
         openedAtIso: '2026-01-15T08:18:00Z',
       },
     ]),
+    expiringCertificates: section([
+      { monitorId: 'mon-1', monitorName: 'Northwind Web', daysLeft: 9 },
+    ]),
+    suppressedMonitors: section([
+      { monitorId: 'mon-2', monitorName: 'Backup NAS', untilLabel: 'Jan 15, 21:00 EST' },
+    ]),
     awaitingReply: section([
       { ticketId: 'tkt-1', title: 'Printer will not connect', sinceIso: '2026-01-13T08:30:00Z' },
     ]),
@@ -345,9 +353,48 @@ describe('composeDigest', () => {
     const email = composeDigest(full, opts)!
     expect(email).not.toBeNull()
     expect(email.text).toContain('Open incidents (1)')
+    expect(email.text).toContain('Certificates expiring soon (1)')
+    expect(email.text).toContain('Alerts paused (1)')
     expect(email.text).toContain('Tickets waiting on a reply (1)')
     expect(email.text).toContain('New tickets (1)')
     expect(email.text).toContain('Low on stock (1)')
+  })
+
+  it('lists a paused monitor with its until time in the org zone', () => {
+    const email = composeDigest(full, opts)!
+    expect(email.text).toContain('Backup NAS, until Jan 15, 21:00 EST')
+    expect(email.text).toContain(`${BASE}/dashboard/monitors/mon-2`)
+  })
+
+  it('words each certificate line by how close it is', () => {
+    const cert = (daysLeft: number) => ({
+      monitorId: 'mon-1',
+      monitorName: 'Prod API',
+      daysLeft,
+    })
+    const compose = (daysLeft: number) =>
+      composeDigest(
+        { ...EMPTY, expiringCertificates: section([cert(daysLeft)]) },
+        opts,
+      )!.text
+    expect(compose(9)).toContain('Prod API, 9 days left')
+    expect(compose(1)).toContain('Prod API, 1 day left')
+    expect(compose(0)).toContain('Prod API, certificate expires today')
+    expect(compose(-2)).toContain('Prod API, certificate expired')
+    expect(compose(9)).toContain(`${BASE}/dashboard/monitors/mon-1`)
+  })
+
+  it('surfaces expiring certificates in the subject', () => {
+    const email = composeDigest(
+      {
+        ...EMPTY,
+        expiringCertificates: section([
+          { monitorId: 'mon-1', monitorName: 'Prod API', daysLeft: 3 },
+        ]),
+      },
+      opts,
+    )!
+    expect(email.subject).toBe('[Talvext] Your day: 1 certificate expiring')
   })
 
   it('carries names, ages and quantities, and links every line to its real route', () => {
@@ -463,6 +510,8 @@ describe('digestSubject', () => {
   it('stays short by naming at most the two most important sections', () => {
     const subject = digestSubject({
       openIncidents: section([incident]),
+      expiringCertificates: section([]),
+      suppressedMonitors: section([]),
       awaitingReply: section([ticket]),
       newTickets: section([ticket]),
       lowStock: section([item]),
