@@ -6,6 +6,38 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-04 — The monitors write grants are column scoped, and sweep state is sweep owned by grant
+
+**Decided.** Migration 020 (certificate expiry alerts) converts the
+authenticated write grants on `monitors` from table wide to column lists:
+insert reaches `org_id, name, url, interval_seconds, active`, update reaches
+`name, url, interval_seconds, active`, and nothing else. The immediate
+reason was the two new certificate columns, `cert_expires_at` and
+`cert_alerted_threshold`, which are sweep owned ledgers no user session may
+write. But the conversion carries a deliberate side effect worth its own
+entry: `last_status`, `last_checked_at`, and `failing_since`, which had
+been service role territory by convention only since migrations 003 and
+004, are now service role territory by grant.
+
+**Why it matters.** Until now, a compromised or misused app role
+credential, any authenticated session, could write `last_status = 'up'` on
+its own org's monitors and the dashboard would repeat the lie. Monitor
+status is telemetry the product vouches for, and after this change the
+database refuses the forgery with a privilege error instead of trusting
+the caller. The same argument covers the certificate columns from birth: a
+writable expiry would let a user fabricate warnings, a writable ledger
+would let one replay or suppress them.
+
+**What it constrains.** Any future column on `monitors` that user sessions
+should write must be added to the grant lists explicitly; nothing is
+inherited from the table any more. That is the point: the writable surface
+of the table is now a statement in the migration, not a default. The
+pattern is the one migration 017 set on `org_notification_settings`
+(`digest_last_sent_on`), and the isolation suite proves both the refusals
+and the survival of the legitimate write shapes.
+
+---
+
 ## 2026-08-04 — Reversal, same day: the Cloudflare proxy is off, talvext.com is DNS only
 
 **Decided.** This supersedes the entry below it. `talvext.com` resolves

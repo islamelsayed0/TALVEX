@@ -2,9 +2,8 @@ import 'server-only'
 
 import { lookup } from 'node:dns/promises'
 import { request as httpRequest, type IncomingMessage } from 'node:http'
-import { request as httpsRequest } from 'node:https'
 import { isIP } from 'node:net'
-import type { TLSSocket } from 'node:tls'
+import { connect as tlsConnect } from 'node:tls'
 
 import { isForbiddenHostname, isPrivateIp } from '@/lib/db/monitor-url'
 
@@ -109,53 +108,152 @@ export function certExpiryFromPeer(
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
 }
 
+/** What one hop produced: a response, or the error that ended it. Either way
+ * the peer certificate expiry rides along when it could be read. */
+export type HopResult =
+  | { ok: true; statusCode: number; location: string | null; certExpiresAt: string | null }
+  | { ok: false; error: unknown; certExpiresAt: string | null }
+
+const USER_AGENT = 'TalvextMonitor/1.0'
+
+/** URL.hostname keeps brackets on IPv6 literals; the socket layer wants them off. */
+function bareHostname(url: URL): string {
+  return url.hostname.replace(/^\[|\]$/g, '')
+}
+
+/** Headers are enough to judge a check; the body and the socket are dropped. */
+function settleResponse(
+  res: IncomingMessage,
+  certExpiresAt: string | null,
+): HopResult {
+  const statusCode = res.statusCode ?? 0
+  const location = res.headers.location ?? null
+  res.destroy()
+  return { ok: true, statusCode, location, certExpiresAt }
+}
+
 /**
- * One GET over node:https / node:http. Resolves once response headers are in
- * (the body is dropped, as before), carrying the peer certificate expiry
- * when asked for. agent: false gives every check a dedicated connection, so
- * the handshake the expiry is read from is this check's own, never a pooled
- * socket from an earlier one.
+ * One https hop: our own TLS handshake first, then HTTP over that same
+ * socket. One connection total, exactly as a plain https.request would make.
+ *
+ * The handshake runs with rejectUnauthorized false SO THAT the certificate
+ * can be read, and then this function enforces the verdict itself: when
+ * socket.authorized is false the hop fails with the same code
+ * rejectUnauthorized true would have produced (socket.authorizationError,
+ * which covers the chain checks and the hostname check alike), the socket is
+ * destroyed, and NO HTTP bytes are ever written to the unverified channel.
+ * Verification is not weakened for the outcome; it is judged one event later
+ * so an already expired certificate, which fails verification before any
+ * response could exist, still reports when it expired. Without that read the
+ * expired threshold could only fire for certs observed before they lapsed.
  */
-function requestOnce(
+function httpsHop(
   url: URL,
   signal: AbortSignal,
   wantCert: boolean,
-): Promise<{
-  statusCode: number
-  location: string | null
-  certExpiresAt: string | null
-}> {
-  return new Promise((resolve, reject) => {
-    const request = url.protocol === 'https:' ? httpsRequest : httpRequest
-    const req = request(url, {
+): Promise<HopResult> {
+  return new Promise((resolve) => {
+    let settled = false
+    const done = (result: HopResult) => {
+      if (!settled) {
+        settled = true
+        resolve(result)
+      }
+    }
+
+    const host = bareHostname(url)
+    const socket = tlsConnect({
+      host,
+      port: url.port ? Number(url.port) : 443,
+      // servername drives SNI and the hostname check; an IP literal takes
+      // the no SNI path, as tls.connect itself would refuse it.
+      ...(isIP(host) === 0 ? { servername: host } : {}),
+      rejectUnauthorized: false,
+    })
+
+    // The shared deadline covers the handshake too. Destroying the socket
+    // surfaces as its error event; the check's catch reads signal.aborted, so
+    // the timeout message stays the same as every other timed out hop.
+    const onAbort = () => socket.destroy(new Error('aborted'))
+    signal.addEventListener('abort', onAbort, { once: true })
+    if (signal.aborted) onAbort()
+    socket.once('close', () => signal.removeEventListener('abort', onAbort))
+
+    const readCert = (): string | null => {
+      if (!wantCert) return null
+      try {
+        return certExpiryFromPeer(socket.getPeerCertificate())
+      } catch {
+        return null
+      }
+    }
+
+    socket.once('secureConnect', () => {
+      const certExpiresAt = readCert()
+      if (!socket.authorized) {
+        // authorizationError is an Error on some Node versions and the bare
+        // OpenSSL code string on others; either way the code survives so the
+        // stored error message matches what rejectUnauthorized true said.
+        const reason = socket.authorizationError
+        const error =
+          reason instanceof Error
+            ? reason
+            : Object.assign(new Error(String(reason)), { code: String(reason) })
+        socket.destroy()
+        done({ ok: false, error, certExpiresAt })
+        return
+      }
+
+      const req = httpRequest({
+        createConnection: () => socket,
+        method: 'GET',
+        path: `${url.pathname}${url.search}`,
+        signal,
+        // url.host keeps the port only when it is not the default, which is
+        // what the Host header must say; node's own host option would write
+        // :443 because the http module believes the default port is 80.
+        headers: { host: url.host, 'user-agent': USER_AGENT },
+      })
+      req.on('response', (res) => done(settleResponse(res, certExpiresAt)))
+      req.on('error', (error) => done({ ok: false, error, certExpiresAt }))
+      req.end()
+    })
+    socket.once('error', (error) => done({ ok: false, error, certExpiresAt: null }))
+  })
+}
+
+/** One plain http hop. No handshake, so never a certificate. */
+function httpHop(url: URL, signal: AbortSignal): Promise<HopResult> {
+  return new Promise((resolve) => {
+    const req = httpRequest(url, {
       method: 'GET',
       signal,
       agent: false,
-      headers: { 'user-agent': 'TalvextMonitor/1.0' },
+      headers: { 'user-agent': USER_AGENT },
     })
-    req.on('response', (res: IncomingMessage) => {
-      let certExpiresAt: string | null = null
-      if (wantCert && url.protocol === 'https:') {
-        try {
-          const socket = res.socket as TLSSocket
-          certExpiresAt = certExpiryFromPeer(
-            typeof socket.getPeerCertificate === 'function'
-              ? socket.getPeerCertificate()
-              : null,
-          )
-        } catch {
-          certExpiresAt = null
-        }
-      }
-      const statusCode = res.statusCode ?? 0
-      const location = res.headers.location ?? null
-      // Headers are enough to judge the check; drop the body and the socket.
-      res.destroy()
-      resolve({ statusCode, location, certExpiresAt })
-    })
-    req.on('error', reject)
+    req.on('response', (res) => resolve(settleResponse(res, null)))
+    req.on('error', (error) => resolve({ ok: false, error, certExpiresAt: null }))
     req.end()
   })
+}
+
+/**
+ * One GET over node:tls + node:http, or node:http alone. Resolves once
+ * response headers are in, or with the error that ended the hop; it never
+ * rejects. Every hop gets a dedicated connection, so the handshake the
+ * expiry is read from is this check's own, never a pooled socket.
+ *
+ * Exported for its unit tests, which drive it against a local TLS server the
+ * SSRF guard would refuse runMonitorCheck access to.
+ */
+export function requestOnce(
+  url: URL,
+  signal: AbortSignal,
+  wantCert: boolean,
+): Promise<HopResult> {
+  return url.protocol === 'https:'
+    ? httpsHop(url, signal, wantCert)
+    : httpHop(url, signal)
 }
 
 /** Runs one guarded check. Never throws; every failure is a down outcome. */
@@ -190,7 +288,10 @@ export async function runMonitorCheck(rawUrl: string): Promise<CheckOutcome> {
       await assertPublicTarget(url.hostname)
 
       const response = await requestOnce(url, signal, hop === 0)
+      // Recorded before the error path below, so an expired or otherwise
+      // unverifiable certificate still lands even though the hop failed.
       if (hop === 0) certExpiresAt = response.certExpiresAt
+      if (!response.ok) throw response.error
 
       if (
         response.statusCode >= 300 &&
