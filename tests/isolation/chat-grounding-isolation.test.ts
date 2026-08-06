@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { retrieveGroundingArticles } from '@/lib/chat/retrieval'
+import { extractSearchTerms, retrieveGroundingArticles } from '@/lib/chat/retrieval'
 import {
   CLAIM_SHAPES,
   createMemberClient,
@@ -138,6 +138,34 @@ describe.each(CLAIM_SHAPES)('retrieval follows the audience (%s claim shape)', (
     expect(results.map((a) => a.title)).toEqual(['Password rules'])
   })
 })
+
+describe.each(CLAIM_SHAPES)(
+  'the ticket form suggestions ride the same contract (%s claim shape)',
+  (shape) => {
+    // The suggestions route composes exactly this: extractSearchTerms over
+    // the typed title and description, then retrieveGroundingArticles on the
+    // caller scoped client. Same fixture, same draft, two members: the
+    // visibility contract decides who sees a suggestion and who sees
+    // nothing.
+    const DRAFT_TITLE = 'The printer will not print'
+    const DRAFT_DESCRIPTION = 'The office printer shows offline on every try.'
+    const draftTerms = () =>
+      extractSearchTerms(`${DRAFT_TITLE} ${DRAFT_DESCRIPTION}`.trim())
+
+    it('the tagged member gets the printer document for the draft', async () => {
+      const client = asUser(seed.taggedA, seed.orgA.clerk_org_id, shape)
+      const results = await retrieveGroundingArticles(client, draftTerms())
+      expect(results.map((a) => a.title)).toContain('Office printer setup')
+      expect(results.every((a) => a.org_id === orgAId)).toBe(true)
+    })
+
+    it('the untagged member gets silence for the same draft', async () => {
+      const client = asUser(seed.untaggedA, seed.orgA.clerk_org_id, shape)
+      const results = await retrieveGroundingArticles(client, draftTerms())
+      expect(results).toEqual([])
+    })
+  },
+)
 
 describe('drafts are never retrieved', () => {
   it('not by members, and not by the admin whose RLS can read them', async () => {
