@@ -18,7 +18,9 @@ import { setConversationStatus } from '@/lib/db/chat'
 
 export async function escalateConversationAction(formData: FormData): Promise<void> {
   const conversationId = String(formData.get('conversation_id') ?? '')
-  if (conversationId === '') {
+  // A conversation id is a uuid, 36 chars; anything oversized is a crafted
+  // form post and gets the list, not the database (audit M2's input cap).
+  if (conversationId === '' || conversationId.length > 64) {
     redirect('/dashboard/chat')
   }
 

@@ -35,6 +35,7 @@ export type LogEvent =
   // The AI chat path.
   | 'chat.provider.call'
   | 'chat.send.failed'
+  | 'chat.grounding.failed'
   // The Clerk webhook that syncs organizations and memberships.
   | 'clerk.webhook.applied'
   | 'clerk.webhook.failed'

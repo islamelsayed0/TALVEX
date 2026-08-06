@@ -4,6 +4,7 @@ import { auth } from '@clerk/nextjs/server'
 
 import { createAdminClient } from '@/lib/db/admin'
 import { createOrgScopedClient } from '@/lib/db/client'
+import { errorName, logError } from '@/lib/log'
 import { OrgNotSyncedError } from '@/lib/db/monitors'
 import { titleFromMessage } from '@/lib/db/chat'
 import type { AiProvider } from '@/lib/db/types'
@@ -204,7 +205,11 @@ export async function sendChatMessage(input: {
     const terms = extractSearchTerms(message, previousUserTurn)
     const articles = await retrieveGroundingArticles(client, terms)
     grounding = composeGrounding(articles, terms)
-  } catch {
+  } catch (err) {
+    // Still degrades to ungrounded, but no longer silently (audit L5): a
+    // schema or RLS regression here would otherwise turn the knowledge base
+    // off for a whole tenant invisibly. The name only; terms are tenant data.
+    logError('chat.grounding.failed', 'failed', { error: errorName(err) })
     grounding = EMPTY_GROUNDING
   }
 
