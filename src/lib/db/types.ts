@@ -499,6 +499,8 @@ export type Database = {
           last_status: string | null
           name: string
           org_id: string
+          suppress_set_at: string | null
+          suppress_until: string | null
           updated_at: string
           url: string
         }
@@ -514,6 +516,8 @@ export type Database = {
           last_status?: string | null
           name: string
           org_id: string
+          suppress_set_at?: string | null
+          suppress_until?: string | null
           updated_at?: string
           url: string
         }
@@ -529,6 +533,8 @@ export type Database = {
           last_status?: string | null
           name?: string
           org_id?: string
+          suppress_set_at?: string | null
+          suppress_until?: string | null
           updated_at?: string
           url?: string
         }

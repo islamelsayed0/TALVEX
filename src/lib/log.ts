@@ -48,6 +48,7 @@ export type LogEvent =
   | 'cron.settings.list_failed'
   | 'cron.timezones.list_failed'
   | 'cron.cert.evaluate_failed'
+  | 'cron.suppression.catchup_failed'
   | 'cron.digest.settings_failed'
   | 'cron.digest.timezones_failed'
   | 'cron.digest.send_failed'

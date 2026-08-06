@@ -97,6 +97,24 @@ export function zonedWallClock(ms: number, timeZone: string) {
 }
 
 /**
+ * An instant as the org's own wall clock, for copy that promises "in your
+ * zone": "Aug 6, 18:15 EDT". Deterministic given the zone, so server
+ * components can render it without hydration drift. Used by the maintenance
+ * window banner and the digest's paused alerts section.
+ */
+export function zonedMinuteLabel(ms: number, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  }).format(new Date(ms))
+}
+
+/**
  * The zone's UTC offset at an instant, in milliseconds. Exported for the same
  * reason as zonedWallClock: the digest converts a local send time back to an
  * instant with the identical two pass technique used by monthStartUtcMs below.

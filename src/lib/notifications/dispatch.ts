@@ -73,6 +73,45 @@ const REAL_SENDERS: NotifySenders = {
 }
 
 /**
+ * True when a maintenance window is holding this monitor's notifications at
+ * the given instant. Suppression silences NOTIFICATIONS ONLY (migration 021):
+ * checks still run, incidents still open and resolve, the timeline stays
+ * true; a suppressed send is skipped, not queued. The catch up in the cron
+ * sweep is what keeps a real outage that outlives the window from being
+ * swallowed.
+ */
+export function suppressedAt(
+  suppressUntilIso: string | null,
+  atMs: number,
+): boolean {
+  if (suppressUntilIso === null) return false
+  const until = Date.parse(suppressUntilIso)
+  return !Number.isNaN(until) && atMs < until
+}
+
+/**
+ * True when an open incident must be alerted now that its monitor's window
+ * has expired (spec ruling 5): the window is over, and the incident was
+ * never notified after the window was set, whether because it opened inside
+ * the window or because its only notification predates it. Without this, a
+ * real outage that outlived the window would stay silent forever.
+ */
+export function needsCatchUp(input: {
+  suppressUntilIso: string | null
+  suppressSetAtIso: string | null
+  lastNotifiedAtIso: string | null
+  nowMs: number
+}): boolean {
+  if (input.suppressUntilIso === null) return false
+  const until = Date.parse(input.suppressUntilIso)
+  if (Number.isNaN(until) || input.nowMs < until) return false
+  if (input.lastNotifiedAtIso === null) return true
+  const setAt =
+    input.suppressSetAtIso === null ? NaN : Date.parse(input.suppressSetAtIso)
+  return !Number.isNaN(setAt) && Date.parse(input.lastNotifiedAtIso) < setAt
+}
+
+/**
  * True when a reopen at occurredAtIso falls inside the cooldown window
  * measured from the incident's last notification. Only reopens are ever
  * suppressed; open and resolve ignore the window entirely.

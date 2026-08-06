@@ -249,6 +249,13 @@ export type DigestCertificate = {
   daysLeft: number
 }
 
+export type DigestSuppressedMonitor = {
+  monitorId: string
+  monitorName: string
+  /** The window's end, already rendered in the org zone by the gather side. */
+  untilLabel: string
+}
+
 export type DigestLowStockItem = {
   itemId: string
   name: string
@@ -280,6 +287,7 @@ export function digestSection<T>(all: T[]): DigestSection<T> {
 export type DigestData = {
   openIncidents: DigestSection<DigestIncident>
   expiringCertificates: DigestSection<DigestCertificate>
+  suppressedMonitors: DigestSection<DigestSuppressedMonitor>
   awaitingReply: DigestSection<DigestTicket>
   newTickets: DigestSection<DigestTicket>
   lowStock: DigestSection<DigestLowStockItem>
@@ -353,6 +361,7 @@ export function composeDigest(
   const empty =
     data.openIncidents.total === 0 &&
     data.expiringCertificates.total === 0 &&
+    data.suppressedMonitors.total === 0 &&
     data.awaitingReply.total === 0 &&
     data.newTickets.total === 0 &&
     data.lowStock.total === 0
@@ -406,6 +415,18 @@ export function composeDigest(
     '/dashboard/monitors',
     certRow,
     (c) => c.monitorId,
+    (id) => `/dashboard/monitors/${id}`,
+  )
+  // Forgotten maintenance windows surface here every morning until someone
+  // resumes them; a section, not a suppression: the digest ALWAYS shows open
+  // incidents above regardless of any window, because the digest is the
+  // person asking, not the system interrupting.
+  section(
+    'Alerts paused',
+    data.suppressedMonitors,
+    '/dashboard/monitors',
+    (m) => `${m.monitorName}, until ${m.untilLabel}`,
+    (m) => m.monitorId,
     (id) => `/dashboard/monitors/${id}`,
   )
   section(

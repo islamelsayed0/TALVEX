@@ -8,6 +8,8 @@ import {
   deleteMonitor,
   MonitorValidationError,
   OrgNotSyncedError,
+  setMonitorSuppression,
+  suppressUntilForPreset,
   updateMonitor,
 } from '@/lib/db/monitors'
 
@@ -103,4 +105,40 @@ export async function deleteMonitorAction(formData: FormData): Promise<void> {
 
   revalidatePath('/dashboard/monitors')
   redirect('/dashboard/monitors')
+}
+
+/**
+ * Pause alerts for one monitor until now plus a preset (migration 021). The
+ * preset list is the server side half of the 24 hour cap; the database
+ * constraint is the half nobody can route around, and the gate trigger is
+ * what turns a non admin's attempt into a refusal.
+ */
+export async function pauseMonitorAlertsAction(formData: FormData): Promise<void> {
+  const id = String(formData.get('id') ?? '')
+  const hours = Number(formData.get('hours') ?? Number.NaN)
+
+  let failure: string | null = null
+  try {
+    await setMonitorSuppression(id, suppressUntilForPreset(hours, Date.now()))
+  } catch (err) {
+    failure = friendlyMessage(err)
+    if (failure === null) throw err
+  }
+  if (failure !== null) {
+    redirect(`/dashboard/monitors/${id}?pause_error=${encodeURIComponent(failure)}`)
+  }
+
+  revalidatePath('/dashboard/monitors')
+  revalidatePath(`/dashboard/monitors/${id}`)
+  redirect(`/dashboard/monitors/${id}`)
+}
+
+/** One click resume: clears the window, alerts flow again. */
+export async function resumeMonitorAlertsAction(formData: FormData): Promise<void> {
+  const id = String(formData.get('id') ?? '')
+  await setMonitorSuppression(id, null)
+
+  revalidatePath('/dashboard/monitors')
+  revalidatePath(`/dashboard/monitors/${id}`)
+  redirect(`/dashboard/monitors/${id}`)
 }

@@ -43,6 +43,7 @@ function section<T>(items: T[], total = items.length) {
 const EMPTY: DigestData = {
   openIncidents: section([]),
   expiringCertificates: section([]),
+  suppressedMonitors: section([]),
   awaitingReply: section([]),
   newTickets: section([]),
   lowStock: section([]),
@@ -328,6 +329,9 @@ describe('composeDigest', () => {
     expiringCertificates: section([
       { monitorId: 'mon-1', monitorName: 'Northwind Web', daysLeft: 9 },
     ]),
+    suppressedMonitors: section([
+      { monitorId: 'mon-2', monitorName: 'Backup NAS', untilLabel: 'Jan 15, 21:00 EST' },
+    ]),
     awaitingReply: section([
       { ticketId: 'tkt-1', title: 'Printer will not connect', sinceIso: '2026-01-13T08:30:00Z' },
     ]),
@@ -350,9 +354,16 @@ describe('composeDigest', () => {
     expect(email).not.toBeNull()
     expect(email.text).toContain('Open incidents (1)')
     expect(email.text).toContain('Certificates expiring soon (1)')
+    expect(email.text).toContain('Alerts paused (1)')
     expect(email.text).toContain('Tickets waiting on a reply (1)')
     expect(email.text).toContain('New tickets (1)')
     expect(email.text).toContain('Low on stock (1)')
+  })
+
+  it('lists a paused monitor with its until time in the org zone', () => {
+    const email = composeDigest(full, opts)!
+    expect(email.text).toContain('Backup NAS, until Jan 15, 21:00 EST')
+    expect(email.text).toContain(`${BASE}/dashboard/monitors/mon-2`)
   })
 
   it('words each certificate line by how close it is', () => {
@@ -500,6 +511,7 @@ describe('digestSubject', () => {
     const subject = digestSubject({
       openIncidents: section([incident]),
       expiringCertificates: section([]),
+      suppressedMonitors: section([]),
       awaitingReply: section([ticket]),
       newTickets: section([ticket]),
       lowStock: section([item]),
