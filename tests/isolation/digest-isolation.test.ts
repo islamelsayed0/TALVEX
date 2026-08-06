@@ -178,6 +178,7 @@ async function composeForOrg(orgId: string): Promise<string | null> {
         openedAtIso: i.opened_at,
       })),
     ),
+    expiringCertificates: digestSection([]),
     awaitingReply: digestSection(awaiting),
     newTickets: digestSection([]),
     lowStock: digestSection(

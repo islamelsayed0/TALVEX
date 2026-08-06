@@ -46,6 +46,8 @@ export type LogEvent =
   | 'cron.incidents.list_failed'
   | 'cron.incidents.stamp_failed'
   | 'cron.settings.list_failed'
+  | 'cron.timezones.list_failed'
+  | 'cron.cert.evaluate_failed'
   | 'cron.digest.settings_failed'
   | 'cron.digest.timezones_failed'
   | 'cron.digest.send_failed'
@@ -57,6 +59,9 @@ export type LogEvent =
   | 'notifications.dispatch.email_failed'
   | 'notifications.dispatch.discord_failed'
   | 'notifications.dispatch.discord_rejected'
+  | 'notifications.dispatch.cert_email_failed'
+  | 'notifications.dispatch.cert_discord_failed'
+  | 'notifications.dispatch.cert_discord_rejected'
   // The operator error sink itself.
   | 'ops.report.not_configured'
 

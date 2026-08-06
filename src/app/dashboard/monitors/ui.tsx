@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { StatusText } from '@/components/status-mark'
+import { certBand, certDaysLeft } from '@/lib/monitoring/cert-alerts'
 import type { Monitor } from '@/lib/db/types'
 
 /**
@@ -44,6 +45,45 @@ export function StatusBadge({ status }: { status: StatusKind }) {
   // was a second visual channel: four states drawn as the same circle meant
   // the mark itself said nothing. StatusText gives each one its own shape.
   return <StatusText tone={status} label={STATUS_LABEL[status]} size={8} />
+}
+
+/** "in 12 days", "in 1 day", "today", "expired 3 days ago". */
+export function certWhen(daysLeft: number): string {
+  if (daysLeft > 1) return `in ${daysLeft} days`
+  if (daysLeft === 1) return 'in 1 day'
+  if (daysLeft === 0) return 'today'
+  const ago = -daysLeft
+  return `expired ${ago} ${ago === 1 ? 'day' : 'days'} ago`
+}
+
+/**
+ * The certificate warning chip for a monitor row. Renders nothing when the
+ * certificate is healthy or unread: absence of warning IS the healthy state,
+ * so a chip only ever means attention. Existing tones, no new silhouette: the
+ * amber hollow ring already means "pending attention" and the red diamond
+ * already means "down"; the label carries the certificate meaning, which is
+ * what keeps this inside the no color alone rule.
+ */
+export function CertChip({
+  certExpiresAt,
+  nowMs,
+  timeZone,
+}: {
+  certExpiresAt: string | null
+  nowMs: number
+  timeZone: string
+}) {
+  const band = certBand(certExpiresAt, nowMs, timeZone)
+  if (band === null) return null
+  if (band === 'expired') {
+    return (
+      <StatusText tone="down" label="Cert expired" size={7} className="text-xs font-medium" />
+    )
+  }
+  const daysLeft = certDaysLeft(certExpiresAt!, nowMs, timeZone)
+  const label =
+    daysLeft === 0 ? 'Cert expires today' : `Cert expires ${certWhen(daysLeft)}`
+  return <StatusText tone="pending" label={label} size={7} className="text-xs font-medium" />
 }
 
 export function formatMs(ms: number | null): string {
