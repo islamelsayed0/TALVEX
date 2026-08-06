@@ -2,6 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { after } from 'next/server'
+
+import { runFirstCheck } from '@/lib/monitoring/first-check'
 
 import {
   createMonitor,
@@ -59,7 +62,14 @@ export async function createMonitorAction(formData: FormData): Promise<void> {
 
   let failure: string | null = null
   try {
-    await createMonitor(input)
+    const monitor = await createMonitor(input)
+    // The first check, immediately on save (docs/future_update.md): after()
+    // runs once the response has gone out, so the redirect is instant and
+    // the result lands a beat later. runFirstCheck never throws, and a
+    // missed first check just leaves the row Pending until the next sweep.
+    after(() =>
+      runFirstCheck({ id: monitor.id, org_id: monitor.org_id, url: monitor.url }),
+    )
   } catch (err) {
     failure = friendlyMessage(err)
     if (failure === null) throw err
