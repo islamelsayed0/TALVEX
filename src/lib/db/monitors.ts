@@ -303,6 +303,44 @@ export async function updateMonitor(
   return data
 }
 
+/** The pause presets the UI offers, in hours. The database enforces the 24
+ * hour cap regardless; this list is what keeps the UI inside it by
+ * construction. */
+export const SUPPRESS_PRESET_HOURS = [1, 4, 8, 24] as const
+
+/**
+ * The until instant a preset renders to, from now. Pure and exported for the
+ * unit suite: every preset must land at or under the 24 hour cap.
+ */
+export function suppressUntilForPreset(hours: number, nowMs: number): string {
+  if (!SUPPRESS_PRESET_HOURS.includes(hours as 1 | 4 | 8 | 24)) {
+    throw new MonitorValidationError('Pick one of the offered durations.')
+  }
+  return new Date(nowMs + hours * 60 * 60 * 1000).toISOString()
+}
+
+/**
+ * Sets or clears the maintenance window on one monitor (migration 021).
+ * Null resumes alerts. Runs on the org scoped client: RLS keeps it inside
+ * the org, and the database gate trigger is what enforces admin only and
+ * stamps suppress_set_at, so nothing here needs to. Returns null when the
+ * monitor is not this org's or is gone, exactly like updateMonitor.
+ */
+export async function setMonitorSuppression(
+  id: string,
+  untilIso: string | null,
+): Promise<Monitor | null> {
+  const { client } = await createOrgScopedClient()
+  const { data, error } = await client
+    .from('monitors')
+    .update({ suppress_until: untilIso })
+    .eq('id', id)
+    .select()
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
 export async function deleteMonitor(id: string): Promise<void> {
   const { client } = await createOrgScopedClient()
   const { error } = await client.from('monitors').delete().eq('id', id)

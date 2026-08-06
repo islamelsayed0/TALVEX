@@ -126,6 +126,8 @@
   --wash-up: rgba(74, 222, 128, 0.12);
   --wash-down: rgba(248, 113, 113, 0.12);
   --wash-accent: rgba(61, 139, 255, 0.1);
+  /* Amber wash for the maintenance window banner: attention, not outage. */
+  --wash-pending: rgba(251, 191, 36, 0.12);
 
   /* Theme toggle */
   --toggle-bg: rgba(255, 255, 255, 0.05);
@@ -191,6 +193,7 @@
   --color-wash-up: var(--wash-up);
   --color-wash-down: var(--wash-down);
   --color-wash-accent: var(--wash-accent);
+  --color-wash-pending: var(--wash-pending);
 
   /* Radii scale from the reference: logo/icon tile 14, primary button 12,
    * inputs and secondary buttons 11. Dashboard adds the larger card and

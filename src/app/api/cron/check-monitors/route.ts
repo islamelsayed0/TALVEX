@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/db/admin'
 import { isLowStock } from '@/lib/db/inventory'
 import { interleaveTrail } from '@/lib/db/tickets'
-import { DEFAULT_TIMEZONE } from '@/lib/db/usage'
+import { DEFAULT_TIMEZONE, zonedMinuteLabel } from '@/lib/db/usage'
 import { errorName, logError, logInfo } from '@/lib/log'
 import { clientIp, createSlidingWindow } from '@/lib/rate-limit'
 import {
@@ -32,8 +32,10 @@ import {
   type DigestTrailItem,
 } from '@/lib/notifications/digest'
 import {
+  needsCatchUp,
   notifyCertExpiry,
   notifyIncidentEvent,
+  suppressedAt,
   type IncidentNotifyEvent,
   type NotifyChannelSettings,
 } from '@/lib/notifications/dispatch'
@@ -110,6 +112,8 @@ type SweptMonitor = {
   failing_since: string | null
   cert_expires_at: string | null
   cert_alerted_threshold: string | null
+  suppress_until: string | null
+  suppress_set_at: string | null
 }
 
 /**
@@ -130,6 +134,11 @@ async function notifyAndStamp(
   lastNotifiedAtIso: string | null,
 ): Promise<void> {
   if (!settings) return
+  // Maintenance window (migration 021): a suppressed send is SKIPPED, not
+  // queued, and last_notified_at is not stamped, which is exactly what lets
+  // the catch up pass recognize an open incident the window outlived. The
+  // incident write already happened above this call; only the noise is held.
+  if (suppressedAt(monitor.suppress_until, Date.now())) return
   const { attempted } = await notifyIncidentEvent(
     settings,
     { name: monitor.name, url: monitor.url },
@@ -315,6 +324,107 @@ async function appendEvents(
 }
 
 // ---------------------------------------------------------------------------
+// Maintenance window catch up (migration 021, ruling 5). When a window ends
+// with the monitor still down, the open incident's alert goes out on the
+// first sweep after expiry, so a real outage that outlived the window is
+// never swallowed. This pass runs over EVERY expired window, not just due
+// monitors: a monitor on a long interval must not stay silent because its
+// next check is an hour away.
+
+async function runSuppressionCatchUp(
+  db: Db,
+  nowMs: number,
+): Promise<{ caughtUp: number; failed: number }> {
+  const counts = { caughtUp: 0, failed: 0 }
+  try {
+    const { data: expired, error } = await db
+      .from('monitors')
+      .select('id, org_id, name, url, suppress_until, suppress_set_at')
+      .not('suppress_until', 'is', null)
+      .lte('suppress_until', new Date(nowMs).toISOString())
+    if (error) throw new Error(error.message)
+    if (expired.length === 0) return counts
+
+    const { data: openIncidents, error: incidentsError } = await db
+      .from('incidents')
+      .select('id, monitor_id, opened_at, last_notified_at')
+      .in('monitor_id', expired.map((m) => m.id))
+      .eq('status', 'open')
+    if (incidentsError) throw new Error(incidentsError.message)
+    if (openIncidents.length === 0) return counts
+
+    const monitorById = new Map(expired.map((m) => [m.id, m]))
+    const due = openIncidents.filter((incident) => {
+      const monitor = monitorById.get(incident.monitor_id)!
+      return needsCatchUp({
+        suppressUntilIso: monitor.suppress_until,
+        suppressSetAtIso: monitor.suppress_set_at,
+        lastNotifiedAtIso: incident.last_notified_at,
+        nowMs,
+      })
+    })
+    if (due.length === 0) return counts
+
+    const orgIds = [...new Set(due.map((i) => monitorById.get(i.monitor_id)!.org_id))]
+    const { data: settingsRows, error: settingsError } = await db
+      .from('org_notification_settings')
+      .select(
+        'org_id, notification_email, discord_webhook, email_on_open, email_on_resolve, alert_cooldown_minutes',
+      )
+      .in('org_id', orgIds)
+    if (settingsError) throw new Error(settingsError.message)
+    const settingsByOrg = new Map<string, NotifyChannelSettings>(
+      settingsRows.map((row) => [
+        row.org_id,
+        {
+          notificationEmail: row.notification_email,
+          discordWebhook: row.discord_webhook,
+          emailOnOpen: row.email_on_open,
+          emailOnResolve: row.email_on_resolve,
+          alertCooldownMinutes: row.alert_cooldown_minutes,
+        },
+      ]),
+    )
+
+    for (const incident of due) {
+      const monitor = monitorById.get(incident.monitor_id)!
+      const settings = settingsByOrg.get(monitor.org_id)
+      if (!settings) continue
+      try {
+        const { attempted } = await notifyIncidentEvent(
+          settings,
+          { name: monitor.name, url: monitor.url },
+          'open',
+          { occurredAtIso: incident.opened_at, lastNotifiedAtIso: null },
+        )
+        if (!attempted) continue
+        counts.caughtUp++
+        // Stamping is what stops the same incident catching up again on the
+        // next sweep: last_notified_at is now inside no window.
+        const { error: stampError } = await db
+          .from('incidents')
+          .update({ last_notified_at: new Date().toISOString() })
+          .eq('id', incident.id)
+        if (stampError) {
+          logError('cron.incidents.stamp_failed', 'failed', {
+            error: stampError.message,
+          })
+        }
+      } catch (err) {
+        counts.failed++
+        logError('cron.suppression.catchup_failed', 'failed', {
+          error: errorName(err),
+        })
+      }
+    }
+  } catch (err) {
+    counts.failed++
+    logError('cron.suppression.catchup_failed', 'failed', { error: errorName(err) })
+  }
+  return counts
+}
+
+// ---------------------------------------------------------------------------
 // The daily digest. One email per org per day, at the time the org chose, in
 // the org's own timezone. It rides THIS sweep: no new scheduler, no new cron
 // entry, no queue. Every 5 minutes the sweep asks which orgs have it enabled,
@@ -355,13 +465,25 @@ async function gatherDigestData(
   nowMs: number,
   timeZone: string,
 ): Promise<DigestData> {
-  const [incidentsRes, certsRes, ticketsRes, inventoryRes] = await Promise.all([
+  const [incidentsRes, suppressedRes, certsRes, ticketsRes, inventoryRes] = await Promise.all([
+    // RULING: the digest ALWAYS shows open incidents, maintenance windows or
+    // not. A window silences the system interrupting; the digest is the
+    // person asking, and the answer they get is the truth.
     db
       .from('incidents')
       .select('id, opened_at, monitors(name)')
       .eq('org_id', orgId)
       .eq('status', 'open')
       .order('opened_at', { ascending: true }),
+    // Monitors whose alerts are currently paused: the morning email is what
+    // surfaces a forgotten window.
+    db
+      .from('monitors')
+      .select('id, name, suppress_until')
+      .eq('org_id', orgId)
+      .not('suppress_until', 'is', null)
+      .gt('suppress_until', new Date(nowMs).toISOString())
+      .order('suppress_until', { ascending: true }),
     // Active monitors only: a paused monitor's stored expiry goes stale the
     // moment checks stop, and stale certainty is worse than silence.
     db
@@ -382,8 +504,15 @@ async function gatherDigestData(
   ])
   if (incidentsRes.error) throw new Error(incidentsRes.error.message)
   if (certsRes.error) throw new Error(certsRes.error.message)
+  if (suppressedRes.error) throw new Error(suppressedRes.error.message)
   if (ticketsRes.error) throw new Error(ticketsRes.error.message)
   if (inventoryRes.error) throw new Error(inventoryRes.error.message)
+
+  const suppressedMonitors = suppressedRes.data.map((m) => ({
+    monitorId: m.id,
+    monitorName: m.name,
+    untilLabel: zonedMinuteLabel(Date.parse(m.suppress_until!), timeZone),
+  }))
 
   // Certificates inside the 14 day warning window, soonest first; expired
   // ones are negative and sort to the top, which is where they belong.
@@ -486,6 +615,7 @@ async function gatherDigestData(
       })),
     ),
     expiringCertificates: digestSection(expiringCertificates),
+    suppressedMonitors: digestSection(suppressedMonitors),
     awaitingReply: digestSection(awaiting),
     newTickets: digestSection(arrived),
     lowStock: digestSection(lowStock),
@@ -705,7 +835,7 @@ async function runSweep(request: Request) {
   const { data: monitors, error: monitorsError } = await db
     .from('monitors')
     .select(
-      'id, org_id, name, url, interval_seconds, last_checked_at, failing_since, cert_expires_at, cert_alerted_threshold',
+      'id, org_id, name, url, interval_seconds, last_checked_at, failing_since, cert_expires_at, cert_alerted_threshold, suppress_until, suppress_set_at',
     )
     .eq('active', true)
   if (monitorsError) {
@@ -932,6 +1062,10 @@ async function runSweep(request: Request) {
   // along with the closed state; the sweep writes nothing to tickets at all
   // now, which is why nothing below counts them.
 
+  // Maintenance window catch up, before the digest so a caught up incident
+  // is already stamped when the digest reads the day. Never fails the sweep.
+  const catchUp = await runSuppressionCatchUp(db, now)
+
   // The daily digest, last: it reads what the work above has just settled, and
   // it can never fail the sweep. Its own errors are counted and logged inside.
   const digests = await runDailyDigests(db, now, requestBaseUrl(request))
@@ -960,6 +1094,8 @@ async function runSweep(request: Request) {
     incidents_opened: incidentCounts.opened,
     incidents_reopened: incidentCounts.reopened,
     incidents_resolved: incidentCounts.resolved,
+    suppression_caught_up: catchUp.caughtUp,
+    suppression_failed: catchUp.failed,
     digests_due: digests.due,
     digests_sent: digests.sent,
     digests_quiet: digests.quiet,

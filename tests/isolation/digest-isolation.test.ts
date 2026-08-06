@@ -179,6 +179,7 @@ async function composeForOrg(orgId: string): Promise<string | null> {
       })),
     ),
     expiringCertificates: digestSection([]),
+    suppressedMonitors: digestSection([]),
     awaitingReply: digestSection(awaiting),
     newTickets: digestSection([]),
     lowStock: digestSection(

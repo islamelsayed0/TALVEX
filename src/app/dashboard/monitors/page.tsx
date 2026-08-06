@@ -4,9 +4,12 @@ import { requireAdmin } from '@/lib/auth/org-viewer'
 import { listMonitorsWithRecentChecks } from '@/lib/db/monitors'
 import { getOrgTimezone } from '@/lib/db/usage'
 
+import { StatusText } from '@/components/status-mark'
+
 import { MiniSpark, StatusDot, UptimeStrip } from '../_overview/ui'
 import { shortAge } from '../_overview/lib'
 import {
+  alertsPaused,
   CertChip,
   STATUS_LABEL,
   STATUS_TEXT,
@@ -127,6 +130,14 @@ export default async function MonitorsPage() {
                     nowMs={nowMs}
                     timeZone={timeZone}
                   />
+                  {alertsPaused(m, nowMs) ? (
+                    <StatusText
+                      tone="paused"
+                      label="Alerts paused"
+                      size={7}
+                      className="text-xs font-medium"
+                    />
+                  ) : null}
                 </div>
               </div>
               <div className="min-w-0">
