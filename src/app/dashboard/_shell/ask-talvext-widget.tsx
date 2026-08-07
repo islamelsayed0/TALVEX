@@ -226,6 +226,24 @@ export function AskTalvextWidget({
                 </div>
               </div>
             </>
+          ) : chatEntry === 'unavailable' ? (
+            /* Entitled, but the platform side cannot serve right now: the
+             * same door as the cap, with the honest reason. */
+            <div className="flex flex-1 flex-col gap-3 px-5 py-6">
+              <h2 className="text-sm font-semibold text-foreground">
+                The assistant is unavailable right now
+              </h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Nothing upgrades or gets charged on its own, and your question
+                does not have to wait: it can go straight to your IT team.
+              </p>
+              <Link
+                href="/dashboard/help"
+                className="text-sm text-accent-text underline underline-offset-2 hover:text-foreground"
+              >
+                Send a request on the Get Help page
+              </Link>
+            </div>
           ) : chatEntry === 'capped' ? (
             /* The month's managed answers are spent: the recorded degrade is
              * the Get Help ticket door with plain copy, never a dead end. */

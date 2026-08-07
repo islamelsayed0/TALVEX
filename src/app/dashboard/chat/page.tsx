@@ -59,6 +59,24 @@ export default async function ChatPage() {
         ) : null}
       </div>
 
+      {entry === 'unavailable' ? (
+        <section className="max-w-2xl rounded-button border border-border bg-card p-6">
+          <h2 className="text-base font-semibold text-foreground">
+            The assistant is unavailable right now
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Nothing upgrades or gets charged on its own, and your question
+            does not have to wait: it can go straight to your IT team.
+          </p>
+          <Link
+            href="/dashboard/help"
+            className="mt-3 inline-block text-sm text-accent-text underline underline-offset-2 hover:text-foreground"
+          >
+            Send a request on the Get Help page
+          </Link>
+        </section>
+      ) : null}
+
       {entry === 'capped' ? (
         <section className="max-w-2xl rounded-button border border-border bg-card p-6">
           <h2 className="text-base font-semibold text-foreground">

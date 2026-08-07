@@ -85,6 +85,25 @@ export class ManagedCapReachedError extends Error {
   }
 }
 
+/**
+ * The org is entitled to managed answers but the platform side cannot serve
+ * one right now: the key is absent, or the provider refused it (spend limit
+ * reached, rate limited, invalid key). The same honest degrade as the cap,
+ * because to the person asking the truth is identical: no answer now, the
+ * ticket door works, nothing upgrades or gets charged. Never a 500 and never
+ * a silent hang.
+ */
+export class ManagedUnavailableError extends Error {
+  constructor() {
+    super(
+      'The assistant is unavailable right now. Send your question to your ' +
+        'IT team from the Get Help page instead; nothing upgrades or gets ' +
+        'charged on its own.',
+    )
+    this.name = 'ManagedUnavailableError'
+  }
+}
+
 /** More than one provider key exists and the caller did not choose one. */
 export class ProviderChoiceRequiredError extends Error {
   readonly providers: AiProvider[]
@@ -117,6 +136,44 @@ export type SendOutcome = {
      * came from the caller's own scoped read, so they are already articles
      * this user may open. Empty when the reply was ungrounded. */
     citations: GroundingCitation[]
+  }
+}
+
+/**
+ * ONE attempt per answer, the platform key resilience rule: a retry here
+ * would multiply spend on the operator's key, and the workspace spend limit
+ * that backstops the database cap must never be probed twice for one
+ * question. Exported for the unit suite; the send path is its only caller.
+ *
+ * A platform refusal (spend limit reached, rate limited, invalid key) posts
+ * chat.platform_key.failed to the operator channel, name only, and degrades
+ * to the managed unavailable copy. A BYOK failure passes through exactly as
+ * before: it is the org's own key and the existing remediation names it.
+ */
+/** The operator channel hears about a platform refusal once per process:
+ * the log line records every failure, but a spend limit outage with members
+ * still typing must not flood the channel into being muted (the log module's
+ * own reasoning for report being opt in). */
+let platformFailureReported = false
+
+export async function callProviderOnce(args: {
+  keySource: 'byok' | 'platform'
+  generate: () => ReturnType<typeof generateReply>
+}): ReturnType<typeof generateReply> {
+  try {
+    return await args.generate()
+  } catch (err) {
+    if (args.keySource === 'platform') {
+      logError(
+        'chat.platform_key.failed',
+        'failed',
+        { error: errorName(err) },
+        { report: !platformFailureReported },
+      )
+      platformFailureReported = true
+      throw new ManagedUnavailableError()
+    }
+    throw err
   }
 }
 
@@ -175,6 +232,11 @@ export async function sendChatMessage(input: {
     const access = await resolveManagedAccess(clerkOrgId)
     if (access.mode === 'capped') {
       throw new ManagedCapReachedError()
+    }
+    if (access.mode === 'unavailable') {
+      // Entitled, but the platform key is not configured: the paid for path
+      // degrades like the cap, never to the ask an admin copy.
+      throw new ManagedUnavailableError()
     }
     if (access.mode !== 'available') {
       throw new NoProviderKeyError()
@@ -254,17 +316,24 @@ export async function sendChatMessage(input: {
       ? platformApiKey()
       : await readProviderKey(orgUuid, provider)
   if (!apiKey) {
-    // A key vanished between the provider list and now.
+    // A key vanished between the provider list and now. On the platform path
+    // that is the operator's configuration, not the org's admin, so it wears
+    // the managed degrade, not the ask an admin copy.
+    if (keySource === 'platform') throw new ManagedUnavailableError()
     throw new NoProviderKeyError()
   }
 
-  const reply = await generateReply({
-    provider,
-    apiKey,
-    system: grounding.section
-      ? `${SYSTEM_PROMPT}\n\n${grounding.section}`
-      : SYSTEM_PROMPT,
-    messages: turns,
+  const reply = await callProviderOnce({
+    keySource,
+    generate: () =>
+      generateReply({
+        provider,
+        apiKey,
+        system: grounding.section
+          ? `${SYSTEM_PROMPT}\n\n${grounding.section}`
+          : SYSTEM_PROMPT,
+        messages: turns,
+      }),
   })
 
   const content =

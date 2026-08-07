@@ -23,6 +23,12 @@ import { AI_PROVIDER_LABELS } from './providers-meta'
  * response headers, or the request or response bodies. On a failed call the
  * error carries a plain language remediation derived from the status code
  * alone; the response body is never read into a log or an error.
+ *
+ * ONE attempt per call, no retries here or in any caller (the platform key
+ * resilience rule, RUNBOOK section 8): on the managed path a retry would
+ * multiply spend on the operator's key against the very limit that may be
+ * refusing it, and on BYOK it would multiply the customer's. A failure is
+ * reported honestly instead.
  */
 
 const PROVIDER_BASE_URLS: Record<AiProvider, string> = {
