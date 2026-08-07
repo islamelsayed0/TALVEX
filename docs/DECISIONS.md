@@ -6,6 +6,78 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-07 — F13 billing: the pricing is frozen, Stripe runs under the agency account in test mode, and attorney review is retired as a launch gate
+
+**Decided: the pricing.** Five tiers and one add on, frozen here; a change to
+any number below is a pricing decision that supersedes this entry, never a
+code cleanup.
+
+- **Free**: 1 organization, 2 monitors, tickets, incident alerts, BYOK chat.
+  Alerts are ungated forever on EVERY tier; a monitoring product that holds
+  an outage notification hostage is the anti pattern this line forbids.
+- **Basic, $39/month**: 1 organization, 15 monitors, status page, daily
+  digest, SSL expiry warnings, maintenance windows. The copy says "for
+  offices up to around 20 staff"; the staff count is marketing language and
+  is NEVER enforced. Seats are never metered anywhere in the product.
+- **Pro, $79/month**: 1 organization, everything unlimited (documents with
+  audience targeting, inventory, audit log, unlimited monitors), plus 300
+  managed AI answers per month included.
+- **Business, $199/month**: up to 10 organizations, everything in Pro, AI
+  included; described as managing every client or location from one account.
+  The word MSP does not appear in customer copy.
+- **Custom**: contact us (a mailto for now), no price shown.
+- **AI Chat add on, $15/month**: 300 managed answers, attachable to Basic
+  only; Pro and Business already include the allowance.
+
+**The cap behavior, recorded as anti patterns.** Hitting the managed AI cap
+degrades to the Get Help ticket door with plain copy. Never a silent failure,
+never an automatic upgrade, never overage charges. BYOK chat remains free and
+uncapped on every tier; the cap governs the platform key path alone. This
+lands the org cost ceiling the August audit called M4 and the 2026-08-06
+entry below deferred to this design: the ceiling is the entitlement, enforced
+in F13 PR 3 against the F11 counters, authoritative in the database.
+
+**Decided: the Stripe account.** Talvext bills under the Simsim agency Stripe
+account rather than a fresh one. What makes that presentable is the statement
+descriptor: it is set to TALVEXT in the Stripe dashboard by hand, so a
+customer's card statement names the product they bought, not the agency. That
+dashboard click is a human act and one of the live gates below.
+
+**Decided: live mode is a human switch, and everything in this repo is test
+mode.** The code, the seed script (scripts/stripe-seed.ts refuses a live key
+outright), the webhook, and every checked in key name run against Stripe test
+mode. Going live requires, in order: the clickwrap gate shipped and working
+(F13 PR 2), the TALVEXT statement descriptor set in the dashboard, and an
+explicit operator go ahead. No code path, cron, or migration flips any of
+those; they are decisions a person makes.
+
+**Superseding: attorney review is retired as a launch gate.** The 2026-08-03
+legal pages entry made signing a customer contingent on professional review
+of the terms. That contingency is lifted as a deliberate, recorded risk
+acceptance: LLC formation is the operative protection being pursued, and the
+review may happen someday, but it no longer blocks taking payment. What does
+NOT change: the transparency note on /terms and /privacy stays exactly as
+written until a review actually happens (its own entry stands), and the
+clickwrap requirement from the browsewrap entry is unchanged and becomes real
+in F13 PR 2. Honesty about the review's absence is the mechanism that makes
+its retirement as a gate tolerable.
+
+**Also decided, the schema posture.** Entitlements live in `org_billing`,
+webhook written on the service role like the Clerk sync, admins read their
+own org's row, no user session holds a write verb, and an org with no row is
+free tier by definition (migration 022). Clickwrap acceptance is recorded on
+the org's billing row, the entity that pays, before any checkout session is
+created. Effective entitlements resolve through
+`src/lib/billing/entitlements.ts` and nowhere else.
+
+**Affects.** F13 PRs 2 through 4 inherit all of it: the billing screen and
+checkout (clickwrap before session, webhook as the entitlement authority),
+enforcement (the degrade behaviors above), and the public pricing page (which
+ships unlinked until the live gates pass). The 2026-08-06 M4 deferral below
+is resolved by this entry.
+
+---
+
 ## 2026-08-06 — Plain text chat rendering is a load bearing security control, and the org cost cap waits for Stripe
 
 **Decided.** The assistant's output renders as plain React text nodes in every
