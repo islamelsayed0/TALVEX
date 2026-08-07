@@ -57,10 +57,50 @@ export function parseCheckoutSelection(input: {
   return { plan: input.plan, aiAddon: input.aiAddon }
 }
 
+/** The add on's price lookup key. Duplicated from stripe-sync.ts on purpose:
+ * this module stays importable outside the server (scripts, tests) while
+ * stripe-sync is server only; tests/billing-portal.test.ts pins the two
+ * copies together. */
+export const AI_ADDON_PRICE_LOOKUP_KEY = 'talvext_ai_addon_monthly'
+
+/** The three purchasable plans' lookup keys, the portal configuration's
+ * switching menu. Same duplication contract as the add on key above. */
+export const PLAN_PRICE_LOOKUP_KEYS = [
+  'talvext_basic_monthly',
+  'talvext_pro_monthly',
+  'talvext_business_monthly',
+] as const
+
 /** The price lookup keys a selection buys, plan first. The keys are the
  * contract with scripts/stripe-seed.ts and src/lib/db/stripe-sync.ts. */
 export function lookupKeysForSelection(selection: CheckoutSelection): string[] {
   const keys = [`talvext_${selection.plan}_monthly`]
-  if (selection.aiAddon) keys.push('talvext_ai_addon_monthly')
+  if (selection.aiAddon) keys.push(AI_ADDON_PRICE_LOOKUP_KEY)
   return keys
+}
+
+// ---------------------------------------------------------------------------
+// The AI add on toggle (F13 follow up). The portal cannot manage a second
+// subscription item, so adding and removing the add on happens in app; this
+// is the decision the action executes.
+
+export type SubscriptionItemFacts = { id: string; lookupKey: string | null }
+
+export type AiAddonChange =
+  | { op: 'add' }
+  | { op: 'remove'; itemId: string }
+  | { op: 'noop' }
+
+/**
+ * What to do to a subscription's items to reach the desired add on state.
+ * noop when the subscription is already there, so a double submit or a stale
+ * form never creates a second add on item or errors on a missing one.
+ */
+export function aiAddonChange(
+  items: SubscriptionItemFacts[],
+  enable: boolean,
+): AiAddonChange {
+  const existing = items.find((item) => item.lookupKey === AI_ADDON_PRICE_LOOKUP_KEY)
+  if (enable) return existing ? { op: 'noop' } : { op: 'add' }
+  return existing ? { op: 'remove', itemId: existing.id } : { op: 'noop' }
 }

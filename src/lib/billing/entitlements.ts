@@ -92,6 +92,8 @@ export type Entitlements = {
   currentPeriodEnd: string | null
   /** Present once the org has ever checked out; what "Manage billing" needs. */
   stripeCustomerId: string | null
+  /** Present while a subscription exists; what the add on toggle edits. */
+  stripeSubscriptionId: string | null
   clickwrapAcceptedAt: string | null
   clickwrapTermsVersion: string | null
 }
@@ -107,6 +109,7 @@ export const FREE_ENTITLEMENTS: Entitlements = {
   dailyDigest: PLAN_LIMITS.free.dailyDigest,
   currentPeriodEnd: null,
   stripeCustomerId: null,
+  stripeSubscriptionId: null,
   clickwrapAcceptedAt: null,
   clickwrapTermsVersion: null,
 }
@@ -152,6 +155,7 @@ export function resolveEntitlements(row: OrgBillingRow | null | undefined): Enti
       ...FREE_ENTITLEMENTS,
       status: row.status,
       stripeCustomerId: row.stripe_customer_id,
+      stripeSubscriptionId: row.stripe_subscription_id,
       clickwrapAcceptedAt: row.clickwrap_accepted_at,
       clickwrapTermsVersion: row.clickwrap_terms_version,
     }
@@ -167,6 +171,7 @@ export function resolveEntitlements(row: OrgBillingRow | null | undefined): Enti
     dailyDigest: PLAN_LIMITS[row.plan].dailyDigest,
     currentPeriodEnd: row.current_period_end,
     stripeCustomerId: row.stripe_customer_id,
+    stripeSubscriptionId: row.stripe_subscription_id,
     clickwrapAcceptedAt: row.clickwrap_accepted_at,
     clickwrapTermsVersion: row.clickwrap_terms_version,
   }

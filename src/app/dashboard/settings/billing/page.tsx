@@ -13,7 +13,7 @@ import { Card } from '../../_overview/ui'
 import { formatUtc, ghostButton, primaryButton } from '../../monitors/ui'
 import { FormError } from '../../tickets/ui'
 import { SettingsNav } from '../nav'
-import { openPortalAction, startCheckoutAction } from './actions'
+import { openPortalAction, setAiAddonAction, startCheckoutAction } from './actions'
 import { PendingRefresh } from './pending-refresh'
 
 export const metadata = { title: 'Settings — Talvext' }
@@ -109,12 +109,21 @@ export default async function BillingSettingsPage({
   const params = await searchParams
   const error = typeof params.error === 'string' ? params.error : undefined
   const checkout = typeof params.checkout === 'string' ? params.checkout : undefined
+  const addon = typeof params.addon === 'string' ? params.addon : undefined
 
   const entitlements = await getEntitlements(orgId)
   const onPaidPlan = entitlements.plan !== 'free'
   // Success redirect but the webhook has not written entitlements yet: the
   // redirect is not trusted, the database is. Show pending and poll briefly.
   const awaitingWebhook = checkout === 'success' && !onPaidPlan
+  // Same rule for the add on toggle: the redirect said what was REQUESTED,
+  // the row says what is true, and pending is the honest word in between.
+  const awaitingAddon =
+    (addon === 'adding' && !entitlements.aiAddon) ||
+    (addon === 'removing' && entitlements.aiAddon)
+  const addonSettled =
+    (addon === 'adding' && entitlements.aiAddon) ||
+    (addon === 'removing' && !entitlements.aiAddon)
 
   return (
     <main
@@ -213,6 +222,53 @@ export default async function BillingSettingsPage({
         </Card>
       ) : null}
 
+      {awaitingAddon ? (
+        <Card className="mt-[18px] px-[22px] py-4">
+          <StatusText
+            tone="pending"
+            label={addon === 'adding' ? 'Adding the AI Chat add on' : 'Removing the AI Chat add on'}
+          />
+          <p className="mt-1.5 text-[12.5px] text-quiet">
+            Stripe is confirming the change to us now. This page checks again
+            every few seconds.
+          </p>
+          <PendingRefresh />
+        </Card>
+      ) : null}
+
+      {addonSettled ? (
+        <Card className="mt-[18px] px-[22px] py-4">
+          <p className="text-sm text-foreground">
+            {addon === 'adding'
+              ? 'The AI Chat add on is active: 300 managed AI answers a month.'
+              : 'The AI Chat add on is removed. BYOK chat keeps working as always.'}
+          </p>
+        </Card>
+      ) : null}
+
+      {entitlements.plan === 'basic' &&
+      entitlements.status === 'active' &&
+      !awaitingAddon ? (
+        <Card className="mt-[18px] px-[22px] py-5">
+          <h2 className="text-base font-semibold text-foreground">AI Chat add on</h2>
+          <p className="mt-1 text-[12.5px] text-quiet">
+            {entitlements.aiAddon
+              ? 'Active: 300 managed AI answers a month, $15 a month. Removing it credits the unused time on your next invoice.'
+              : '300 managed AI answers a month for $15 a month, prorated from today. BYOK chat stays free either way.'}
+          </p>
+          <form action={setAiAddonAction} className="mt-3">
+            <button
+              type="submit"
+              name="addon"
+              value={entitlements.aiAddon ? 'disable' : 'enable'}
+              className={ghostButton}
+            >
+              {entitlements.aiAddon ? 'Remove the add on' : 'Add AI Chat'}
+            </button>
+          </form>
+        </Card>
+      ) : null}
+
       {!onPaidPlan && !awaitingWebhook ? (
         <Card className="mt-[18px] px-[22px] py-5">
           <h2 className="text-base font-semibold text-foreground">Upgrade</h2>
@@ -299,6 +355,9 @@ export default async function BillingSettingsPage({
           <p className="mt-1 text-[12.5px] text-quiet">
             Payment method, invoices, plan changes and cancellation all happen
             in the Stripe billing portal. No card details ever touch Talvext.
+            {entitlements.aiAddon
+              ? ' To switch plans, remove the AI Chat add on first; the portal cannot change a plan while the add on is attached.'
+              : ''}
           </p>
           <form action={openPortalAction} className="mt-3">
             <button type="submit" className={primaryButton}>
