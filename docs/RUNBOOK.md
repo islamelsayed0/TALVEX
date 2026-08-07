@@ -83,12 +83,12 @@ tenant rows is a capability worth not having.
    - `https://talvex-chi.vercel.app/api/health` — the runtime reaches Postgres.
    - `https://talvex-chi.vercel.app/api/ops/heartbeat` — the endpoint the
      external watcher depends on is itself serving.
-4. Settings, Status page: enable it with the slug `talvext`. The org created
-   before the 2026-08-03 rename still carries the slug `talvex`; changing it
-   to `talvext` is a manual step (Settings, Status page), and the same pull
-   request that follows it should update the `TALVEX_SLUG` default in
-   `tests/e2e/health.spec.mjs`, or the verify command below starts checking a
-   slug nobody serves.
+4. Settings, Status page: enable it with the slug `talvext`. The slug moved
+   from `talvex` on 2026-08-04, after the rename, together with the
+   `TALVEX_SLUG` default in `tests/e2e/health.spec.mjs`: the two change in
+   the same pull request or the verify command below starts checking a slug
+   nobody serves. The env var name itself keeps its old spelling, like every
+   config shaped identifier.
 5. Settings, Notifications: set the notification email, so the platform's own
    incidents go somewhere. Enabling the daily digest here is reasonable too.
 
@@ -466,7 +466,7 @@ which is the opposite of what these documents are for.
 |---|---|
 | `.github/workflows/heartbeat.yml` | the external watcher's actual target |
 | `tests/ops-heartbeat.test.ts` | asserts the workflow contains that URL, so **it changes in the same commit or CI goes red** |
-| `README.md` | the Live link, and the `/status/talvex` link |
+| `README.md` | the Live link, and the `/status/talvext` link |
 | `docs/RUNBOOK.md` | section 1's two checks, and section 2's three monitor URLs |
 | `docs/DEMO.md` | the demo target and its preflight check |
 | `tests/e2e/health.spec.mjs` | the usage example in the header comment |

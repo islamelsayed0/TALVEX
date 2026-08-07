@@ -73,7 +73,7 @@ endpoint every thirty minutes from outside the deployment, because the sweep
 cannot report its own death.
 
 Talvext also monitors Talvext and publishes a status page at
-[`/status/talvex`](https://talvex-chi.vercel.app/status/talvex). That catches a
+[`/status/talvext`](https://talvex-chi.vercel.app/status/talvext). That catches a
 dead deployment or a dead database. It **cannot** catch a dead sweep, because
 its own monitors are checked by that sweep; the GitHub workflow is what catches
 that. The distinction is kept deliberately in
