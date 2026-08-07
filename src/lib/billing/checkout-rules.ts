@@ -86,6 +86,14 @@ export function lookupKeysForSelection(selection: CheckoutSelection): string[] {
 
 export type SubscriptionItemFacts = { id: string; lookupKey: string | null }
 
+/** Cents to on screen dollars: 5400 becomes "$54.00". Negative amounts (a
+ * removal preview where the credit outweighs the charge) keep the sign
+ * outside the dollar mark: "-$12.50". */
+export function formatUsd(cents: number): string {
+  const sign = cents < 0 ? '-' : ''
+  return `${sign}$${(Math.abs(cents) / 100).toFixed(2)}`
+}
+
 export type AiAddonChange =
   | { op: 'add' }
   | { op: 'remove'; itemId: string }
