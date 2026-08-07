@@ -38,6 +38,11 @@ export function platformApiKey(): string | null {
   return key && key.trim() ? key : null
 }
 
+/** Logged once per process, the notifications email pattern: the layout
+ * resolves access on every dashboard render, and a line per render is a
+ * muted channel by lunchtime. */
+let missingPlatformKeyLogged = false
+
 export type ManagedAccess =
   /** Managed answers may be served right now. */
   | { mode: 'available'; included: number; used: number; remaining: number }
@@ -82,7 +87,10 @@ export async function resolveManagedAccess(
   if (!platformApiKey()) {
     // An org paid for managed answers the operator has not configured a key
     // for. That is a platform failure worth a line, not a user error.
-    logError('chat.platform_key.not_configured', 'unavailable')
+    if (!missingPlatformKeyLogged) {
+      missingPlatformKeyLogged = true
+      logError('chat.platform_key.not_configured', 'unavailable')
+    }
     return { mode: 'none' }
   }
 

@@ -30,9 +30,13 @@ export default async function DashboardLayout({
 
   // The org count gate (F13 PR 3, docs/DECISIONS.md 2026-08-07): Clerk's
   // hosted widgets create orgs with no server side hook before the fact, so
-  // the plan's organization allowance is enforced here, at first data
-  // access, with a clear screen in place of the page. Per person, oldest
-  // memberships first; see org-access.ts for the reasoning.
+  // the plan's organization allowance is enforced here, with a clear screen
+  // rendered in place of the page. Per person, oldest memberships first; see
+  // org-access.ts for the reasoning. This is PACKAGING enforcement, not a
+  // security boundary: the viewer is a legitimate member of the org and the
+  // page's own server render may still execute alongside this layout; RLS
+  // remains the boundary for what any session can read. The screen gates
+  // use of the product, which is what a plan limit is.
   const orgAccess = await checkOrgAccess(userId, orgId);
 
   // Role drives which nav a person sees. isAdmin reads org_members.role (the

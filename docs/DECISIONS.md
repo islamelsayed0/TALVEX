@@ -53,7 +53,11 @@ to, so Business staff inherit ten from the Business org's membership) and
 shows a clear screen in place of the page for memberships past it, oldest
 memberships first. Nothing is deleted; other members are unaffected; the
 switcher remains reachable. The single org majority costs one extra count
-query per dashboard render.
+query per dashboard render. Said precisely: this is packaging enforcement,
+not a security boundary. The viewer is a legitimate member of the org, the
+page's own server render may still execute beside the layout, and RLS
+remains the boundary for what any session can read; the screen gates use of
+the product, which is what a plan limit is.
 
 **Known gap, recorded not improvised: Business sibling orgs resolve free
 entitlements.** The pricing sells Business as ten organizations with
