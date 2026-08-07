@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   AI_ADDON_PRICE_LOOKUP_KEY,
   aiAddonChange,
+  formatUsd,
   lookupKeysForSelection,
   PLAN_PRICE_LOOKUP_KEYS,
 } from '@/lib/billing/checkout-rules'
@@ -73,6 +74,16 @@ describe('portalConfigurationParams', () => {
     expect(params.business_profile?.headline).toBe(PORTAL_HEADLINE)
     expect(params.business_profile?.terms_of_service_url).toBe('https://talvext.com/terms')
     expect(params.business_profile?.privacy_policy_url).toBe('https://talvext.com/privacy')
+  })
+})
+
+describe('formatUsd', () => {
+  it('renders cents as on screen dollars, sign outside the mark', () => {
+    expect(formatUsd(5400)).toBe('$54.00')
+    expect(formatUsd(1500)).toBe('$15.00')
+    expect(formatUsd(0)).toBe('$0.00')
+    // A removal preview can be a net credit.
+    expect(formatUsd(-1250)).toBe('-$12.50')
   })
 })
 

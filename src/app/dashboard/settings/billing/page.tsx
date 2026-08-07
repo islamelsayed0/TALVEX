@@ -1,4 +1,5 @@
 import { auth } from '@clerk/nextjs/server'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { requireAdmin } from '@/lib/auth/org-viewer'
@@ -13,7 +14,7 @@ import { Card } from '../../_overview/ui'
 import { formatUtc, ghostButton, primaryButton } from '../../monitors/ui'
 import { FormError } from '../../tickets/ui'
 import { SettingsNav } from '../nav'
-import { openPortalAction, setAiAddonAction, startCheckoutAction } from './actions'
+import { openPortalAction, startCheckoutAction } from './actions'
 import { PendingRefresh } from './pending-refresh'
 
 export const metadata = { title: 'Settings — Talvext' }
@@ -254,18 +255,16 @@ export default async function BillingSettingsPage({
           <p className="mt-1 text-[12.5px] text-quiet">
             {entitlements.aiAddon
               ? 'Active: 300 managed AI answers a month, $15 a month. Removing it credits the unused time on your next invoice.'
-              : '300 managed AI answers a month for $15 a month, prorated from today. BYOK chat stays free either way.'}
+              : '300 managed AI answers a month for $15 a month. BYOK chat stays free either way.'}
           </p>
-          <form action={setAiAddonAction} className="mt-3">
-            <button
-              type="submit"
-              name="addon"
-              value={entitlements.aiAddon ? 'disable' : 'enable'}
-              className={ghostButton}
-            >
-              {entitlements.aiAddon ? 'Remove the add on' : 'Add AI Chat'}
-            </button>
-          </form>
+          {/* A link, deliberately not a submit: nothing on this screen moves
+              money. The confirm page shows the real numbers first. */}
+          <Link
+            href={`/dashboard/settings/billing/addon?op=${entitlements.aiAddon ? 'remove' : 'add'}`}
+            className={`${ghostButton} mt-3`}
+          >
+            {entitlements.aiAddon ? 'Remove the add on' : 'Add AI Chat'}
+          </Link>
         </Card>
       ) : null}
 

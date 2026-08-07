@@ -6,6 +6,32 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-07 — No single click moves money: the add on change confirms first, with Stripe's own numbers
+
+**Decided.** The add on button on the billing screen is a link, not a
+submit. It lands on a confirmation page (the release address idiom) that
+shows what the change actually costs, fetched from Stripe's invoice preview:
+the next invoice's real total with prorations included, and the recurring
+monthly total after the change. Only the Confirm button submits the action
+that edits the subscription. The preview is best effort: if the call fails,
+the page renders the plain arithmetic and the confirm still works, because a
+decorative number must never outrank the customer's intent.
+
+**Why.** The first live test proved the problem: one click on Add AI Chat
+changed the subscription immediately, and the first sight of the combined
+$54 was on an invoice rather than on a screen asking permission. That is the
+silent charge shape the frozen pricing's anti patterns forbid, arrived at
+through UI rather than through the cap. A Stripe hosted checkout cannot fix
+it, because Checkout creates subscriptions and cannot append an item to an
+existing one; the confirmation therefore lives in the app, with Stripe
+supplying the numbers.
+
+**Affects.** Any future control that changes what an org pays inherits the
+rule as stated in this entry's title: a click may open a page that asks, and
+only a page that has said the real amount may carry the button that commits.
+
+---
+
 ## 2026-08-07 — Subscription management: the portal is configured in code, the add on toggles in app, and Billing joins the nav
 
 **Decided: the portal configuration is code.** What the Stripe customer
