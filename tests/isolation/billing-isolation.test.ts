@@ -481,3 +481,56 @@ describe('the webhook sync writes what the resolver reads', () => {
     expect(row!.plan).toBe('pro')
   })
 })
+
+describe('the clickwrap write (F13 PR 2) touches acceptance and nothing else', () => {
+  it('first acceptance creates a row whose entitlements default to free', async () => {
+    const { recordClickwrapAcceptance } = await import('@/lib/db/billing')
+    const clerkOrgId = `org_billing_d_${runId}`
+    const { data: org } = await service
+      .from('organizations')
+      .insert({ clerk_org_id: clerkOrgId, name: 'Billing Test Org D' })
+      .select('id')
+      .single()
+
+    await recordClickwrapAcceptance(service, org!.id, '2026-08-03')
+
+    const { data: row } = await service
+      .from('org_billing')
+      .select('*')
+      .eq('org_id', org!.id)
+      .single()
+    expect(row).toMatchObject({
+      plan: 'free',
+      status: 'active',
+      // Migration 023: the default is the free tier's 2, so a row created
+      // by accepting terms never reads as unlimited (NULL) before checkout.
+      monitor_limit: 2,
+      clickwrap_terms_version: '2026-08-03',
+    })
+    expect(row!.clickwrap_accepted_at).not.toBeNull()
+    // And the resolver agrees: no plan was granted by accepting terms.
+    expect(resolveEntitlements(row).monitorLimit).toBe(2)
+
+    await service.from('organizations').delete().eq('clerk_org_id', clerkOrgId)
+  })
+
+  it('a later acceptance refreshes the record without disturbing webhook written entitlements', async () => {
+    const { recordClickwrapAcceptance } = await import('@/lib/db/billing')
+    // Org A holds webhook shaped Pro entitlements from the seed.
+    await recordClickwrapAcceptance(service, orgAId, '2026-12-31')
+
+    const { data: row } = await service
+      .from('org_billing')
+      .select('plan, status, ai_answers_included, monitor_limit, stripe_customer_id, clickwrap_terms_version')
+      .eq('org_id', orgAId)
+      .single()
+    expect(row).toEqual({
+      plan: 'pro',
+      status: 'active',
+      ai_answers_included: 300,
+      monitor_limit: null,
+      stripe_customer_id: `cus_a_${runId}`,
+      clickwrap_terms_version: '2026-12-31',
+    })
+  })
+})

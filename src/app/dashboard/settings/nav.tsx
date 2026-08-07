@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+import { SETTINGS_TABS } from './tabs'
+
 /**
  * The settings section tabs. The gear in the header lands on AI providers;
  * this nav is how the other settings surfaces are reached. Rendered by each
@@ -10,20 +12,11 @@ import { usePathname } from 'next/navigation'
  * themselves (requireAdmin).
  */
 
-const TABS = [
-  { href: '/dashboard/settings/api-keys', label: 'AI providers' },
-  { href: '/dashboard/settings/notifications', label: 'Notifications' },
-  { href: '/dashboard/settings/status-page', label: 'Status page' },
-  { href: '/dashboard/settings/members', label: 'Members' },
-  { href: '/dashboard/settings/usage', label: 'Usage' },
-  { href: '/dashboard/settings/audit', label: 'Audit' },
-]
-
 export function SettingsNav() {
   const pathname = usePathname()
   return (
     <nav aria-label="Settings sections" className="mb-[18px] flex gap-2">
-      {TABS.map((tab) => {
+      {SETTINGS_TABS.map((tab) => {
         const active = pathname.startsWith(tab.href)
         return (
           <Link

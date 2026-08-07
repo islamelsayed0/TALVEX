@@ -84,3 +84,18 @@ describe('active nav item', () => {
     ).toBe(false)
   })
 })
+
+describe('settings tabs', () => {
+  it('pins the tab set and order, billing included (F13 PR 2)', async () => {
+    const { SETTINGS_TABS } = await import('../src/app/dashboard/settings/tabs')
+    expect(SETTINGS_TABS).toEqual([
+      { href: '/dashboard/settings/api-keys', label: 'AI providers' },
+      { href: '/dashboard/settings/notifications', label: 'Notifications' },
+      { href: '/dashboard/settings/status-page', label: 'Status page' },
+      { href: '/dashboard/settings/members', label: 'Members' },
+      { href: '/dashboard/settings/billing', label: 'Billing' },
+      { href: '/dashboard/settings/usage', label: 'Usage' },
+      { href: '/dashboard/settings/audit', label: 'Audit' },
+    ])
+  })
+})

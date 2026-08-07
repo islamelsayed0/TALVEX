@@ -42,6 +42,10 @@ export type LogEvent =
   // The Stripe webhook that syncs subscription state into org_billing (F13).
   | 'stripe.webhook.applied'
   | 'stripe.webhook.failed'
+  // The billing screen's two server actions (F13 PR 2). Names only, never
+  // Stripe error text: it can quote request details.
+  | 'billing.checkout.failed'
+  | 'billing.portal.failed'
   // The five minute sweep, its steps, and the daily digest that rides it.
   | 'cron.sweep.complete'
   | 'cron.sweep.steps_failed'

@@ -128,6 +128,21 @@ describe('status rules', () => {
     expect(e.clickwrapTermsVersion).toBe('2026-08-01')
   })
 
+  it('a free plan row resolves to the free matrix, whatever its columns say', () => {
+    // Such a row exists for real: the clickwrap stamp creates it before any
+    // checkout completes, with columns at their defaults. Free means the
+    // matrix says free; a NULL monitor_limit on it must never read as
+    // unlimited.
+    const e = resolveEntitlements(
+      row({ plan: 'free', monitor_limit: null, org_limit: 5, ai_answers_included: 900 }),
+    )
+    expect(e.monitorLimit).toBe(2)
+    expect(e.orgLimit).toBe(1)
+    expect(e.aiAnswersIncluded).toBe(0)
+    expect(e.dailyDigest).toBe(false)
+    expect(e.stripeCustomerId).toBe('cus_test')
+  })
+
   it('a hand shaped row with an unknown plan or status degrades to free, never up', () => {
     expect(resolveEntitlements(row({ plan: 'enterprise' }))).toEqual(FREE_ENTITLEMENTS)
     expect(resolveEntitlements(row({ status: 'trialing' }))).toEqual(FREE_ENTITLEMENTS)

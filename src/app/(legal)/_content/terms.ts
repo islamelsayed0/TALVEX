@@ -23,6 +23,17 @@ import type { LegalDocument } from '@/lib/legal/documents'
  * out when a lawyer has actually read this, and not before, at which point the
  * effective date changes too. See docs/DECISIONS.md.
  */
+/**
+ * The machine readable version of the terms, which is their effective date.
+ * The clickwrap gate (F13 PR 2, docs/DECISIONS.md 2026-08-07) stores this
+ * against the org's billing row at the moment of acceptance, so the record
+ * says WHICH terms were accepted. It must always equal the effective date
+ * written inside the document below; tests/billing-checkout-rules.test.ts
+ * fails if the two drift apart. When the terms change, both move together
+ * and prior acceptance rows keep the version they recorded.
+ */
+export const TERMS_EFFECTIVE = '2026-08-03'
+
 export const TERMS: LegalDocument = {
   title: 'Talvext Terms of Service',
   description: 'The terms that govern use of the Talvext platform.',

@@ -43,6 +43,10 @@ export class AdminConfigError extends Error {
  *     effective entitlements. The org_billing select grant is the org's own
  *     admins, but plan limits bind every session, member sessions included,
  *     so the resolver reads past RLS server side and hands gates plan facts)
+ *   - src/app/dashboard/settings/billing/actions.ts  (via src/lib/db/
+ *     billing.ts: recording clickwrap acceptance on org_billing, where no
+ *     user session holds a write verb by design, migration 022. The action
+ *     proves the viewer is an org admin before the write)
  *   - future cron route handlers and migration tooling, added to this list
  *     when they exist
  *

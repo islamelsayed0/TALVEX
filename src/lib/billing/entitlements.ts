@@ -141,10 +141,16 @@ export function resolveEntitlements(row: OrgBillingRow | null | undefined): Enti
     return FREE_ENTITLEMENTS
   }
 
-  if (row.status === 'canceled') {
+  // A canceled subscription resolves to free limits, and so does any row
+  // whose plan IS free: a row can exist before checkout completes (the
+  // clickwrap stamp creates one), and free means the matrix says free, never
+  // whatever a partially written column happens to hold. Belt and braces
+  // with migration 023, which defaults monitor_limit to 2 so the row itself
+  // does not read as unlimited.
+  if (row.status === 'canceled' || row.plan === 'free') {
     return {
       ...FREE_ENTITLEMENTS,
-      status: 'canceled',
+      status: row.status,
       stripeCustomerId: row.stripe_customer_id,
       clickwrapAcceptedAt: row.clickwrap_accepted_at,
       clickwrapTermsVersion: row.clickwrap_terms_version,
