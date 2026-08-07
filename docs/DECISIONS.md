@@ -6,6 +6,45 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-07 — The billing screen: admin gated for v1, the success redirect is never trusted, and clickwrap is live
+
+**Decided: billing is admin gated, owner activation is deferred.** The
+billing tab uses the same requireAdmin gate as every settings surface, so
+any org admin can subscribe, open the portal, and cancel. The BRD's owner
+role exists in the vocabulary (org_members.role) but is assigned nowhere in
+app, and giving billing an owner only gate would first require in app role
+management for promoting someone to owner. That is its own task; shipping
+billing behind a role nobody can hold would ship billing nobody can use.
+When owner management exists, tightening the gate is a one line change in
+one place.
+
+**Decided: the webhook is the entitlement authority; the redirect is a
+hint.** After Stripe Checkout sends the browser back with `checkout=success`
+the screen does not upgrade anything. It renders whatever
+`org_billing` says, and while the webhook has not landed it says pending and
+refreshes itself briefly (bounded, then degrades to a static page). A forged
+or replayed success URL therefore changes nothing: the only writer is the
+signature verified webhook.
+
+**Decided: clickwrap is live, org level, versioned by effective date.** The
+checkout action refuses to create a Stripe session until the acceptance
+checkbox arrives with the form, then records `clickwrap_accepted_at` and
+`clickwrap_terms_version` on the org's billing row BEFORE the session is
+created. The version is the terms' effective date, exported as
+`TERMS_EFFECTIVE` next to the document itself and cross checked by test
+against the date written inside it. Acceptance is recorded against the org,
+the entity that pays, by an admin acting for it, which is what the terms
+themselves say acceptance on behalf of an organization means. This
+discharges the 2026-08-03 browsewrap entry's debt on schedule: clickwrap
+arrived with billing.
+
+**Affects.** The first paid plan is unblocked legally (with attorney review
+retired per the entry below). Owner activation is a named future task, not
+an accident of omission. PR 3 builds enforcement on the same resolver this
+screen renders from.
+
+---
+
 ## 2026-08-07 — F13 billing: the pricing is frozen, Stripe runs under the agency account in test mode, and attorney review is retired as a launch gate
 
 **Decided: the pricing.** Five tiers and one add on, frozen here; a change to
