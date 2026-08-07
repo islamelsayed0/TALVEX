@@ -39,6 +39,9 @@ export type LogEvent =
   // The Clerk webhook that syncs organizations and memberships.
   | 'clerk.webhook.applied'
   | 'clerk.webhook.failed'
+  // The Stripe webhook that syncs subscription state into org_billing (F13).
+  | 'stripe.webhook.applied'
+  | 'stripe.webhook.failed'
   // The five minute sweep, its steps, and the daily digest that rides it.
   | 'cron.sweep.complete'
   | 'cron.sweep.steps_failed'

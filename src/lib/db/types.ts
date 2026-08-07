@@ -4,7 +4,6 @@
 // (or the Supabase MCP tool generate_typescript_types against project
 // rdfuzadtraxzrrthhnnp). Then re-append the convenience aliases at the bottom.
 // Source of truth is the schema in supabase/migrations/.
-
 export type Json =
   | string
   | number
@@ -589,6 +588,65 @@ export type Database = {
           },
         ]
       }
+      org_billing: {
+        Row: {
+          ai_addon: boolean
+          ai_answers_included: number
+          clickwrap_accepted_at: string | null
+          clickwrap_terms_version: string | null
+          created_at: string
+          current_period_end: string | null
+          monitor_limit: number | null
+          org_id: string
+          org_limit: number
+          plan: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_addon?: boolean
+          ai_answers_included?: number
+          clickwrap_accepted_at?: string | null
+          clickwrap_terms_version?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          monitor_limit?: number | null
+          org_id: string
+          org_limit?: number
+          plan?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_addon?: boolean
+          ai_answers_included?: number
+          clickwrap_accepted_at?: string | null
+          clickwrap_terms_version?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          monitor_limit?: number | null
+          org_id?: string
+          org_limit?: number
+          plan?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_billing_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_members: {
         Row: {
           clerk_user_id: string
@@ -728,6 +786,27 @@ export type Database = {
           run_count?: number
           step_failures?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      stripe_webhook_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id: string
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          processed_at?: string | null
         }
         Relationships: []
       }
@@ -1046,6 +1125,8 @@ export const Constants = {
 
 
 
+
+
 // Convenience aliases used by the data layer.
 export type Organization = Tables<"organizations">
 export type OrgMember = Tables<"org_members">
@@ -1122,3 +1203,7 @@ export type InventoryItem = Tables<"inventory_items">
 
 // The sweep heartbeat. Platform state, one row, not scoped to any org.
 export type PlatformHeartbeat = Tables<"platform_heartbeat">
+
+// Billing (F13).
+export type OrgBilling = Tables<"org_billing">
+export type StripeWebhookEvent = Tables<"stripe_webhook_events">

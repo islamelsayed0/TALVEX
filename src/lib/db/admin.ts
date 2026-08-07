@@ -36,6 +36,13 @@ export class AdminConfigError extends Error {
  *     monitor is created; it writes the same sweep owned rows and columns
  *     the cron route does, scheduled by the create action via after(), and
  *     it is the create path's only reach into service role territory)
+ *   - src/app/api/webhooks/stripe/route.ts  (syncing subscription state into
+ *     org_billing; same posture as the Clerk webhook, no user session, the
+ *     signature is the authentication, migration 022)
+ *   - src/lib/billing/entitlements.ts  (READ ONLY: resolving an org's
+ *     effective entitlements. The org_billing select grant is the org's own
+ *     admins, but plan limits bind every session, member sessions included,
+ *     so the resolver reads past RLS server side and hands gates plan facts)
  *   - future cron route handlers and migration tooling, added to this list
  *     when they exist
  *

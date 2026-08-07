@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "screenshots": "node scripts/capture-screenshots.mjs",
+    "stripe:seed": "node --env-file-if-exists=.env.local --import tsx scripts/stripe-seed.ts",
     "screenshots:login": "node scripts/capture-screenshots.mjs login",
     "prepare": "git config core.hooksPath .githooks",
     "db:start": "supabase start",
@@ -23,7 +24,8 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.18.0",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "stripe": "^22.4.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
@@ -38,6 +40,7 @@
     "playwright": "1.54.1",
     "supabase": "2.109.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.10",
     "typescript": "^5",
     "vitest": "^4.1.10"
   }
