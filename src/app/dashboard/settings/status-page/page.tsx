@@ -1,4 +1,5 @@
 import { headers } from 'next/headers'
+import Link from 'next/link'
 
 import { requireAdmin } from '@/lib/auth/org-viewer'
 import { getStatusPageSettings } from '@/lib/db/status-page'
@@ -42,6 +43,7 @@ export default async function StatusPageSettings({
       : null
 
   const saved = asString(sp.saved) === '1'
+  const released = asString(sp.released) === '1'
   const error = asString(sp.error)
 
   return (
@@ -61,6 +63,12 @@ export default async function StatusPageSettings({
         </Card>
       ) : null}
 
+      {released ? (
+        <Card className="mb-[18px] px-5 py-4 text-sm text-card-foreground">
+          The address was released. It is free for anyone to claim now.
+        </Card>
+      ) : null}
+
       <Card className="px-[22px] py-5">
         <h2 className="text-base font-semibold text-foreground">Status page</h2>
         <p className="mt-1 text-[12.5px] text-quiet">
@@ -71,7 +79,30 @@ export default async function StatusPageSettings({
         {liveUrl ? (
           <div className="mt-4 flex flex-col gap-1.5">
             <span className="text-[12.5px] text-muted-foreground">Live at</span>
-            <CopyLink url={liveUrl} />
+            <div className="flex flex-wrap items-center gap-3">
+              <CopyLink url={liveUrl} />
+              <Link
+                href="/dashboard/settings/status-page/release"
+                className="text-[12.5px] text-link underline hover:text-foreground"
+              >
+                Release this address
+              </Link>
+            </div>
+          </div>
+        ) : settings.slug ? (
+          // The page is off but the address is still reserved: the exact
+          // state that used to be invisible and made a held slug look free.
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="text-[12.5px] text-muted-foreground">
+              Your page is off, and /status/{settings.slug} is still reserved
+              for you.
+            </span>
+            <Link
+              href="/dashboard/settings/status-page/release"
+              className="text-[12.5px] text-link underline hover:text-foreground"
+            >
+              Release this address
+            </Link>
           </div>
         ) : null}
 
@@ -91,6 +122,10 @@ export default async function StatusPageSettings({
             />
             Make my status page public
           </label>
+          <p className="text-[12px] text-quiet">
+            Turning the page off keeps your address reserved for you. Releasing
+            the address is what frees it for anyone.
+          </p>
 
           <label className="flex flex-col gap-1.5">
             <span className="text-[12.5px] text-muted-foreground">

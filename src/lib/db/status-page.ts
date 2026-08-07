@@ -116,6 +116,26 @@ export class StatusPageValidationError extends Error {
 
 export type StatusPageSettings = { enabled: boolean; slug: string | null }
 
+/**
+ * Releases the active org's status page address: the page goes dark and the
+ * slug is freed for anyone, immediately. This is the ONLY release path; the
+ * settings form cannot express it, because saving refuses an empty slug while
+ * the page is enabled and a disabled page deliberately keeps its slug so
+ * re enabling restores the same URL. That keep is the right default and it is
+ * also a trap without this: a disabled page silently holds the address
+ * reserved, which is how the Talvext slug flip got stuck (2026-08-06). RLS
+ * (migration 011) makes the write admin only; for anyone else it matches
+ * zero rows.
+ */
+export async function releaseStatusPageAddress(): Promise<void> {
+  const { client, orgId } = await createOrgScopedClient()
+  const { error } = await client
+    .from('organizations')
+    .update({ status_page_enabled: false, status_page_slug: null })
+    .eq('clerk_org_id', orgId)
+  if (error) throw error
+}
+
 /** The active org's status page settings. Admin only by the org scoped client. */
 export async function getStatusPageSettings(): Promise<StatusPageSettings> {
   const { client, orgId } = await createOrgScopedClient()
