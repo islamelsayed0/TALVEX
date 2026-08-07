@@ -6,11 +6,14 @@ import { redirect } from 'next/navigation'
 
 import { TERMS_EFFECTIVE } from '@/app/(legal)/_content/terms'
 import {
+  AI_ADDON_PRICE_LOOKUP_KEY,
+  aiAddonChange,
   CheckoutValidationError,
   lookupKeysForSelection,
   parseCheckoutSelection,
 } from '@/lib/billing/checkout-rules'
 import { getEntitlements } from '@/lib/billing/entitlements'
+import { ensurePortalConfiguration } from '@/lib/billing/portal-config'
 import { createStripeClient } from '@/lib/billing/stripe'
 import { createAdminClient } from '@/lib/db/admin'
 import { billingOrgUuid, recordClickwrapAcceptance } from '@/lib/db/billing'
@@ -145,8 +148,14 @@ export async function openPortalAction(): Promise<void> {
     }
     const stripe = createStripeClient()
     const base = await returnBase()
+    // The configuration is ours, in code (portal-config.ts): plan switching,
+    // cancel at period end, invoices, card updates. Passing it explicitly
+    // means the portal never depends on whatever the dashboard's default
+    // happens to be.
+    const configuration = await ensurePortalConfiguration(stripe)
     const session = await stripe.billingPortal.sessions.create({
       customer: entitlements.stripeCustomerId,
+      configuration: configuration.id,
       return_url: `${base}${PAGE}`,
     })
     portalUrl = session.url
@@ -164,4 +173,75 @@ export async function openPortalAction(): Promise<void> {
     redirect(`${PAGE}?${new URLSearchParams({ error: failure })}`)
   }
   redirect(portalUrl!)
+}
+
+/**
+ * Adds or removes the AI Chat add on on a Basic subscription, in app,
+ * because Stripe's portal cannot manage a second subscription item. The
+ * subscription is edited directly with prorations; the WEBHOOK remains the
+ * entitlement writer (the edit fires customer.subscription.updated, and the
+ * screen shows pending until it lands, the checkout pattern exactly).
+ */
+export async function setAiAddonAction(formData: FormData): Promise<void> {
+  const viewer = await getActiveOrgViewer()
+  if (!viewer.isAdmin) redirect(PAGE)
+  const { orgId: clerkOrgId } = await auth()
+  if (!clerkOrgId) redirect('/select-org')
+
+  const enable = formData.get('addon') === 'enable'
+
+  let failure: string | null = null
+  try {
+    const entitlements = await getEntitlements(clerkOrgId)
+    if (entitlements.plan !== 'basic' || !entitlements.stripeSubscriptionId) {
+      throw new CheckoutValidationError(
+        'The AI Chat add on attaches to an active Basic plan. Pro and Business already include managed AI answers.',
+      )
+    }
+    if (entitlements.status !== 'active') {
+      throw new CheckoutValidationError(
+        'Sort the payment state out under Manage billing first, then change the add on.',
+      )
+    }
+
+    const stripe = createStripeClient()
+    const sub = await stripe.subscriptions.retrieve(entitlements.stripeSubscriptionId)
+    const change = aiAddonChange(
+      sub.items.data.map((item) => ({ id: item.id, lookupKey: item.price.lookup_key })),
+      enable,
+    )
+
+    if (change.op === 'add') {
+      const { data: prices } = await stripe.prices.list({
+        lookup_keys: [AI_ADDON_PRICE_LOOKUP_KEY],
+        limit: 1,
+      })
+      const price = prices[0]
+      if (!price) throw new Error('add on price missing; run npm run stripe:seed')
+      await stripe.subscriptions.update(sub.id, {
+        items: [{ price: price.id, quantity: 1 }],
+        proration_behavior: 'create_prorations',
+      })
+    } else if (change.op === 'remove') {
+      await stripe.subscriptions.update(sub.id, {
+        items: [{ id: change.itemId, deleted: true }],
+        proration_behavior: 'create_prorations',
+      })
+    }
+    // noop falls through: the subscription already matches, and the screen
+    // simply shows the state it is in.
+  } catch (err) {
+    if (err instanceof CheckoutValidationError) {
+      failure = err.message
+    } else {
+      logError('billing.addon.failed', 'failed', { error: errorName(err) })
+      failure =
+        'The add on change did not go through and nothing was charged. Try again in a moment; if it keeps failing, tell us on the Get Help page.'
+    }
+  }
+
+  if (failure !== null) {
+    redirect(`${PAGE}?${new URLSearchParams({ error: failure })}`)
+  }
+  redirect(`${PAGE}?addon=${enable ? 'adding' : 'removing'}`)
 }

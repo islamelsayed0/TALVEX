@@ -25,6 +25,8 @@
 
 import Stripe from 'stripe'
 
+import { ensurePortalConfiguration } from '../src/lib/billing/portal-config'
+
 type CatalogEntry = {
   lookupKey: string
   productName: string
@@ -128,6 +130,13 @@ async function main(): Promise<void> {
         `$${(entry.unitAmount / 100).toFixed(2)}/month`,
     )
   }
+
+  // The customer portal configuration, same philosophy as the catalog: in
+  // code, reproducible from zero. The portal action self heals too, so this
+  // is belt and braces; running it here means the first subscriber never
+  // pays the creation latency.
+  const portal = await ensurePortalConfiguration(stripe)
+  console.log(`Portal configuration: ${portal.id}`)
 
   console.log('Catalog check complete. Test mode only; nothing here touches live.')
 }

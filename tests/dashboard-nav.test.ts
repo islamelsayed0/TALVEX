@@ -23,8 +23,15 @@ describe('role aware nav', () => {
       'Tickets',
       'Documents',
       'Inventory',
+      'Billing',
       'Help',
     ])
+    // Billing is the settings rule's one exception: same page as the
+    // settings tab, surfaced in the nav because money deserves a first
+    // class door.
+    expect(ADMIN_NAV.find((i) => i.label === 'Billing')!.href).toBe(
+      '/dashboard/settings/billing',
+    )
   })
 
   it('gives members Home, My requests, and Documents', () => {

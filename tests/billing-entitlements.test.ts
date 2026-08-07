@@ -124,6 +124,7 @@ describe('status rules', () => {
     expect(e.dailyDigest).toBe(false)
     expect(e.aiAnswersIncluded).toBe(0)
     expect(e.stripeCustomerId).toBe('cus_test')
+    expect(e.stripeSubscriptionId).toBe('sub_test')
     expect(e.clickwrapAcceptedAt).toBe('2026-08-07T12:00:00Z')
     expect(e.clickwrapTermsVersion).toBe('2026-08-01')
   })

@@ -6,6 +6,45 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-07 — Subscription management: the portal is configured in code, the add on toggles in app, and Billing joins the nav
+
+**Decided: the portal configuration is code.** What the Stripe customer
+portal offers subscribers is a configuration object, and hand building it in
+the dashboard is the same trap as hand building the catalog. It now lives in
+src/lib/billing/portal-config.ts, the seed philosophy applied to the portal:
+plan switching across exactly the three plan prices, cancellation at period
+end (the subscriber keeps what they paid for; entitlements drop when the
+deletion event lands), invoice history, card updates, and the real legal
+pages linked. The portal action passes the configuration id explicitly and
+creates the configuration when none exists, so the portal never depends on
+whatever a dashboard default happens to be, and the seed script creates it
+ahead of the first subscriber.
+
+**Decided: the AI add on is managed in app, not in the portal.** Stripe's
+portal cannot manage a second subscription item, so the add on would have
+been unreachable after checkout. A toggle on the billing screen adds or
+removes it on the live subscription with prorations, Basic and active only.
+The WEBHOOK remains the one entitlement writer: the toggle edits the
+subscription, the updated event lands the state, and the screen shows
+pending until it does, exactly the checkout pattern. The screen also says
+the one sharp edge out loud: with the add on attached, the portal cannot
+switch plans, so remove it first.
+
+**Decided: Billing joins the admin nav.** The settings rule (Settings is the
+gear, the nav holds destinations) gets its one deliberate exception: the
+billing page stays a settings tab by route, and admins also reach it from
+the nav, because money deserves a first class door. Same page, two doors; no
+route moved, so tests, links, and Stripe return URLs are untouched.
+
+**Affects.** Changing what subscribers can do to their own subscription now
+means editing portal-config.ts or the toggle action, both reviewed and both
+pinned by tests/billing-portal.test.ts; the dashboard is never the place.
+The entitlements resolver now exposes the subscription id for the toggle's
+use. Everything stays inside the frozen pricing and the live gates of the
+2026-08-07 F13 entry below.
+
+---
+
 ## 2026-08-07 — Enforcement: BYOK always wins, the meter is the transcript, and the org gate is per person at first data access
 
 **Decided: key precedence and the managed path.** When an org has any BYOK
