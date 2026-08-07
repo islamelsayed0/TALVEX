@@ -150,6 +150,12 @@ export type SendOutcome = {
  * to the managed unavailable copy. A BYOK failure passes through exactly as
  * before: it is the org's own key and the existing remediation names it.
  */
+/** The operator channel hears about a platform refusal once per process:
+ * the log line records every failure, but a spend limit outage with members
+ * still typing must not flood the channel into being muted (the log module's
+ * own reasoning for report being opt in). */
+let platformFailureReported = false
+
 export async function callProviderOnce(args: {
   keySource: 'byok' | 'platform'
   generate: () => ReturnType<typeof generateReply>
@@ -162,8 +168,9 @@ export async function callProviderOnce(args: {
         'chat.platform_key.failed',
         'failed',
         { error: errorName(err) },
-        { report: true },
+        { report: !platformFailureReported },
       )
+      platformFailureReported = true
       throw new ManagedUnavailableError()
     }
     throw err
