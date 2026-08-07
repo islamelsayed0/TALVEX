@@ -222,22 +222,31 @@ async function writeEntitlements(
 }
 
 /** Resolves which org a subscription belongs to: the clerk_org_id metadata
- * stamped at checkout first, the unique Stripe ids on org_billing second. */
+ * stamped at checkout first, then the unique Stripe ids on org_billing,
+ * subscription before customer. Sequential rather than one OR query so a
+ * pathological state where the two ids point at different rows resolves to
+ * the more specific match instead of erroring into a retry loop. */
 async function orgIdForSubscription(db: Db, facts: SubscriptionFacts): Promise<string | null> {
   if (facts.clerkOrgId) {
     const orgId = await orgIdByClerkOrgId(db, facts.clerkOrgId)
     if (orgId) return orgId
   }
-  const { data, error } = await db
+  const { data: bySub, error: subError } = await db
     .from('org_billing')
     .select('org_id')
-    .or(
-      `stripe_subscription_id.eq.${facts.subscriptionId}` +
-        (facts.customerId ? `,stripe_customer_id.eq.${facts.customerId}` : ''),
-    )
+    .eq('stripe_subscription_id', facts.subscriptionId)
     .maybeSingle()
-  if (error) throw error
-  return data?.org_id ?? null
+  if (subError) throw subError
+  if (bySub) return bySub.org_id
+
+  if (!facts.customerId) return null
+  const { data: byCustomer, error: customerError } = await db
+    .from('org_billing')
+    .select('org_id')
+    .eq('stripe_customer_id', facts.customerId)
+    .maybeSingle()
+  if (customerError) throw customerError
+  return byCustomer?.org_id ?? null
 }
 
 export async function applyStripeEvent(
