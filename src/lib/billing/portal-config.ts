@@ -51,24 +51,40 @@ export function portalConfigurationParams(
   }
 }
 
+/** Whether a live configuration's switching menu matches the desired one.
+ * Exported for the unit suite; order insensitive on products. */
+export function portalProductsMatch(
+  config: Stripe.BillingPortal.Configuration,
+  desired: Stripe.BillingPortal.ConfigurationCreateParams,
+): boolean {
+  const flatten = (
+    products:
+      | Array<{ product: string; prices: string[] }>
+      | null
+      | undefined,
+  ) =>
+    (products ?? [])
+      .map((p) => `${p.product}:${[...p.prices].sort().join(',')}`)
+      .sort()
+      .join('|')
+  return (
+    flatten(config.features?.subscription_update?.products) ===
+    flatten(desired.features?.subscription_update?.products as never)
+  )
+}
+
 /**
  * Finds our portal configuration, creating it from the live catalog when it
- * does not exist yet. Requires the catalog to be seeded (npm run
- * stripe:seed); throws a plain message when it is not, because a portal that
- * cannot offer the plans is worse than an honest failure.
+ * does not exist, and UPDATING it in place when its switching menu no longer
+ * matches this file (a replaced price would otherwise leave the portal
+ * offering the stale one forever, the dashboard drift trap this module
+ * exists to kill). Requires the catalog to be seeded (npm run stripe:seed);
+ * throws a plain message when it is not, because a portal that cannot offer
+ * the plans is worse than an honest failure.
  */
 export async function ensurePortalConfiguration(
   stripe: Stripe,
 ): Promise<Stripe.BillingPortal.Configuration> {
-  const existing = await stripe.billingPortal.configurations.list({
-    active: true,
-    limit: 100,
-  })
-  const ours = existing.data.find(
-    (config) => config.business_profile?.headline === PORTAL_HEADLINE,
-  )
-  if (ours) return ours
-
   const { data: prices } = await stripe.prices.list({
     lookup_keys: [...PLAN_PRICE_LOOKUP_KEYS],
     limit: 10,
@@ -78,12 +94,24 @@ export async function ensurePortalConfiguration(
       'the plan prices are missing from this Stripe account; run npm run stripe:seed first',
     )
   }
-  return stripe.billingPortal.configurations.create(
-    portalConfigurationParams(
-      prices.map((price) => ({
-        product: typeof price.product === 'string' ? price.product : price.product.id,
-        price: price.id,
-      })),
-    ),
+  const desired = portalConfigurationParams(
+    prices.map((price) => ({
+      product: typeof price.product === 'string' ? price.product : price.product.id,
+      price: price.id,
+    })),
   )
+
+  const existing = await stripe.billingPortal.configurations.list({
+    active: true,
+    limit: 100,
+  })
+  const ours = existing.data.find(
+    (config) => config.business_profile?.headline === PORTAL_HEADLINE,
+  )
+  if (!ours) return stripe.billingPortal.configurations.create(desired)
+  if (portalProductsMatch(ours, desired)) return ours
+  return stripe.billingPortal.configurations.update(ours.id, {
+    business_profile: desired.business_profile,
+    features: desired.features,
+  })
 }

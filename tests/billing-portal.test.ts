@@ -9,6 +9,7 @@ import {
 import {
   PORTAL_HEADLINE,
   portalConfigurationParams,
+  portalProductsMatch,
 } from '@/lib/billing/portal-config'
 import { AI_ADDON_LOOKUP_KEY, PLAN_LOOKUP_KEYS } from '@/lib/db/stripe-sync'
 
@@ -72,6 +73,42 @@ describe('portalConfigurationParams', () => {
     expect(params.business_profile?.headline).toBe(PORTAL_HEADLINE)
     expect(params.business_profile?.terms_of_service_url).toBe('https://talvext.com/terms')
     expect(params.business_profile?.privacy_policy_url).toBe('https://talvext.com/privacy')
+  })
+})
+
+describe('portalProductsMatch', () => {
+  const desired = portalConfigurationParams([
+    { product: 'prod_a', price: 'price_a' },
+    { product: 'prod_b', price: 'price_b' },
+  ])
+  const live = (products: Array<{ product: string; prices: string[] }>) =>
+    ({
+      features: { subscription_update: { products } },
+    }) as never
+
+  it('matches regardless of product order', () => {
+    expect(
+      portalProductsMatch(
+        live([
+          { product: 'prod_b', prices: ['price_b'] },
+          { product: 'prod_a', prices: ['price_a'] },
+        ]),
+        desired,
+      ),
+    ).toBe(true)
+  })
+
+  it('detects a replaced price, the drift the ensure repairs', () => {
+    expect(
+      portalProductsMatch(
+        live([
+          { product: 'prod_a', prices: ['price_a_old'] },
+          { product: 'prod_b', prices: ['price_b'] },
+        ]),
+        desired,
+      ),
+    ).toBe(false)
+    expect(portalProductsMatch(live([]), desired)).toBe(false)
   })
 })
 
