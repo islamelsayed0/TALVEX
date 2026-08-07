@@ -139,22 +139,34 @@ export default async function AddonConfirmPage({
             ? '300 managed AI answers a month join your Basic plan. The remainder of the current billing period is prorated, so the first charge is smaller than a full month.'
             : 'Managed AI answers stop with the current billing period and the unused time is credited. BYOK chat keeps working exactly as before.'}
         </p>
-        {preview ? (
-          <p className="text-sm leading-relaxed text-card-foreground">
-            Your next invoice, prorations included: {preview.nextInvoiceTotal}.
-            After that, {preview.monthlyAfter} a month
-            {entitlements.currentPeriodEnd
-              ? `, next billed ${formatUtc(entitlements.currentPeriodEnd)}`
-              : ''}
-            .
-          </p>
-        ) : (
-          <p className="text-sm leading-relaxed text-card-foreground">
-            {enable
-              ? 'From the next full billing period this comes to $54.00 a month with your Basic plan.'
-              : 'From the next billing period your total returns to $39.00 a month.'}
-          </p>
-        )}
+        {/* The numbers, set like the small invoice they describe: quiet
+            label, strong tabular amount. When the Stripe preview cannot be
+            fetched the panel keeps its shape and states the plain
+            arithmetic. */}
+        <dl className="rounded-button border border-divider bg-background/40 px-4 py-1">
+          {preview ? (
+            <div className="flex items-baseline justify-between gap-4 py-2.5">
+              <dt className="text-[12.5px] text-quiet">
+                Next invoice, prorations included
+              </dt>
+              <dd className="text-[15px] font-semibold text-card-foreground tabular-nums">
+                {preview.nextInvoiceTotal}
+              </dd>
+            </div>
+          ) : null}
+          <div
+            className={`flex items-baseline justify-between gap-4 py-2.5 ${preview ? 'border-t border-divider' : ''}`}
+          >
+            <dt className="text-[12.5px] text-quiet">
+              {entitlements.currentPeriodEnd
+                ? `Each month from ${formatUtc(entitlements.currentPeriodEnd)}`
+                : 'Each month after that'}
+            </dt>
+            <dd className="text-[15px] font-semibold text-card-foreground tabular-nums">
+              {preview ? preview.monthlyAfter : enable ? '$54.00' : '$39.00'}
+            </dd>
+          </div>
+        </dl>
         <form action={setAiAddonAction} className="flex items-center gap-3">
           <input type="hidden" name="addon" value={enable ? 'enable' : 'disable'} />
           <button type="submit" className={primaryButton}>
