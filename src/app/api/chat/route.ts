@@ -6,6 +6,7 @@ import {
   ChatRateLimitError,
   ConversationUnavailableError,
   ManagedCapReachedError,
+  ManagedUnavailableError,
   NoProviderKeyError,
   ProviderChoiceRequiredError,
   sendChatMessage,
@@ -70,6 +71,12 @@ export async function POST(req: Request): Promise<Response> {
       // plain copy and the ticket door, never a silent failure or an
       // automatic upgrade. 429 because it is a quota, though a monthly one.
       return NextResponse.json({ error: err.message }, { status: 429 })
+    }
+    if (err instanceof ManagedUnavailableError) {
+      // The platform side cannot serve a managed answer (key absent, or the
+      // provider refused it). Same honest shape as the cap, 503 because it
+      // is our unavailability, never the member's doing.
+      return NextResponse.json({ error: err.message }, { status: 503 })
     }
     if (err instanceof ConversationUnavailableError) {
       return NextResponse.json({ error: err.message }, { status: 404 })

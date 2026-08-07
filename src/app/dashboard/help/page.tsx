@@ -109,6 +109,18 @@ export default async function HelpHomePage() {
         </div>
       ) : null}
 
+      {entry === 'unavailable' ? (
+        <div className="glass mt-[26px] rounded-nested p-4 pl-[18px] text-left">
+          <p className="text-sm font-medium text-foreground">
+            The assistant is unavailable right now.
+          </p>
+          <p className="mt-1 text-[13px] text-quiet">
+            Nothing upgrades or gets charged on its own. Send your request
+            below and your IT team picks it up.
+          </p>
+        </div>
+      ) : null}
+
       {askOpen ? (
         <Link
           href={CHAT_HREF}

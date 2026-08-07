@@ -38,6 +38,10 @@ export type LogEvent =
   | 'chat.grounding.failed'
   // An org entitled to managed answers hit a missing platform key (F13).
   | 'chat.platform_key.not_configured'
+  // The provider refused the platform key at answer time: spend limit
+  // reached, rate limited, or the key is invalid. Reported to the operator
+  // channel; the managed path degrades to the Get Help door.
+  | 'chat.platform_key.failed'
   // The Clerk webhook that syncs organizations and memberships.
   | 'clerk.webhook.applied'
   | 'clerk.webhook.failed'

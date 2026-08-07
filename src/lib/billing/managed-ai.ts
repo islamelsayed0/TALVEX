@@ -48,7 +48,13 @@ export type ManagedAccess =
   | { mode: 'available'; included: number; used: number; remaining: number }
   /** The month's allowance is spent: degrade to the Get Help door. */
   | { mode: 'capped'; included: number }
-  /** No managed entitlement, or the platform key is not configured. */
+  /** The org IS entitled but the platform side cannot serve (no key
+   * configured). The same honest degrade as the cap, because to the person
+   * asking, the truth is identical: no answer now, the ticket door works,
+   * nothing is charged. Distinct from 'none' so an org that paid for
+   * managed answers is never shown the free tier's ask an admin copy. */
+  | { mode: 'unavailable' }
+  /** No managed entitlement. */
   | { mode: 'none' }
 
 type Db = ReturnType<typeof createAdminClient>
@@ -91,7 +97,7 @@ export async function resolveManagedAccess(
       missingPlatformKeyLogged = true
       logError('chat.platform_key.not_configured', 'unavailable')
     }
-    return { mode: 'none' }
+    return { mode: 'unavailable' }
   }
 
   const db = createAdminClient()
@@ -117,10 +123,12 @@ export async function resolveManagedAccess(
 /**
  * What the chat surfaces should offer this org, in one question. byok and
  * managed both mean the ask entry is open; capped means the recorded degrade
- * (the Get Help ticket door with plain copy); none means the original BYOK
- * era behavior (ask an admin for a key, or upgrade).
+ * (the Get Help ticket door with plain copy); unavailable is the same door
+ * with the platform down copy (entitled, but the platform side cannot serve
+ * right now); none means the original BYOK era behavior (ask an admin for a
+ * key, or upgrade).
  */
-export type ChatEntryMode = 'byok' | 'managed' | 'capped' | 'none'
+export type ChatEntryMode = 'byok' | 'managed' | 'capped' | 'unavailable' | 'none'
 
 export async function chatEntryMode(
   clerkOrgId: string,
@@ -130,5 +138,6 @@ export async function chatEntryMode(
   const access = await resolveManagedAccess(clerkOrgId)
   if (access.mode === 'available') return 'managed'
   if (access.mode === 'capped') return 'capped'
+  if (access.mode === 'unavailable') return 'unavailable'
   return 'none'
 }
