@@ -2,6 +2,11 @@ import 'server-only'
 
 import { auth } from '@clerk/nextjs/server'
 
+import {
+  MANAGED_PROVIDER,
+  platformApiKey,
+  resolveManagedAccess,
+} from '@/lib/billing/managed-ai'
 import { createAdminClient } from '@/lib/db/admin'
 import { createOrgScopedClient } from '@/lib/db/client'
 import { errorName, logError } from '@/lib/log'
@@ -61,6 +66,22 @@ export class NoProviderKeyError extends Error {
   constructor() {
     super('The assistant needs an API key. Ask an admin to add one in settings.')
     this.name = 'NoProviderKeyError'
+  }
+}
+
+/**
+ * The month's included managed answers are used up (F13 PR 3). The recorded
+ * degrade behavior: plain copy pointing at the Get Help ticket door. Never a
+ * silent failure, never an automatic upgrade, never an overage charge.
+ */
+export class ManagedCapReachedError extends Error {
+  constructor() {
+    super(
+      'This month’s included AI answers are used up. Send your question ' +
+        'to your IT team from the Get Help page instead; the allowance resets ' +
+        'next month, and nothing upgrades or gets charged on its own.',
+    )
+    this.name = 'ManagedCapReachedError'
   }
 }
 
@@ -135,19 +156,31 @@ export async function sendChatMessage(input: {
   const orgUuid = org.id
 
   // Which provider. A member with one key needs no choice; with several, the
-  // caller must have chosen (the picker); with none, there is nothing to use.
+  // caller must have chosen (the picker). With none, the managed path (F13
+  // PR 3) may serve the answer on the platform key IF the org's plan
+  // includes managed answers and the month's allowance is not spent. BYOK
+  // always wins when a key exists: it is free, uncapped, and never metered.
   const { data: providerRows, error: provErr } = await client.rpc(
     'org_api_key_providers',
   )
   if (provErr) throw provErr
   const providers = (providerRows ?? []).filter(isAiProvider)
   let provider: AiProvider
+  let keySource: 'byok' | 'platform' = 'byok'
   if (input.provider && isAiProvider(input.provider) && providers.includes(input.provider)) {
     provider = input.provider
   } else if (providers.length === 1) {
     provider = providers[0]
   } else if (providers.length === 0) {
-    throw new NoProviderKeyError()
+    const access = await resolveManagedAccess(clerkOrgId)
+    if (access.mode === 'capped') {
+      throw new ManagedCapReachedError()
+    }
+    if (access.mode !== 'available') {
+      throw new NoProviderKeyError()
+    }
+    provider = MANAGED_PROVIDER
+    keySource = 'platform'
   } else {
     throw new ProviderChoiceRequiredError(providers)
   }
@@ -214,8 +247,12 @@ export async function sendChatMessage(input: {
   }
 
   // Read and decrypt the key in request scope, then call the provider. Nothing
-  // is written until this succeeds.
-  const apiKey = await readProviderKey(orgUuid, provider)
+  // is written until this succeeds. The managed path uses the platform key
+  // and never touches the vault.
+  const apiKey =
+    keySource === 'platform'
+      ? platformApiKey()
+      : await readProviderKey(orgUuid, provider)
   if (!apiKey) {
     // A key vanished between the provider list and now.
     throw new NoProviderKeyError()
@@ -281,6 +318,9 @@ export async function sendChatMessage(input: {
       model: reply.model,
       input_tokens: reply.inputTokens,
       output_tokens: reply.outputTokens,
+      // The meter's input (migration 024): a platform row counts against the
+      // org's monthly allowance, a byok row never does.
+      key_source: keySource,
       // Ids only, never article content. What renders later goes back
       // through the viewer's own scoped articles read (migration 015).
       grounded_article_ids:

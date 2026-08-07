@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useId, useRef, useState } from 'react'
 
+import type { ChatEntryMode } from '@/lib/billing/managed-ai'
+
 import { bubble, bubbleRow } from '../chat/chat-style'
 import { ArticleCitations } from '../chat/citations'
 import { DisclosureLine, fullChatHref, type ProviderOption } from '../chat/ui'
@@ -21,14 +23,17 @@ import { useChat } from '../chat/use-chat'
  * instead of taking input.
  */
 export function AskTalvextWidget({
-  hasKey,
+  chatEntry,
   isAdmin,
   providers,
 }: {
-  hasKey: boolean
+  /** byok and managed take input; capped shows the ticket door copy (the
+   * recorded degrade, F13 PR 3); none explains the missing key. */
+  chatEntry: ChatEntryMode
   isAdmin: boolean
   providers: ProviderOption[]
 }) {
+  const askOpen = chatEntry === 'byok' || chatEntry === 'managed'
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const panelId = useId()
@@ -53,8 +58,8 @@ export function AskTalvextWidget({
   })
 
   useEffect(() => {
-    if (open && hasKey) inputRef.current?.focus()
-  }, [open, hasKey])
+    if (open && askOpen) inputRef.current?.focus()
+  }, [open, askOpen])
 
   useEffect(() => {
     if (!open) return
@@ -138,7 +143,7 @@ export function AskTalvextWidget({
             </button>
           </header>
 
-          {hasKey ? (
+          {askOpen ? (
             <>
               {/* Thread */}
               <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
@@ -221,6 +226,25 @@ export function AskTalvextWidget({
                 </div>
               </div>
             </>
+          ) : chatEntry === 'capped' ? (
+            /* The month's managed answers are spent: the recorded degrade is
+             * the Get Help ticket door with plain copy, never a dead end. */
+            <div className="flex flex-1 flex-col gap-3 px-5 py-6">
+              <h2 className="text-sm font-semibold text-foreground">
+                This month&rsquo;s included AI answers are used up
+              </h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                The allowance resets next month, and nothing upgrades or gets
+                charged on its own. Your question can go straight to your IT
+                team instead.
+              </p>
+              <Link
+                href="/dashboard/help"
+                className="text-sm text-accent-text underline underline-offset-2 hover:text-foreground"
+              >
+                Send a request on the Get Help page
+              </Link>
+            </div>
           ) : (
             /* No provider key: explain instead of taking input. */
             <div className="flex flex-1 flex-col gap-3 px-5 py-6">

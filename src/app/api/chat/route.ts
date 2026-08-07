@@ -5,6 +5,7 @@ import {
   ChatInputError,
   ChatRateLimitError,
   ConversationUnavailableError,
+  ManagedCapReachedError,
   NoProviderKeyError,
   ProviderChoiceRequiredError,
   sendChatMessage,
@@ -63,6 +64,12 @@ export async function POST(req: Request): Promise<Response> {
     }
     if (err instanceof NoProviderKeyError) {
       return NextResponse.json({ error: err.message }, { status: 409 })
+    }
+    if (err instanceof ManagedCapReachedError) {
+      // The recorded degrade (docs/DECISIONS.md 2026-08-07): a refusal with
+      // plain copy and the ticket door, never a silent failure or an
+      // automatic upgrade. 429 because it is a quota, though a monthly one.
+      return NextResponse.json({ error: err.message }, { status: 429 })
     }
     if (err instanceof ConversationUnavailableError) {
       return NextResponse.json({ error: err.message }, { status: 404 })

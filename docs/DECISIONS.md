@@ -6,6 +6,70 @@ future work; do not log routine implementation details.
 
 ---
 
+## 2026-08-07 — Enforcement: BYOK always wins, the meter is the transcript, and the org gate is per person at first data access
+
+**Decided: key precedence and the managed path.** When an org has any BYOK
+key, chat runs on it: free, uncapped, never metered, exactly as before F13.
+The managed path exists only for orgs with NO key whose plan includes
+answers, runs on one platform key (Anthropic, `PLATFORM_ANTHROPIC_API_KEY`,
+server only), and is metered per assistant answer. The escalation draft
+stays BYOK only: a managed answer is something a person asked for, a draft
+is decoration, and its existing deterministic fallback already covers the
+keyless case.
+
+**Decided: the meter is the transcript.** A managed answer is counted by the
+chat_messages row that IS the answer (`key_source = 'platform'`, migration
+024), bucketed by the org's one authoritative timezone, exactly as the F11
+usage screen counts. No separate counter exists to drift or to reset: user
+sessions hold no write verb on chat_messages, so the meter's inputs are as
+unforgeable as the transcript. Two requests racing at the last included
+answer can both land and write one answer over; the overage is absorbed,
+never charged, because the recorded anti patterns (silent failure, automatic
+upgrade, overage charges) outrank a one row overshoot. At the cap the send
+path refuses with plain copy pointing at the Get Help ticket door, and the
+chat surfaces say the same before anyone types.
+
+**Decided: the digest gate lives in the sweep AND the settings.** The cron
+sweep skips unentitled orgs before the due check and before the ledger
+stamp, so a lapsed plan sends nothing even with a stale enabled flag, and
+the morning an org upgrades, that day's digest still counts as owed. The
+settings screen replaces the controls with the upgrade path for free orgs,
+and the save action refuses a posted form the same way, in the same words.
+
+**Decided: the monitor limit is enforced in the data layer.** The migration
+003 insert policy is member wide on purpose, so a page level gate would
+guard only the admin UI. `createMonitor` counts under the caller's own RLS
+and refuses past the limit with upgrade copy. Deletion never blocks, and
+alerts on existing monitors never pause: limits are packaging, not
+capacity.
+
+**Decided: the org allowance is per person, enforced at first data access.**
+Clerk owns org creation end to end (hosted widgets, no pre creation server
+hook), and its webhook fires after the org exists, where a refusal only
+makes Clerk retry forever. So the seam the spec preferred cannot express
+the rule, and the recorded fallback applies: the dashboard layout checks
+the viewer's allowance (the highest orgLimit across every org they belong
+to, so Business staff inherit ten from the Business org's membership) and
+shows a clear screen in place of the page for memberships past it, oldest
+memberships first. Nothing is deleted; other members are unaffected; the
+switcher remains reachable. The single org majority costs one extra count
+query per dashboard render.
+
+**Known gap, recorded not improvised: Business sibling orgs resolve free
+entitlements.** The pricing sells Business as ten organizations with
+everything in Pro, but entitlements are resolved per org and the other nine
+orgs have no billing row, so today they resolve as free tier. Linking
+sibling orgs to a Business subscription (a billing group) is its own task
+and a blocker on SELLING Business, recorded here so the gap is a decision
+and not a surprise. Test mode makes this safe to ship now.
+
+**Affects.** The chat surfaces, the sweep, monitor creation, and the
+dashboard layout all read the one resolver. The M4 audit item is closed:
+the org level ceiling exists and is the entitlement. PR 4's pricing page
+states nothing this entry does not already enforce or record.
+
+---
+
 ## 2026-08-07 — The billing screen: admin gated for v1, the success redirect is never trusted, and clickwrap is live
 
 **Decided: billing is admin gated, owner activation is deferred.** The

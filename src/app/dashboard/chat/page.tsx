@@ -1,6 +1,8 @@
+import { auth } from '@clerk/nextjs/server'
 import Link from 'next/link'
 
 import { UNKNOWN_MEMBER, resolveUserNames } from '@/lib/auth/user-names'
+import { chatEntryMode } from '@/lib/billing/managed-ai'
 import { orgHasKey } from '@/lib/db/api-keys'
 import { getChatViewer, listConversations } from '@/lib/db/chat'
 import type { ChatConversationStatus } from '@/lib/db/types'
@@ -23,11 +25,14 @@ const STATUS_LABEL: Record<ChatConversationStatus, string> = {
  * creator's name on each row.
  */
 export default async function ChatPage() {
-  const [viewer, hasKey, conversations] = await Promise.all([
+  const [viewer, hasKey, conversations, { orgId }] = await Promise.all([
     getChatViewer(),
     orgHasKey(),
     listConversations(),
+    auth(),
   ])
+  const entry = orgId ? await chatEntryMode(orgId, hasKey) : 'none'
+  const askOpen = entry === 'byok' || entry === 'managed'
 
   const names = viewer.isAdmin
     ? await resolveUserNames(conversations.map((c) => c.created_by))
@@ -47,14 +52,33 @@ export default async function ChatPage() {
             <DisclosureLine />
           </div>
         </div>
-        {hasKey ? (
+        {askOpen ? (
           <Link href="/dashboard/chat/new" className={primaryButton}>
             New conversation
           </Link>
         ) : null}
       </div>
 
-      {!hasKey ? (
+      {entry === 'capped' ? (
+        <section className="max-w-2xl rounded-button border border-border bg-card p-6">
+          <h2 className="text-base font-semibold text-foreground">
+            This month&rsquo;s included AI answers are used up
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            The allowance resets next month, and nothing upgrades or gets
+            charged on its own. Your question can go straight to your IT team
+            instead.
+          </p>
+          <Link
+            href="/dashboard/help"
+            className="mt-3 inline-block text-sm text-accent-text underline underline-offset-2 hover:text-foreground"
+          >
+            Send a request on the Get Help page
+          </Link>
+        </section>
+      ) : null}
+
+      {entry === 'none' ? (
         <section className="max-w-2xl rounded-button border border-border bg-card p-6">
           <h2 className="text-base font-semibold text-foreground">
             The assistant needs an API key

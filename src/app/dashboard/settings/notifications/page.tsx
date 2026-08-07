@@ -1,4 +1,8 @@
+import { auth } from '@clerk/nextjs/server'
+import Link from 'next/link'
+
 import { requireAdmin } from '@/lib/auth/org-viewer'
+import { getEntitlements } from '@/lib/billing/entitlements'
 import {
   COOLDOWN_MAX_MINUTES,
   COOLDOWN_MIN_MINUTES,
@@ -37,10 +41,17 @@ export default async function NotificationSettingsPage({
 
   await requireAdmin()
 
-  const [settings, org] = await Promise.all([
+  const { orgId } = await auth()
+  const [settings, org, entitlements] = await Promise.all([
     getNotificationSettings(),
     getOrgTimezone(),
+    orgId ? getEntitlements(orgId) : Promise.resolve(null),
   ])
+  // The digest is a paid feature (Basic and up, the F13 packaging decision).
+  // Free orgs see the upgrade path where the controls would be; the cron
+  // sweep enforces the same rule on its side, so a stale enabled flag from a
+  // lapsed plan sends nothing.
+  const digestEntitled = entitlements?.dailyDigest ?? false
 
   const savedParam = asString(sp.saved)
   const saved = savedParam === '1'
@@ -215,6 +226,19 @@ export default async function NotificationSettingsPage({
           contents of a ticket.
         </p>
 
+        {!digestEntitled ? (
+          <p className="mt-4 border-t border-divider pt-4 text-sm text-foreground">
+            The daily digest comes with the Basic plan and up. Incident alerts
+            are separate and stay on for every tier, always.{' '}
+            <Link
+              href="/dashboard/settings/billing"
+              className="text-link underline hover:text-foreground"
+            >
+              See plans in Billing
+            </Link>
+            .
+          </p>
+        ) : (
         <form
           action={saveDigestSettingsAction}
           className="mt-5 flex flex-col gap-4"
@@ -262,6 +286,7 @@ export default async function NotificationSettingsPage({
             </button>
           </div>
         </form>
+        )}
       </Card>
     </main>
   )

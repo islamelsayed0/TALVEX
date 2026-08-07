@@ -39,10 +39,13 @@ export class AdminConfigError extends Error {
  *   - src/app/api/webhooks/stripe/route.ts  (syncing subscription state into
  *     org_billing; same posture as the Clerk webhook, no user session, the
  *     signature is the authentication, migration 022)
- *   - src/lib/billing/entitlements.ts  (READ ONLY: resolving an org's
- *     effective entitlements. The org_billing select grant is the org's own
- *     admins, but plan limits bind every session, member sessions included,
- *     so the resolver reads past RLS server side and hands gates plan facts)
+ *   - src/lib/billing/entitlements.ts, managed-ai.ts, org-access.ts  (READ
+ *     ONLY: resolving an org's effective entitlements, the managed AI meter,
+ *     and the per user org allowance. The org_billing select grant is the
+ *     org's own admins, but plan limits bind every session, member sessions
+ *     included, and the org allowance spans orgs a single session can never
+ *     see together, so these read past RLS server side and hand gates plan
+ *     facts, never Stripe identifiers)
  *   - src/app/dashboard/settings/billing/actions.ts  (via src/lib/db/
  *     billing.ts: recording clickwrap acceptance on org_billing, where no
  *     user session holds a write verb by design, migration 022. The action

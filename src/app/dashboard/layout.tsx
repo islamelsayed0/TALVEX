@@ -2,11 +2,14 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
 import { getActiveOrgViewer } from "@/lib/auth/org-viewer";
+import { chatEntryMode } from "@/lib/billing/managed-ai";
+import { checkOrgAccess } from "@/lib/billing/org-access";
 import { listKeyProviders } from "@/lib/db/api-keys";
 import { readSweepHeartbeat } from "@/lib/db/heartbeat";
 import { sweepBannerCopy } from "@/lib/monitoring/heartbeat";
 
 import { DashboardShell } from "./_shell/dashboard-shell";
+import { OrgLimitScreen } from "./_shell/org-limit-screen";
 import { toProviderOptions } from "./chat/ui";
 import { navFor } from "./nav-items";
 
@@ -20,10 +23,17 @@ export default async function DashboardLayout({
   // organization is redirected to org selection, never shown an error. This
   // runs before any child page, so nothing under /dashboard reaches the data
   // layer org-less; the MissingActiveOrgError in client.ts stays a backstop.
-  const { orgId } = await auth();
-  if (!orgId) {
+  const { userId, orgId } = await auth();
+  if (!userId || !orgId) {
     redirect("/select-org");
   }
+
+  // The org count gate (F13 PR 3, docs/DECISIONS.md 2026-08-07): Clerk's
+  // hosted widgets create orgs with no server side hook before the fact, so
+  // the plan's organization allowance is enforced here, at first data
+  // access, with a clear screen in place of the page. Per person, oldest
+  // memberships first; see org-access.ts for the reasoning.
+  const orgAccess = await checkOrgAccess(userId, orgId);
 
   // Role drives which nav a person sees. isAdmin reads org_members.role (the
   // column RLS reads), never the token claim; see org-viewer.ts. This is a UI
@@ -31,10 +41,13 @@ export default async function DashboardLayout({
   // and admin pages call requireAdmin() to redirect a member who deep links in.
   const { isAdmin } = await getActiveOrgViewer();
 
-  // The floating assistant is for everyone. It needs to know whether the org has
-  // a provider key connected (otherwise it explains that instead of taking
-  // input) and which providers to offer. Presence only; no key material.
+  // The floating assistant is for everyone. It needs to know whether the org
+  // has a provider key connected, and failing that whether the plan's managed
+  // answers are open, spent for the month, or absent (F13 PR 3), so it can
+  // take input, degrade to the ticket door, or explain. Presence only; no
+  // key material.
   const keyProviders = await listKeyProviders();
+  const chatEntry = await chatEntryMode(orgId, keyProviders.length > 0);
 
   // The stale sweep banner lives in the layout, not on the Overview page, and
   // that placement is the point: when monitoring dies, a Monitors table full of
@@ -49,11 +62,19 @@ export default async function DashboardLayout({
     <DashboardShell
       isAdmin={isAdmin}
       navItems={navFor(isAdmin)}
-      hasKey={keyProviders.length > 0}
+      chatEntry={orgAccess.allowed ? chatEntry : "none"}
       providers={toProviderOptions(keyProviders)}
       sweepBanner={sweepBanner}
     >
-      {children}
+      {orgAccess.allowed ? (
+        children
+      ) : (
+        <OrgLimitScreen
+          allowance={orgAccess.allowance}
+          position={orgAccess.position}
+          total={orgAccess.total}
+        />
+      )}
     </DashboardShell>
   );
 }
