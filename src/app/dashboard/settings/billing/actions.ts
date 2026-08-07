@@ -2,7 +2,6 @@
 
 import { auth } from '@clerk/nextjs/server'
 import { headers } from 'next/headers'
-import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { TERMS_EFFECTIVE } from '@/app/(legal)/_content/terms'
@@ -164,6 +163,5 @@ export async function openPortalAction(): Promise<void> {
   if (failure !== null) {
     redirect(`${PAGE}?${new URLSearchParams({ error: failure })}`)
   }
-  revalidatePath(PAGE)
   redirect(portalUrl!)
 }

@@ -222,6 +222,26 @@ export default async function BillingSettingsPage({
           </p>
 
           <form action={startCheckoutAction}>
+            <label className="mt-4 flex items-start gap-2.5 text-sm text-foreground">
+              <input
+                name="accept_terms"
+                type="checkbox"
+                required
+                className="mt-0.5 h-4 w-4 accent-(--status-up)"
+              />
+              <span>
+                I agree to the{' '}
+                <a href="/terms" className="text-link underline hover:text-foreground">
+                  Terms of Service
+                </a>{' '}
+                and{' '}
+                <a href="/privacy" className="text-link underline hover:text-foreground">
+                  Privacy Policy
+                </a>
+                .
+              </span>
+            </label>
+
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {TIER_CARDS.map((tier) => (
                 <div
@@ -258,25 +278,6 @@ export default async function BillingSettingsPage({
               ))}
             </div>
 
-            <label className="mt-4 flex items-start gap-2.5 border-t border-divider pt-4 text-sm text-foreground">
-              <input
-                name="accept_terms"
-                type="checkbox"
-                required
-                className="mt-0.5 h-4 w-4 accent-(--status-up)"
-              />
-              <span>
-                I agree to the{' '}
-                <a href="/terms" className="text-link underline hover:text-foreground">
-                  Terms of Service
-                </a>{' '}
-                and{' '}
-                <a href="/privacy" className="text-link underline hover:text-foreground">
-                  Privacy Policy
-                </a>
-                .
-              </span>
-            </label>
           </form>
 
           <p className="mt-4 border-t border-divider pt-3 text-[12.5px] text-quiet">
