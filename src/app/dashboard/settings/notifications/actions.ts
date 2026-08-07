@@ -1,9 +1,11 @@
 'use server'
 
+import { auth } from '@clerk/nextjs/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { getActiveOrgViewer } from '@/lib/auth/org-viewer'
+import { getEntitlements } from '@/lib/billing/entitlements'
 import {
   NotificationSettingsValidationError,
   getNotificationSettings,
@@ -68,6 +70,21 @@ export async function saveDigestSettingsAction(
 ): Promise<void> {
   const viewer = await getActiveOrgViewer()
   if (!viewer.isAdmin) redirect(PAGE)
+
+  // The digest is a paid feature (F13 PR 3). The screen hides these controls
+  // from free orgs, so reaching here without the entitlement means the form
+  // was posted around the UI; refuse with the same plain copy the screen
+  // shows, not an error.
+  const { orgId } = await auth()
+  const entitlements = orgId ? await getEntitlements(orgId) : null
+  if (!entitlements?.dailyDigest) {
+    redirect(
+      `${PAGE}?${new URLSearchParams({
+        error:
+          'The daily digest comes with the Basic plan and up. See plans under Settings, then Billing.',
+      })}`,
+    )
+  }
 
   const input = {
     digestEnabled: formData.get('digest_enabled') === 'on',

@@ -1,7 +1,8 @@
-import { currentUser } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import Link from 'next/link'
 
 import { getActiveOrgViewer } from '@/lib/auth/org-viewer'
+import { chatEntryMode } from '@/lib/billing/managed-ai'
 import { orgHasKey } from '@/lib/db/api-keys'
 import { listArticles } from '@/lib/db/articles'
 import { countOpenIncidents } from '@/lib/db/incidents'
@@ -64,15 +65,22 @@ const COMMON: CommonTopic[] = [
  * detail, so it does not link there).
  */
 export default async function HelpHomePage() {
-  const [user, hasKey, viewer, openIncidents, articles] = await Promise.all([
-    currentUser(),
-    orgHasKey(),
-    getActiveOrgViewer(),
-    countOpenIncidents(),
-    listArticles(),
-  ])
+  const [user, hasKey, viewer, openIncidents, articles, { orgId }] =
+    await Promise.all([
+      currentUser(),
+      orgHasKey(),
+      getActiveOrgViewer(),
+      countOpenIncidents(),
+      listArticles(),
+      auth(),
+    ])
+  // byok and managed open the ask entry; capped degrades to the request path
+  // with plain copy (the F13 PR 3 recorded behavior); none keeps the original
+  // no key experience.
+  const entry = orgId ? await chatEntryMode(orgId, hasKey) : 'none'
+  const askOpen = entry === 'byok' || entry === 'managed'
   const firstName = user?.firstName ?? 'there'
-  const topicHref = hasKey ? CHAT_HREF : TICKET_HREF
+  const topicHref = askOpen ? CHAT_HREF : TICKET_HREF
   // What this session can actually read (RLS already decided); the door only
   // appears when there is something behind it.
   const readableArticles = articles.filter((a) => a.status === 'published').length
@@ -84,12 +92,24 @@ export default async function HelpHomePage() {
           Hi, {firstName}
         </h1>
         <p className="mt-2.5 text-[15.5px] leading-relaxed text-pretty text-muted-foreground">
-          How can we help today? {hasKey ? 'Ask our assistant, or send' : 'Send'}{' '}
+          How can we help today? {askOpen ? 'Ask our assistant, or send' : 'Send'}{' '}
           a request straight to your IT team.
         </p>
       </div>
 
-      {hasKey ? (
+      {entry === 'capped' ? (
+        <div className="glass mt-[26px] rounded-nested p-4 pl-[18px] text-left">
+          <p className="text-sm font-medium text-foreground">
+            This month&rsquo;s included AI answers are used up.
+          </p>
+          <p className="mt-1 text-[13px] text-quiet">
+            The allowance resets next month; nothing upgrades or gets charged
+            on its own. Send your request below and your IT team picks it up.
+          </p>
+        </div>
+      ) : null}
+
+      {askOpen ? (
         <Link
           href={CHAT_HREF}
           className="glass mt-[26px] flex items-center gap-3 rounded-nested p-4 pl-[18px]"
@@ -147,7 +167,7 @@ export default async function HelpHomePage() {
         </Link>
       ) : null}
 
-      {!hasKey && viewer.isAdmin ? (
+      {entry === 'none' && viewer.isAdmin ? (
         <p className="mt-3.5 text-center text-xs text-quiet">
           Want the AI assistant here too?{' '}
           {/* Underlined always, not only on hover. A link sitting inside a

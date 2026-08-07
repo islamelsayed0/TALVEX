@@ -36,6 +36,8 @@ export type LogEvent =
   | 'chat.provider.call'
   | 'chat.send.failed'
   | 'chat.grounding.failed'
+  // An org entitled to managed answers hit a missing platform key (F13).
+  | 'chat.platform_key.not_configured'
   // The Clerk webhook that syncs organizations and memberships.
   | 'clerk.webhook.applied'
   | 'clerk.webhook.failed'
@@ -58,6 +60,7 @@ export type LogEvent =
   | 'cron.cert.evaluate_failed'
   | 'cron.suppression.catchup_failed'
   | 'cron.digest.settings_failed'
+  | 'cron.digest.entitlements_failed'
   | 'cron.digest.timezones_failed'
   | 'cron.digest.send_failed'
   | 'cron.digest.org_failed'

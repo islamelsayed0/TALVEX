@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { resolveEntitlements } from '@/lib/billing/entitlements'
 import { createAdminClient } from '@/lib/db/admin'
 import { isLowStock } from '@/lib/db/inventory'
 import { interleaveTrail } from '@/lib/db/tickets'
@@ -652,6 +653,26 @@ async function runDailyDigests(
     .filter((entry) => entry.to !== '')
   if (enabled.length === 0) return counts
 
+  // The entitlement gate (F13 PR 3): the daily digest is a paid feature
+  // (Basic and up, the recorded packaging decision). One batched read over
+  // org_billing for the enabled orgs; an org with no row is free by
+  // definition and is skipped. Skipping happens BEFORE the due check and the
+  // stamp, so a gated org is never counted due and its ledger never moves:
+  // the day an org upgrades, that morning's digest is still owed and sends.
+  const { data: billingRows, error: billingError } = await db
+    .from('org_billing')
+    .select('*')
+    .in('org_id', enabled.map((entry) => entry.row.org_id))
+  if (billingError) {
+    logError('cron.digest.entitlements_failed', 'failed', { error: billingError.message })
+    return counts
+  }
+  const billingByOrg = new Map((billingRows ?? []).map((b) => [b.org_id, b]))
+  const entitled = enabled.filter(
+    (entry) => resolveEntitlements(billingByOrg.get(entry.row.org_id)).dailyDigest,
+  )
+  if (entitled.length === 0) return counts
+
   // organizations.timezone is the F11 authority (migration 012). An org that
   // has not had one detected yet falls back to the same default the rest of
   // the app uses, so the digest never waits on a zone to exist.
@@ -659,7 +680,7 @@ async function runDailyDigests(
   const { data: orgs, error: orgsError } = await db
     .from('organizations')
     .select('id, timezone')
-    .in('id', enabled.map((entry) => entry.row.org_id))
+    .in('id', entitled.map((entry) => entry.row.org_id))
   if (orgsError) {
     logError('cron.digest.timezones_failed', 'failed', { error: orgsError.message })
     return counts
@@ -668,7 +689,7 @@ async function runDailyDigests(
     zoneByOrg.set(org.id, org.timezone ?? DEFAULT_TIMEZONE)
   }
 
-  for (const { row, to } of enabled) {
+  for (const { row, to } of entitled) {
     const schedule: DigestSchedule = {
       timeZone: zoneByOrg.get(row.org_id) ?? DEFAULT_TIMEZONE,
       sendTime: row.digest_send_time,

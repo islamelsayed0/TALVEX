@@ -184,6 +184,7 @@ export type Database = {
           grounded_article_ids: Json | null
           id: string
           input_tokens: number | null
+          key_source: string | null
           model: string | null
           org_id: string
           output_tokens: number | null
@@ -197,6 +198,7 @@ export type Database = {
           grounded_article_ids?: Json | null
           id?: string
           input_tokens?: number | null
+          key_source?: string | null
           model?: string | null
           org_id: string
           output_tokens?: number | null
@@ -210,6 +212,7 @@ export type Database = {
           grounded_article_ids?: Json | null
           id?: string
           input_tokens?: number | null
+          key_source?: string | null
           model?: string | null
           org_id?: string
           output_tokens?: number | null
@@ -1122,9 +1125,6 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
-
-
 
 
 // Convenience aliases used by the data layer.

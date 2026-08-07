@@ -9,6 +9,8 @@ import { Wordmark } from '@/components/brand/wordmark'
 
 import { isNavItemActive, type NavItem } from '../nav-items'
 import type { ProviderOption } from '../chat/ui'
+import type { ChatEntryMode } from '@/lib/billing/managed-ai'
+
 import { AskTalvextWidget } from './ask-talvext-widget'
 import { NAV_ICON } from './nav-icons'
 
@@ -232,14 +234,14 @@ function SweepStaleBanner({ title, subtitle }: { title: string; subtitle: string
 export function DashboardShell({
   isAdmin,
   navItems,
-  hasKey,
+  chatEntry,
   providers,
   sweepBanner,
   children,
 }: {
   isAdmin: boolean
   navItems: readonly NavItem[]
-  hasKey: boolean
+  chatEntry: ChatEntryMode
   providers: ProviderOption[]
   sweepBanner: { title: string; subtitle: string } | null
   children: React.ReactNode
@@ -323,7 +325,7 @@ export function DashboardShell({
       </div>
 
       {/* The floating assistant, over the content, unchanged. */}
-      <AskTalvextWidget hasKey={hasKey} isAdmin={isAdmin} providers={providers} />
+      <AskTalvextWidget chatEntry={chatEntry} isAdmin={isAdmin} providers={providers} />
     </div>
   )
 }

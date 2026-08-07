@@ -1,3 +1,4 @@
+import { getEntitlements } from '@/lib/billing/entitlements'
 import { createOrgScopedClient } from './client'
 import { validateMonitorUrl } from './monitor-url'
 import type { Monitor, MonitorCheck } from './types'
@@ -277,6 +278,29 @@ export async function createMonitor(input: MonitorInput): Promise<Monitor> {
     .maybeSingle()
   if (orgError) throw orgError
   if (!org) throw new OrgNotSyncedError()
+
+  // The plan's monitor limit (F13 PR 3): free 2, Basic 15, Pro and Business
+  // unlimited. Enforced HERE, in the data layer, because the migration 003
+  // insert policy is member wide: gating only the admin UI would leave the
+  // action reachable around it. The count runs under the caller's own RLS,
+  // so it can only ever see the active org. Two racing creates can land one
+  // over the limit; the limit is packaging, not capacity, so a one monitor
+  // overshoot is ours to shrug at, never a lockout.
+  const { monitorLimit } = await getEntitlements(orgId)
+  if (monitorLimit !== null) {
+    const { count, error: countError } = await client
+      .from('monitors')
+      .select('id', { count: 'exact', head: true })
+    if (countError) throw countError
+    if ((count ?? 0) >= monitorLimit) {
+      throw new MonitorValidationError(
+        `Your plan includes ${monitorLimit} monitors and all ${monitorLimit} ` +
+          'are in use. Upgrade under Settings, then Billing, to add more, or ' +
+          'delete a monitor you no longer need. Alerts on existing monitors ' +
+          'are never affected.',
+      )
+    }
+  }
 
   const { data, error } = await client
     .from('monitors')
