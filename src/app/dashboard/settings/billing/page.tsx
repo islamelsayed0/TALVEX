@@ -16,6 +16,7 @@ import { FormError } from '../../tickets/ui'
 import { SettingsNav } from '../nav'
 import { openPortalAction, startCheckoutAction } from './actions'
 import { PendingRefresh } from './pending-refresh'
+import { Eyebrow, PriceMark } from './ui'
 
 export const metadata = { title: 'Settings — Talvext' }
 
@@ -63,25 +64,47 @@ const PLAN_INCLUDES: Record<BillingPlan, string[]> = {
   ],
 }
 
+/** Display prices, the frozen pricing's numbers as numbers. */
+const PLAN_DOLLARS: Record<'basic' | 'pro' | 'business', number> = {
+  basic: 39,
+  pro: 79,
+  business: 199,
+}
+
+const ADDON_DOLLARS = 15
+
 const TIER_CARDS: Array<{
-  plan: BillingPlan & ('basic' | 'pro' | 'business')
-  price: string
+  plan: 'basic' | 'pro' | 'business'
   blurb: string
+  features: string[]
 }> = [
   {
     plan: 'basic',
-    price: '$39',
     blurb: 'For offices up to around 20 staff.',
+    features: [
+      '15 monitors',
+      'Status page and daily digest',
+      'SSL expiry warnings',
+      'Maintenance windows',
+    ],
   },
   {
     plan: 'pro',
-    price: '$79',
-    blurb: 'Everything unlimited, AI answers included.',
+    blurb: 'The whole platform, no limits.',
+    features: [
+      'Unlimited monitors',
+      'Documents, inventory, audit log',
+      '300 managed AI answers a month',
+    ],
   },
   {
     plan: 'business',
-    price: '$199',
     blurb: 'Every client or location, one account.',
+    features: [
+      'Up to 10 organizations',
+      'Everything in Pro',
+      'AI answers included',
+    ],
   },
 ]
 
@@ -175,29 +198,40 @@ export default async function BillingSettingsPage({
       ) : null}
 
       <Card className="px-[22px] py-5">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-base font-semibold text-foreground">
-            Current plan: {PLAN_NAMES[entitlements.plan]}
-          </h2>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <Eyebrow>Current plan</Eyebrow>
+            <h2 className="mt-1.5 text-title text-foreground">
+              {PLAN_NAMES[entitlements.plan]}
+            </h2>
+            {onPaidPlan && entitlements.plan !== 'free' ? (
+              <div className="mt-2">
+                <PriceMark
+                  dollars={
+                    PLAN_DOLLARS[entitlements.plan as 'basic' | 'pro' | 'business'] +
+                    (entitlements.aiAddon ? ADDON_DOLLARS : 0)
+                  }
+                  size="md"
+                />
+              </div>
+            ) : null}
+          </div>
           {planStatus(entitlements)}
         </div>
-        <ul className="mt-3 space-y-1">
+        <ul className="mt-4 grid gap-x-8 gap-y-1.5 border-t border-divider pt-3.5 sm:grid-cols-2">
           {PLAN_INCLUDES[entitlements.plan].map((line) => (
-            <li
-              key={line}
-              className="border-t border-divider py-2 text-[13px] text-foreground first:border-t-0"
-            >
+            <li key={line} className="text-[13px] text-foreground">
               {line}
             </li>
           ))}
           {entitlements.aiAddon ? (
-            <li className="border-t border-divider py-2 text-[13px] text-foreground">
+            <li className="text-[13px] text-foreground">
               AI Chat add on: 300 managed AI answers a month
             </li>
           ) : null}
         </ul>
         {entitlements.currentPeriodEnd && entitlements.status === 'active' ? (
-          <p className="mt-2 text-[12.5px] text-quiet">
+          <p className="mt-3.5 border-t border-divider pt-3 text-[12.5px] text-quiet">
             Renews {formatUtc(entitlements.currentPeriodEnd)}.
           </p>
         ) : null}
@@ -251,7 +285,10 @@ export default async function BillingSettingsPage({
       entitlements.status === 'active' &&
       !awaitingAddon ? (
         <Card className="mt-[18px] px-[22px] py-5">
-          <h2 className="text-base font-semibold text-foreground">AI Chat add on</h2>
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-base font-semibold text-foreground">AI Chat add on</h2>
+            <PriceMark dollars={ADDON_DOLLARS} size="md" />
+          </div>
           <p className="mt-1 text-[12.5px] text-quiet">
             {entitlements.aiAddon
               ? 'Active: 300 managed AI answers a month, $15 a month. Removing it credits the unused time on your next invoice.'
@@ -277,7 +314,10 @@ export default async function BillingSettingsPage({
           </p>
 
           <form action={startCheckoutAction}>
-            <label className="mt-4 flex items-start gap-2.5 text-sm text-foreground">
+            {/* The clickwrap gate, rendered as one: a bordered row the eye
+                must pass before any tier button, matching its place in the
+                tab order. */}
+            <label className="mt-4 flex items-start gap-2.5 rounded-button border border-card-border bg-background/40 px-3.5 py-3 text-sm text-foreground">
               <input
                 name="accept_terms"
                 type="checkbox"
@@ -301,18 +341,22 @@ export default async function BillingSettingsPage({
               {TIER_CARDS.map((tier) => (
                 <div
                   key={tier.plan}
-                  className="flex flex-col rounded-card border border-card-border p-4"
+                  className="flex flex-col rounded-card border border-card-border bg-background/30 p-4 transition-colors hover:border-(--ghost-border-hover)"
                 >
-                  <h3 className="text-sm font-semibold text-foreground">
-                    {PLAN_NAMES[tier.plan]}
-                  </h3>
-                  <p className="mt-0.5 text-[13px] text-foreground">
-                    {tier.price}
-                    <span className="text-quiet"> a month</span>
-                  </p>
-                  <p className="mt-1.5 flex-1 text-[12.5px] text-quiet">{tier.blurb}</p>
+                  <Eyebrow>{PLAN_NAMES[tier.plan]}</Eyebrow>
+                  <div className="mt-2.5">
+                    <PriceMark dollars={PLAN_DOLLARS[tier.plan]} />
+                  </div>
+                  <p className="mt-1.5 text-[12.5px] text-quiet">{tier.blurb}</p>
+                  <ul className="mt-3 flex-1 space-y-1.5 border-t border-divider pt-3">
+                    {tier.features.map((feature) => (
+                      <li key={feature} className="text-[12.5px] text-foreground">
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
                   {tier.plan === 'basic' ? (
-                    <label className="mt-3 flex items-start gap-2 text-[12.5px] text-foreground">
+                    <label className="mt-3 flex items-start gap-2 border-t border-divider pt-3 text-[12.5px] text-foreground">
                       <input
                         name="ai_addon"
                         type="checkbox"
@@ -325,7 +369,7 @@ export default async function BillingSettingsPage({
                     type="submit"
                     name="plan"
                     value={tier.plan}
-                    className={`${ghostButton} mt-3`}
+                    className={`${ghostButton} mt-3.5`}
                   >
                     Choose {PLAN_NAMES[tier.plan]}
                   </button>
