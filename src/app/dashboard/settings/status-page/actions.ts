@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { getActiveOrgViewer } from '@/lib/auth/org-viewer'
 import {
   StatusPageValidationError,
+  releaseStatusPageAddress,
   saveStatusPageSettings,
 } from '@/lib/db/status-page'
 
@@ -46,4 +47,19 @@ export async function saveStatusPageSettingsAction(
 
   revalidatePath(PAGE)
   redirect(`${PAGE}?saved=1`)
+}
+
+/**
+ * Releases the address (disables the page AND clears the slug in one write).
+ * Reached only through the confirm page, because the link dies immediately
+ * and the address is claimable by anyone the moment it is free.
+ */
+export async function releaseStatusPageAddressAction(): Promise<void> {
+  const viewer = await getActiveOrgViewer()
+  if (!viewer.isAdmin) redirect(PAGE)
+
+  await releaseStatusPageAddress()
+
+  revalidatePath(PAGE)
+  redirect(`${PAGE}?released=1`)
 }

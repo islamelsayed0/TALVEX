@@ -242,3 +242,65 @@ describe('admin write policy for the status page', () => {
     expect(data).toEqual([])
   })
 })
+
+describe('releasing the address (the release feature)', () => {
+  // The write shape releaseStatusPageAddress performs: page off AND slug
+  // null in one statement. The tests run in order: the member refusal first,
+  // so the slug provably survives an unauthorized attempt, then the admin
+  // release, then THE SUBSTANCE, which is that released means claimable.
+
+  it('a member cannot release, and the address survives the attempt', async () => {
+    const asMemberAdminClaim = createMemberClient(
+      memberToken({ clerkUserId: seed.member, clerkOrgId: seed.orgIn.clerk_org_id, shape: 'legacy', claimRole: 'admin' }),
+    )
+    const { data, error } = await asMemberAdminClaim
+      .from('organizations')
+      .update({ status_page_enabled: false, status_page_slug: null })
+      .eq('id', orgInId)
+      .select()
+    expect(error).toBeNull()
+    expect(data).toEqual([])
+
+    const { data: held } = await service
+      .from('organizations')
+      .select('status_page_slug')
+      .eq('id', orgInId)
+      .single()
+    expect(held?.status_page_slug).not.toBeNull()
+  })
+
+  it('an admin releases, and the freed address is immediately claimable by another org', async () => {
+    const { data: before } = await service
+      .from('organizations')
+      .select('status_page_slug')
+      .eq('id', orgInId)
+      .single()
+    const heldSlug = before!.status_page_slug!
+
+    const asAdmin = createMemberClient(
+      memberToken({ clerkUserId: seed.admin, clerkOrgId: seed.orgIn.clerk_org_id, shape: 'legacy', claimRole: 'admin' }),
+    )
+    const { error } = await asAdmin
+      .from('organizations')
+      .update({ status_page_enabled: false, status_page_slug: null })
+      .eq('id', orgInId)
+    expect(error).toBeNull()
+
+    const { data: after } = await service
+      .from('organizations')
+      .select('status_page_enabled, status_page_slug')
+      .eq('id', orgInId)
+      .single()
+    expect(after).toEqual({ status_page_enabled: false, status_page_slug: null })
+
+    // Released MEANS claimable: the unique constraint no longer holds the
+    // address, so another org takes the exact slug without a conflict. This
+    // is the meaning of the feature; anything less is a disabled page still
+    // squatting on the name.
+    const { error: claimError } = await service
+      .from('organizations')
+      .update({ status_page_slug: heldSlug })
+      .eq('id', orgOutId)
+    expect(claimError).toBeNull()
+  })
+})
